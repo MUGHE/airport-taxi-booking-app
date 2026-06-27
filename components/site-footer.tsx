@@ -1,0 +1,80 @@
+import Link from "next/link"
+import { Plane } from "lucide-react"
+
+export function SiteFooter() {
+  return (
+    <footer className="border-t border-border/60 bg-card">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-3">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Plane className="size-4" />
+            </span>
+            <span className="text-lg tracking-tight">Aero Transfer</span>
+          </Link>
+          <p className="text-sm text-muted-foreground">
+            Reliable, fixed-price airport transfers with professional chauffeurs,
+            available 24/7.
+          </p>
+        </div>
+
+        <FooterCol
+          title="Service"
+          links={[
+            { href: "/book", label: "Book a Ride" },
+            { href: "/#fleet", label: "Our Fleet" },
+            { href: "/#how", label: "How It Works" },
+            { href: "/track", label: "Track Booking" },
+          ]}
+        />
+        <FooterCol
+          title="Company"
+          links={[
+            { href: "/", label: "About Us" },
+            { href: "/", label: "Careers" },
+            { href: "/", label: "Partners" },
+            { href: "/admin", label: "Admin Portal" },
+          ]}
+        />
+        <FooterCol
+          title="Support"
+          links={[
+            { href: "/", label: "Help Center" },
+            { href: "/", label: "Contact" },
+            { href: "/", label: "Terms" },
+            { href: "/", label: "Privacy" },
+          ]}
+        />
+      </div>
+      <div className="border-t border-border/60 py-6 text-center text-sm text-muted-foreground">
+        © {new Date().getFullYear()} Aero Transfer. All rights reserved.
+      </div>
+    </footer>
+  )
+}
+
+function FooterCol({
+  title,
+  links,
+}: {
+  title: string
+  links: { href: string; label: string }[]
+}) {
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <ul className="space-y-2">
+        {links.map((l, i) => (
+          <li key={`${l.label}-${i}`}>
+            <Link
+              href={l.href}
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
