@@ -37,17 +37,17 @@ export default async function BookingConfirmationPage({
         <BookingDetails booking={booking} />
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button asChild variant="outline">
-            <Link href="/track">
-              <Search className="size-4" />
-              Track this booking
-            </Link>
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/track" />}
+          >
+            <Search className="size-4" />
+            Track this booking
           </Button>
-          <Button asChild>
-            <Link href="/">
-              <Home className="size-4" />
-              Back to home
-            </Link>
+          <Button nativeButton={false} render={<Link href="/" />}>
+            <Home className="size-4" />
+            Back to home
           </Button>
         </div>
       </main>

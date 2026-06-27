@@ -44,7 +44,9 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden md:block">
-          <Button render={<Link href="/book" />}>Book a Ride</Button>
+          <Button nativeButton={false} render={<Link href="/book" />}>
+            Book a Ride
+          </Button>
         </div>
 
         <button
@@ -70,10 +72,12 @@ export function SiteHeader() {
                 {item.label}
               </Link>
             ))}
-            <Button asChild className="mt-2">
-              <Link href="/book" onClick={() => setOpen(false)}>
-                Book a Ride
-              </Link>
+            <Button
+              className="mt-2"
+              nativeButton={false}
+              render={<Link href="/book" onClick={() => setOpen(false)} />}
+            >
+              Book a Ride
             </Button>
           </nav>
         </div>

@@ -65,8 +65,13 @@ export function FleetSection() {
                   ))}
                 </ul>
 
-                <Button asChild variant="outline" className="mt-5 w-full">
-                  <Link href={`/book?vehicle=${v.id}`}>Select {v.name}</Link>
+                <Button
+                  variant="outline"
+                  className="mt-5 w-full"
+                  nativeButton={false}
+                  render={<Link href={`/book?vehicle=${v.id}`} />}
+                >
+                  Select {v.name}
                 </Button>
               </div>
             </div>
