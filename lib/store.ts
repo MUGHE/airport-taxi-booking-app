@@ -31,6 +31,7 @@ function seed(map: Map<string, Booking>) {
     {
       reference: "AT-7F3K9Q",
       status: "confirmed",
+      paymentStatus: "paid",
       direction: "from-airport",
       airportId: "jfk",
       locationId: "midtown",
@@ -46,11 +47,15 @@ function seed(map: Map<string, Booking>) {
       notes: "Please wait at Terminal 7 arrivals.",
       fare: 96,
       distanceKm: 24,
+      stripeCheckoutSessionId: "cs_test_seed_confirmed",
+      stripePaymentIntentId: "pi_test_seed_confirmed",
+      paidAt: new Date(today.getTime() - 3600_000 * 4).toISOString(),
       createdAt: new Date(today.getTime() - 3600_000 * 5).toISOString(),
     },
     {
       reference: "AT-2M8X1B",
       status: "pending",
+      paymentStatus: "unpaid",
       direction: "to-airport",
       airportId: "ewr",
       locationId: "jerseycity",
@@ -71,6 +76,7 @@ function seed(map: Map<string, Booking>) {
     {
       reference: "AT-5J0P4D",
       status: "completed",
+      paymentStatus: "paid",
       direction: "from-airport",
       airportId: "lga",
       locationId: "brooklyn",
@@ -86,6 +92,9 @@ function seed(map: Map<string, Booking>) {
       notes: "",
       fare: 56,
       distanceKm: 18,
+      stripeCheckoutSessionId: "cs_test_seed_completed",
+      stripePaymentIntentId: "pi_test_seed_completed",
+      paidAt: new Date(today.getTime() - 3600_000 * 28).toISOString(),
       createdAt: new Date(today.getTime() - 3600_000 * 30).toISOString(),
     },
   ]
@@ -122,6 +131,27 @@ export async function setBookingStatus(
   const existing = bookings.get(reference)
   if (!existing) return null
   const updated = { ...existing, status }
+  bookings.set(reference, updated)
+  return updated
+}
+
+export async function markBookingAsPaid(
+  reference: string,
+  stripeCheckoutSessionId: string,
+  stripePaymentIntentId?: string,
+): Promise<Booking | null> {
+  const existing = bookings.get(reference)
+  if (!existing) return null
+
+  const updated: Booking = {
+    ...existing,
+    status: existing.status === "pending" ? "confirmed" : existing.status,
+    paymentStatus: "paid",
+    stripeCheckoutSessionId,
+    stripePaymentIntentId,
+    paidAt: new Date().toISOString(),
+  }
+
   bookings.set(reference, updated)
   return updated
 }

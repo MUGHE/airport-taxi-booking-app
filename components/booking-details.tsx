@@ -1,6 +1,7 @@
 import {
   CalendarClock,
   CarFront,
+  CircleDollarSign,
   Mail,
   MapPin,
   Phone,
@@ -35,6 +36,9 @@ export function BookingDetails({ booking }: { booking: Booking }) {
       </div>
 
       <dl className="divide-y divide-border">
+        <Item icon={<CircleDollarSign className="size-4" />} label="Payment">
+          {booking.paymentStatus === "paid" ? "Paid" : "Awaiting payment"}
+        </Item>
         <Item icon={<MapPin className="size-4" />} label="Route">
           {from} <span className="text-muted-foreground">→</span> {to}
         </Item>

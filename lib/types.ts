@@ -5,6 +5,8 @@ export type BookingStatus =
   | "completed"
   | "cancelled"
 
+export type PaymentStatus = "unpaid" | "paid"
+
 export type TripDirection = "from-airport" | "to-airport"
 
 export interface VehicleClass {
@@ -30,6 +32,7 @@ export interface ServiceLocation {
 export interface Booking {
   reference: string
   status: BookingStatus
+  paymentStatus: PaymentStatus
   direction: TripDirection
   airportId: string
   locationId: string
@@ -45,6 +48,9 @@ export interface Booking {
   notes: string
   fare: number
   distanceKm: number
+  stripeCheckoutSessionId?: string
+  stripePaymentIntentId?: string
+  paidAt?: string
   createdAt: string // ISO timestamp
 }
 

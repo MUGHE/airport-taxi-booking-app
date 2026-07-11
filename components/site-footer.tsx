@@ -10,7 +10,7 @@ export function SiteFooter() {
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Plane className="size-4" />
             </span>
-            <span className="text-lg tracking-tight">Aero Transfer</span>
+            <span className="text-lg tracking-tight">ONE Airport Taxi</span>
           </Link>
           <p className="text-sm text-muted-foreground">
             Reliable, fixed-price airport transfers with professional chauffeurs,
@@ -47,7 +47,7 @@ export function SiteFooter() {
         />
       </div>
       <div className="border-t border-border/60 py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Aero Transfer. All rights reserved.
+        © {new Date().getFullYear()} ONE Airport Taxi. All rights reserved.
       </div>
     </footer>
   )

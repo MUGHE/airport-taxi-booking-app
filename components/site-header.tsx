@@ -25,7 +25,7 @@ export function SiteHeader() {
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Plane className="size-4" />
           </span>
-          <span className="text-lg tracking-tight">Aero Transfer</span>
+          <span className="text-lg tracking-tight">ONE Airport Taxi</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">

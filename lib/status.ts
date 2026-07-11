@@ -9,7 +9,7 @@ export const STATUS_ORDER: BookingStatus[] = [
 ]
 
 export const STATUS_LABELS: Record<BookingStatus, string> = {
-  pending: "Pending",
+  pending: "Pending payment",
   confirmed: "Confirmed",
   assigned: "Driver assigned",
   completed: "Completed",

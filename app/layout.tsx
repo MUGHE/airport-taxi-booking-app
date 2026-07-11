@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Aero Transfer | Premium Airport Taxi & Transfers',
+  title: 'ONE Airport Taxi | Premium Airport Taxi & Transfers in London',
   description:
     'Book reliable, fixed-price airport taxi transfers with professional chauffeurs. Instant fare estimates, flight tracking, and 24/7 meet & greet service.',
   generator: 'v0.app',
