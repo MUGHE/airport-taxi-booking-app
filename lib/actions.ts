@@ -2,18 +2,20 @@
 
 import { cookies, headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { calculateFare } from "./fleet"
+import { computeFare  } from "./fleet"
 import {
   findBooking,
   generateReference,
   listBookings,
+  listVehiclesWithPricing,
   markBookingAsPaid,
   saveBooking,
   setBookingStatus,
+  updateVehiclePricing as setVehiclePricing,
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingStatus, NewBookingInput } from "./types"
+import type { Booking, BookingStatus, NewBookingInput, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 
 export interface LoginResult {
@@ -71,16 +73,18 @@ export async function createBooking(
     return { ok: false, error: "Please choose a pickup date and time." }
   }
 
-  const quote = calculateFare(input.vehicleId, input.locationId)
+  const vehicles = await listVehiclesWithPricing()
+  const vehicle = vehicles.find((v) => v.id === input.vehicleId)
+  const quote = vehicle ? computeFare(vehicle, input.locationId) : null
   if (!quote) return { ok: false, error: "Unable to price this trip." }
-
+  
   const booking: Booking = {
     ...input,
     reference: generateReference(),
     status: "pending",
     paymentStatus: "unpaid",
     fare: quote.fare,
-    distanceKm: quote.distanceKm,
+    distanceMiles: quote.distanceMiles,
     createdAt: new Date().toISOString(),
   }
 
@@ -227,4 +231,36 @@ export async function updateBookingStatus(
   const updated = await setBookingStatus(reference, status)
   revalidatePath("/admin")
   return updated
+}
+
+export async function getVehicleFleet(): Promise<VehicleClass[]> {
+  return listVehiclesWithPricing()
+}
+
+export interface UpdateVehiclePricingResult {
+  ok: boolean
+  vehicle?: VehicleClass
+  error?: string
+}
+
+export async function updateVehiclePricing(
+  vehicleId: string,
+  minFare: number,
+  perMileAfter: number,
+): Promise<UpdateVehiclePricingResult> {
+  if (!(await isAdminAuthenticated())) {
+    return { ok: false, error: "Not authorized." }
+  }
+  if (!Number.isFinite(minFare) || minFare < 0) {
+    return { ok: false, error: "Minimum fare must be a positive number." }
+  }
+  if (!Number.isFinite(perMileAfter) || perMileAfter < 0) {
+    return { ok: false, error: "Per-mile rate must be a positive number." }
+  }
+  const updated = await setVehiclePricing(vehicleId, minFare, perMileAfter)
+  if (!updated) return { ok: false, error: "Vehicle not found." }
+  revalidatePath("/admin")
+  revalidatePath("/")
+  revalidatePath("/book")
+  return { ok: true, vehicle: updated }
 }

@@ -1,8 +1,10 @@
 import Image from "next/image"
 import { ShieldCheck, Star, Clock } from "lucide-react"
 import { FareEstimator } from "@/components/fare-estimator"
+import { getVehicleFleet } from "@/lib/actions"
 
-export function Hero() {
+export async function Hero() {
+  const vehicles = await getVehicleFleet()
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -48,7 +50,7 @@ export function Hero() {
         </div>
 
         <div className="lg:justify-self-end lg:max-w-md w-full">
-          <FareEstimator />
+        <FareEstimator vehicles={vehicles} />
         </div>
       </div>
     </section>

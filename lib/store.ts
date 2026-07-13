@@ -1,4 +1,5 @@
-import type { Booking, BookingStatus } from "./types"
+import type { Booking, BookingStatus, VehicleClass } from "./types"
+import { VEHICLE_CLASSES } from "./fleet"
 
 /**
  * In-memory booking store.
@@ -8,8 +9,21 @@ import type { Booking, BookingStatus } from "./types"
  * real database (e.g. Neon/Postgres) is connected. The function surface below is
  * intentionally async so swapping in a DB later requires no call-site changes.
  */
+
+
 const globalForStore = globalThis as unknown as {
   __taxiBookings?: Map<string, Booking>
+  __taxiVehiclePricing?: Map<string, { minFare: number; perMileAfter: number }>
+}
+
+const vehiclePricing: Map<string, { minFare: number; perMileAfter: number }> =
+  globalForStore.__taxiVehiclePricing ?? new Map()
+
+if (!globalForStore.__taxiVehiclePricing) {
+  globalForStore.__taxiVehiclePricing = vehiclePricing
+  for (const v of VEHICLE_CLASSES) {
+    vehiclePricing.set(v.id, { minFare: v.minFare, perMileAfter: v.perMileAfter })
+  }
 }
 
 const bookings: Map<string, Booking> =
@@ -46,7 +60,7 @@ function seed(map: Map<string, Booking>) {
       phone: "+1 212 555 0142",
       notes: "Please wait at Terminal 7 arrivals.",
       fare: 96,
-      distanceKm: 24,
+      distanceMiles: 24,
       stripeCheckoutSessionId: "cs_test_seed_confirmed",
       stripePaymentIntentId: "pi_test_seed_confirmed",
       paidAt: new Date(today.getTime() - 3600_000 * 4).toISOString(),
@@ -70,7 +84,7 @@ function seed(map: Map<string, Booking>) {
       phone: "+1 201 555 0188",
       notes: "",
       fare: 106,
-      distanceKm: 22,
+      distanceMiles: 22,
       createdAt: new Date(today.getTime() - 3600_000 * 2).toISOString(),
     },
     {
@@ -91,7 +105,7 @@ function seed(map: Map<string, Booking>) {
       phone: "+1 718 555 0110",
       notes: "",
       fare: 56,
-      distanceKm: 18,
+      distanceMiles: 18,
       stripeCheckoutSessionId: "cs_test_seed_completed",
       stripePaymentIntentId: "pi_test_seed_completed",
       paidAt: new Date(today.getTime() - 3600_000 * 28).toISOString(),
@@ -154,4 +168,22 @@ export async function markBookingAsPaid(
 
   bookings.set(reference, updated)
   return updated
+}
+
+export async function listVehiclesWithPricing(): Promise<VehicleClass[]> {
+  return VEHICLE_CLASSES.map((v) => {
+    const pricing = vehiclePricing.get(v.id)
+    return pricing ? { ...v, ...pricing } : v
+  })
+}
+
+export async function updateVehiclePricing(
+  vehicleId: string,
+  minFare: number,
+  perMileAfter: number,
+): Promise<VehicleClass | null> {
+  const base = VEHICLE_CLASSES.find((v) => v.id === vehicleId)
+  if (!base) return null
+  vehiclePricing.set(vehicleId, { minFare, perMileAfter })
+  return { ...base, minFare, perMileAfter }
 }

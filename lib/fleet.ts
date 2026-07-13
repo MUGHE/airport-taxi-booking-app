@@ -1,23 +1,27 @@
 import type { ServiceLocation, VehicleClass } from "./types"
 
 export const AIRPORTS: ServiceLocation[] = [
-  { id: "jfk", name: "JFK International", area: "Queens", distanceKm: 0 },
-  { id: "lga", name: "LaGuardia (LGA)", area: "Queens", distanceKm: 0 },
-  { id: "ewr", name: "Newark Liberty (EWR)", area: "New Jersey", distanceKm: 0 },
+  { id: "jfk", name: "JFK International", area: "Queens", distanceMiles: 0 },
+  { id: "lga", name: "LaGuardia (LGA)", area: "Queens", distanceMiles: 0 },
+  { id: "ewr", name: "Newark Liberty (EWR)", area: "New Jersey", distanceMiles: 0 },
 ]
 
 export const LOCATIONS: ServiceLocation[] = [
-  { id: "midtown", name: "Midtown Manhattan", area: "Manhattan", distanceKm: 24 },
-  { id: "downtown", name: "Downtown / Financial District", area: "Manhattan", distanceKm: 27 },
-  { id: "brooklyn", name: "Brooklyn Heights", area: "Brooklyn", distanceKm: 18 },
-  { id: "williamsburg", name: "Williamsburg", area: "Brooklyn", distanceKm: 16 },
-  { id: "uws", name: "Upper West Side", area: "Manhattan", distanceKm: 29 },
-  { id: "harlem", name: "Harlem", area: "Manhattan", distanceKm: 31 },
-  { id: "lic", name: "Long Island City", area: "Queens", distanceKm: 12 },
-  { id: "jerseycity", name: "Jersey City", area: "New Jersey", distanceKm: 22 },
-  { id: "stamford", name: "Stamford", area: "Connecticut", distanceKm: 64 },
-  { id: "whiteplains", name: "White Plains", area: "Westchester", distanceKm: 52 },
+  { id: "midtown", name: "Midtown Manhattan", area: "Manhattan", distanceMiles: 15 },
+  { id: "downtown", name: "Downtown / Financial District", area: "Manhattan", distanceMiles: 17 },
+  { id: "brooklyn", name: "Brooklyn Heights", area: "Brooklyn", distanceMiles: 11 },
+  { id: "williamsburg", name: "Williamsburg", area: "Brooklyn", distanceMiles: 10 },
+  { id: "uws", name: "Upper West Side", area: "Manhattan", distanceMiles: 18 },
+  { id: "harlem", name: "Harlem", area: "Manhattan", distanceMiles: 19 },
+  { id: "lic", name: "Long Island City", area: "Queens", distanceMiles: 7 },
+  { id: "jerseycity", name: "Jersey City", area: "New Jersey", distanceMiles: 14 },
+  { id: "stamford", name: "Stamford", area: "Connecticut", distanceMiles: 40 },
+  { id: "whiteplains", name: "White Plains", area: "Westchester", distanceMiles: 32 },
 ]
+
+// Minimum fare covers the first MIN_DISTANCE_MILES; every mile beyond that
+// is charged at the vehicle's perMileAfter rate.
+export const MIN_DISTANCE_MILES = 10
 
 export const VEHICLE_CLASSES: VehicleClass[] = [
   {
@@ -27,8 +31,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     capacity: 3,
     luggage: 2,
     image: "/vehicles/standard-sedan.png",
-    baseFare: 22,
-    perKm: 1.9,
+    minFare: 40,
+    perMileAfter: 1.7,
     features: ["Meet & greet", "Free 60 min wait", "Bottled water"],
   },
   {
@@ -38,8 +42,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     capacity: 3,
     luggage: 3,
     image: "/vehicles/executive-sedan.png",
-    baseFare: 34,
-    perKm: 2.6,
+    minFare: 55,
+    perMileAfter: 2.2,
     features: ["Meet & greet", "Free 60 min wait", "Pro chauffeur", "Phone charger"],
   },
   {
@@ -49,8 +53,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     capacity: 6,
     luggage: 6,
     image: "/vehicles/suv-minivan.png",
-    baseFare: 42,
-    perKm: 2.9,
+    minFare: 65,
+    perMileAfter: 2.5,
     features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
   },
   {
@@ -60,8 +64,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     capacity: 3,
     luggage: 3,
     image: "/vehicles/luxury-sedan.png",
-    baseFare: 68,
-    perKm: 4.2,
+    minFare: 95,
+    perMileAfter: 3.5,
     features: ["VIP meet & greet", "Free 90 min wait", "Premium interior", "Refreshments"],
   },
 ]
@@ -79,27 +83,35 @@ export function getAirport(id: string): ServiceLocation | undefined {
 }
 
 export interface FareQuote {
-  distanceKm: number
+  distanceMiles: number
   fare: number
 }
 
-/** Flat zone-based fare: base fare + per-km rate over the zone distance. */
-export function calculateFare(vehicleId: string, locationId: string): FareQuote | null {
-  const vehicle = getVehicle(vehicleId)
+/**
+ * Minimum-fare pricing: every trip costs at least the vehicle's minFare
+ * (covers up to MIN_DISTANCE_MILES). Distance beyond that is billed per
+ * mile at the vehicle's perMileAfter rate. Takes the vehicle object
+ * directly so callers can pass live (admin-edited) pricing.
+ */
+export function computeFare(
+  vehicle: Pick<VehicleClass, "minFare" | "perMileAfter">,
+  locationId: string,
+): FareQuote | null {
   const location = getLocation(locationId)
-  if (!vehicle || !location) return null
+  if (!location) return null
 
-  const distanceKm = location.distanceKm
-  const raw = vehicle.baseFare + vehicle.perKm * distanceKm
-  // round to nearest dollar
+  const distanceMiles = location.distanceMiles
+  const extraMiles = Math.max(0, distanceMiles - MIN_DISTANCE_MILES)
+  const raw = vehicle.minFare + extraMiles * vehicle.perMileAfter
   const fare = Math.round(raw)
-  return { distanceKm, fare }
+
+  return { distanceMiles, fare }
 }
 
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
-    currency: "USD",
+    currency: "GBP",
     maximumFractionDigits: 0,
   }).format(value)
-}
+}	

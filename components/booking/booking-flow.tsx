@@ -28,20 +28,20 @@ import {
   AIRPORTS,
   LOCATIONS,
   VEHICLE_CLASSES,
-  calculateFare,
+  computeFare,
   formatCurrency,
   getAirport,
   getLocation,
   getVehicle,
 } from "@/lib/fleet"
 import { createBooking } from "@/lib/actions"
-import type { TripDirection } from "@/lib/types"
+import type { TripDirection ,VehicleClass} from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const STEPS = ["Trip", "Vehicle", "Details", "Review"] as const
 
-export function BookingFlow() {
+export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   const router = useRouter()
   const params = useSearchParams()
   const [isPending, startTransition] = useTransition()
@@ -63,11 +63,11 @@ export function BookingFlow() {
   const [phone, setPhone] = useState("")
   const [notes, setNotes] = useState("")
 
+  const vehicle = vehicles.find((v) => v.id === vehicleId)
   const quote = useMemo(
-    () => (vehicleId && locationId ? calculateFare(vehicleId, locationId) : null),
-    [vehicleId, locationId],
+    () => (vehicle && locationId ? computeFare(vehicle, locationId) : null),
+    [vehicle, locationId],
   )
-  const vehicle = getVehicle(vehicleId)
   const location = getLocation(locationId)
   const airport = getAirport(airportId)
   const today = new Date().toISOString().slice(0, 10)
@@ -145,6 +145,7 @@ export function BookingFlow() {
               vehicleId={vehicleId}
               setVehicleId={setVehicleId}
               locationId={locationId}
+              vehicles={vehicles}
             />
           )}
 
@@ -384,10 +385,12 @@ function VehicleStep({
   vehicleId,
   setVehicleId,
   locationId,
+  vehicles,
 }: {
   vehicleId: string
   setVehicleId: (v: string) => void
   locationId: string
+  vehicles: VehicleClass[]
 }) {
   return (
     <div>
@@ -397,7 +400,7 @@ function VehicleStep({
       />
       <div className="grid gap-4 sm:grid-cols-2">
         {VEHICLE_CLASSES.map((v) => {
-          const q = locationId ? calculateFare(v.id, locationId) : null
+          const q = locationId ? computeFare(v, locationId) : null
           const selected = v.id === vehicleId
           return (
             <button
@@ -437,7 +440,7 @@ function VehicleStep({
                   {v.description}
                 </p>
                 <p className="mt-2 font-semibold tabular-nums">
-                  {q ? formatCurrency(q.fare) : `from ${formatCurrency(v.baseFare)}`}
+                  {q ? formatCurrency(q.fare) : `from ${formatCurrency(v.minFare)}`}
                 </p>
               </div>
             </button>

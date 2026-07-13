@@ -12,27 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  AIRPORTS,
-  LOCATIONS,
-  VEHICLE_CLASSES,
-  calculateFare,
-  formatCurrency,
-} from "@/lib/fleet"
-import type { TripDirection } from "@/lib/types"
+import { AIRPORTS, LOCATIONS, computeFare, formatCurrency } from "@/lib/fleet"
+import type { TripDirection, VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-export function FareEstimator() {
+
+export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   const router = useRouter()
   const [direction, setDirection] = useState<TripDirection>("from-airport")
   const [airportId, setAirportId] = useState(AIRPORTS[0].id)
   const [locationId, setLocationId] = useState("")
-  const [vehicleId, setVehicleId] = useState("executive")
+  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "executive")
 
+  const vehicle = vehicles.find((v) => v.id === vehicleId)
   const quote = useMemo(() => {
-    if (!locationId) return null
-    return calculateFare(vehicleId, locationId)
-  }, [vehicleId, locationId])
+    if (!locationId || !vehicle) return null
+    return computeFare(vehicle, locationId)
+  }, [vehicle, locationId])
 
   function handleContinue() {
     const params = new URLSearchParams({
@@ -129,7 +125,7 @@ export function FareEstimator() {
               <SelectValue placeholder="Select vehicle" />
             </SelectTrigger>
             <SelectContent>
-              {VEHICLE_CLASSES.map((v) => (
+              {vehicles.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   {v.name} · up to {v.capacity} pax
                 </SelectItem>
@@ -149,7 +145,7 @@ export function FareEstimator() {
         <div className="text-right text-xs text-muted-foreground">
           {quote ? (
             <>
-              <p>{quote.distanceKm} km</p>
+              <p>{quote.distanceMiles} miles</p>
               <p>All taxes included</p>
             </>
           ) : (

@@ -3,8 +3,10 @@ import Link from "next/link"
 import { Briefcase, Check, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { VEHICLE_CLASSES, formatCurrency } from "@/lib/fleet"
+import { getVehicleFleet } from "@/lib/actions"
 
-export function FleetSection() {
+export async function FleetSection() {
+  const vehicles = (await getVehicleFleet()) ?? []
   return (
     <section id="fleet" className="scroll-mt-20 bg-card/60 py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-4">
@@ -37,8 +39,8 @@ export function FleetSection() {
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-semibold">{v.name}</h3>
                   <span className="text-sm font-medium text-muted-foreground">
-                    from {formatCurrency(v.baseFare)}
-                  </span>
+                    from {formatCurrency(v.minFare)}
+                  </span> 
                 </div>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                   {v.description}

@@ -16,8 +16,10 @@ export interface VehicleClass {
   capacity: number
   luggage: number
   image: string
-  baseFare: number
-  perKm: number
+  /** Minimum fare — covers up to MIN_DISTANCE_MILES of travel. */
+  minFare: number
+  /** Rate charged per mile once distance exceeds MIN_DISTANCE_MILES. */
+  perMileAfter: number
   features: string[]
 }
 
@@ -25,8 +27,8 @@ export interface ServiceLocation {
   id: string
   name: string
   area: string
-  /** Approximate driving distance from the airport in km. */
-  distanceKm: number
+  /** Approximate driving distance from the airport in miles. */
+  distanceMiles: number
 }
 
 export interface Booking {
@@ -37,8 +39,8 @@ export interface Booking {
   airportId: string
   locationId: string
   vehicleId: string
-  pickupDate: string // ISO date (yyyy-mm-dd)
-  pickupTime: string // HH:mm
+  pickupDate: string
+  pickupTime: string
   flightNumber: string
   passengers: number
   bags: number
@@ -47,14 +49,14 @@ export interface Booking {
   phone: string
   notes: string
   fare: number
-  distanceKm: number
+  distanceMiles: number
   stripeCheckoutSessionId?: string
   stripePaymentIntentId?: string
   paidAt?: string
-  createdAt: string // ISO timestamp
+  createdAt: string
 }
 
-export type NewBookingInput = Omit<
+export type NewBookingInput = Omit
   Booking,
-  "reference" | "status" | "createdAt" | "fare" | "distanceKm"
+  "reference" | "status" | "createdAt" | "fare" | "distanceMiles"
 >
