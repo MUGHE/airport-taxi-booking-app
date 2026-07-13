@@ -10,16 +10,15 @@ import {
   Users,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getAirport, getLocation, getVehicle, formatCurrency } from "@/lib/fleet"
+import { getAirport, getVehicle, formatCurrency } from "@/lib/fleet"
 import type { Booking } from "@/lib/types"
 import { STATUS_LABELS, STATUS_STYLES } from "@/lib/status"
 
 export function BookingDetails({ booking }: { booking: Booking }) {
   const airport = getAirport(booking.airportId)
-  const location = getLocation(booking.locationId)
   const vehicle = getVehicle(booking.vehicleId)
-  const from = booking.direction === "from-airport" ? airport?.name : location?.name
-  const to = booking.direction === "from-airport" ? location?.name : airport?.name
+  const from = booking.direction === "from-airport" ? airport?.name : booking.destinationAddress
+  const to = booking.direction === "from-airport" ? booking.destinationAddress : airport?.name
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">

@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select"
 import {
   AIRPORTS,
-  LOCATIONS,
   VEHICLE_CLASSES,
   computeFare,
   formatCurrency,
@@ -34,8 +33,9 @@ import {
   getLocation,
   getVehicle,
 } from "@/lib/fleet"
-import { createBooking } from "@/lib/actions"
-import type { TripDirection ,VehicleClass} from "@/lib/types"
+import { createBooking, getDistanceQuote } from "@/lib/actions"
+import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
+import type { TripDirection, VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -51,7 +51,14 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
     (params.get("direction") as TripDirection) || "from-airport",
   )
   const [airportId, setAirportId] = useState(params.get("airport") || AIRPORTS[0].id)
-  const [locationId, setLocationId] = useState(params.get("location") || "")
+  const [destination, setDestination] = useState<PlaceSelection | null>(() => {
+    const address = params.get("destinationAddress")
+    const lat = Number(params.get("destinationLat"))
+    const lng = Number(params.get("destinationLng"))
+    return address && Number.isFinite(lat) && Number.isFinite(lng)
+      ? { placeId: params.get("destinationPlaceId") || "", address, lat, lng }
+      : null
+  })
   const [vehicleId, setVehicleId] = useState(params.get("vehicle") || "")
   const [pickupDate, setPickupDate] = useState("")
   const [pickupTime, setPickupTime] = useState("")
@@ -64,16 +71,33 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   const [notes, setNotes] = useState("")
 
   const vehicle = vehicles.find((v) => v.id === vehicleId)
+
+  const [distanceMiles, setDistanceMiles] = useState<number | null>(null)
+  const [distanceLoading, setDistanceLoading] = useState(false)
+
+
+  async function handlePlaceSelect(place: PlaceSelection) {
+    setDestination(place)
+    setDistanceMiles(null)
+    setDistanceLoading(true)
+    const res = await getDistanceQuote(airportId, { lat: place.lat, lng: place.lng })
+    setDistanceLoading(false)
+    if (res.ok && res.distanceMiles != null) {
+      setDistanceMiles(res.distanceMiles)
+    } else {
+      toast.error(res.error || "Couldn't calculate distance for that address.")
+    }
+  }
+
   const quote = useMemo(
-    () => (vehicle && locationId ? computeFare(vehicle, locationId) : null),
-    [vehicle, locationId],
+    () => (vehicle && distanceMiles != null ? computeFare(vehicle, distanceMiles) : null),
+    [vehicle, distanceMiles],
   )
-  const location = getLocation(locationId)
   const airport = getAirport(airportId)
   const today = new Date().toISOString().slice(0, 10)
 
   function canAdvance(): boolean {
-    if (step === 0) return Boolean(locationId && pickupDate && pickupTime)
+    if (step === 0) return Boolean(destination && pickupDate && pickupTime)
     if (step === 1) return Boolean(vehicleId)
     if (step === 2)
       return Boolean(customerName.trim() && email.trim() && phone.trim())
@@ -96,7 +120,9 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       const res = await createBooking({
         direction,
         airportId,
-        locationId,
+        destinationAddress: destination!.address,
+        destinationLat: destination!.lat,
+        destinationLng: destination!.lng,
         vehicleId,
         pickupDate,
         pickupTime,
@@ -128,8 +154,12 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
               setDirection={setDirection}
               airportId={airportId}
               setAirportId={setAirportId}
-              locationId={locationId}
-              setLocationId={setLocationId}
+              destination={destination}
+              onDestinationSelect={handlePlaceSelect}
+              onDestinationClear={() => {
+                setDestination(null)
+                setDistanceMiles(null)
+              }}
               pickupDate={pickupDate}
               setPickupDate={setPickupDate}
               pickupTime={pickupTime}
@@ -144,7 +174,7 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
             <VehicleStep
               vehicleId={vehicleId}
               setVehicleId={setVehicleId}
-              locationId={locationId}
+              distanceMiles={distanceMiles}
               vehicles={vehicles}
             />
           )}
@@ -171,7 +201,7 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
             <ReviewStep
               direction={direction}
               airportName={airport?.name ?? ""}
-              locationName={location?.name ?? ""}
+              destinationAddress={destination?.address ?? ""}
               vehicleName={vehicle?.name ?? ""}
               pickupDate={pickupDate}
               pickupTime={pickupTime}
@@ -208,7 +238,7 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       <SummaryCard
         direction={direction}
         airportName={airport?.name}
-        locationName={location?.name}
+        destinationAddress={destination?.address}
         vehicle={vehicle}
         quote={quote}
         pickupDate={pickupDate}
@@ -268,8 +298,9 @@ function TripStep(props: {
   setDirection: (d: TripDirection) => void
   airportId: string
   setAirportId: (v: string) => void
-  locationId: string
-  setLocationId: (v: string) => void
+  destination: PlaceSelection | null
+  onDestinationSelect: (place: PlaceSelection) => void
+  onDestinationClear: () => void
   pickupDate: string
   setPickupDate: (v: string) => void
   pickupTime: string
@@ -314,7 +345,7 @@ function TripStep(props: {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Airport" icon={<Plane className="size-4 text-primary" />}>
-          <Select value={props.airportId} onValueChange={props.setAirportId}>
+          <Select value={props.airportId} onValueChange={(value) => value && props.setAirportId(value)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select airport" />
             </SelectTrigger>
@@ -332,7 +363,13 @@ function TripStep(props: {
           label={props.direction === "from-airport" ? "Drop-off location" : "Pickup location"}
           icon={<MapPin className="size-4 text-accent-foreground" />}
         >
-          <Select value={props.locationId} onValueChange={props.setLocationId}>
+          <DestinationPicker
+            defaultValue={props.destination?.address}
+            onSelect={props.onDestinationSelect}
+            onClear={props.onDestinationClear}
+            placeholder="Start typing an address"
+          />
+          {/*
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
@@ -343,7 +380,7 @@ function TripStep(props: {
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </Select> */}
         </Field>
 
         <Field label="Pickup date">
@@ -384,12 +421,12 @@ function TripStep(props: {
 function VehicleStep({
   vehicleId,
   setVehicleId,
-  locationId,
+  distanceMiles,
   vehicles,
 }: {
   vehicleId: string
   setVehicleId: (v: string) => void
-  locationId: string
+  distanceMiles: number | null
   vehicles: VehicleClass[]
 }) {
   return (
@@ -400,7 +437,7 @@ function VehicleStep({
       />
       <div className="grid gap-4 sm:grid-cols-2">
         {VEHICLE_CLASSES.map((v) => {
-          const q = locationId ? computeFare(v, locationId) : null
+          const q = distanceMiles != null ? computeFare(v, distanceMiles) : null
           const selected = v.id === vehicleId
           return (
             <button
@@ -547,7 +584,7 @@ function DetailsStep(props: {
 function ReviewStep(props: {
   direction: TripDirection
   airportName: string
-  locationName: string
+  destinationAddress: string
   vehicleName: string
   pickupDate: string
   pickupTime: string
@@ -559,8 +596,8 @@ function ReviewStep(props: {
   phone: string
   notes: string
 }) {
-  const from = props.direction === "from-airport" ? props.airportName : props.locationName
-  const to = props.direction === "from-airport" ? props.locationName : props.airportName
+  const from = props.direction === "from-airport" ? props.airportName : props.destinationAddress
+  const to = props.direction === "from-airport" ? props.destinationAddress : props.airportName
   return (
     <div>
       <StepHeading
@@ -613,15 +650,15 @@ function Field({
 function SummaryCard(props: {
   direction: TripDirection
   airportName?: string
-  locationName?: string
+  destinationAddress?: string
   vehicle?: ReturnType<typeof getVehicle>
-  quote: ReturnType<typeof calculateFare>
+  quote: ReturnType<typeof computeFare> | null
   pickupDate: string
   pickupTime: string
 }) {
   const from =
-    props.direction === "from-airport" ? props.airportName : props.locationName
-  const to = props.direction === "from-airport" ? props.locationName : props.airportName
+    props.direction === "from-airport" ? props.airportName : props.destinationAddress
+  const to = props.direction === "from-airport" ? props.destinationAddress : props.airportName
   return (
     <aside className="lg:sticky lg:top-24 h-fit rounded-2xl border border-border/70 bg-card p-5">
       <h3 className="font-semibold">Trip summary</h3>

@@ -2,7 +2,6 @@
 
 import { cookies, headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { computeFare  } from "./fleet"
 import {
   findBooking,
   generateReference,
@@ -17,6 +16,9 @@ import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./aut
 import { isAdminAuthenticated } from "./session"
 import type { Booking, BookingStatus, NewBookingInput, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
+import { calculateDrivingMiles } from "./google-distance"
+import { computeFare, getAirport } from "./fleet"
+
 
 export interface LoginResult {
   ok: boolean
@@ -59,25 +61,33 @@ export interface CreateBookingResult {
   error?: string
 }
 
-export async function createBooking(
-  input: NewBookingInput,
-): Promise<CreateBookingResult> {
-  // Basic server-side validation
+export async function createBooking(input: NewBookingInput): Promise<CreateBookingResult> {
   if (!input.customerName?.trim()) return { ok: false, error: "Name is required." }
   if (!input.email?.trim()) return { ok: false, error: "Email is required." }
   if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
-  if (!input.locationId || !input.vehicleId || !input.airportId) {
-    return { ok: false, error: "Please complete your trip details." }
+  if (!input.airportId || !input.vehicleId) return { ok: false, error: "Please complete your trip details." }
+  if (!Number.isFinite(input.destinationLat) || !Number.isFinite(input.destinationLng)) {
+    return { ok: false, error: "Please select a destination address." }
   }
   if (!input.pickupDate || !input.pickupTime) {
     return { ok: false, error: "Please choose a pickup date and time." }
   }
 
+  const airport = getAirport(input.airportId)
+  if (!airport) return { ok: false, error: "Unknown airport." }
+
   const vehicles = await listVehiclesWithPricing()
   const vehicle = vehicles.find((v) => v.id === input.vehicleId)
-  const quote = vehicle ? computeFare(vehicle, input.locationId) : null
-  if (!quote) return { ok: false, error: "Unable to price this trip." }
-  
+  if (!vehicle) return { ok: false, error: "Unknown vehicle." }
+
+  const miles = await calculateDrivingMiles(
+    { lat: airport.lat, lng: airport.lng },
+    { lat: input.destinationLat, lng: input.destinationLng },
+  )
+  if (miles == null) return { ok: false, error: "Unable to price this trip." }
+
+  const quote = computeFare(vehicle, miles)
+
   const booking: Booking = {
     ...input,
     reference: generateReference(),
@@ -263,4 +273,31 @@ export async function updateVehiclePricing(
   revalidatePath("/")
   revalidatePath("/book")
   return { ok: true, vehicle: updated }
+}
+
+export interface DistanceQuoteResult {
+  ok: boolean
+  distanceMiles?: number
+  error?: string
+}
+
+export async function getDistanceQuote(
+  airportId: string,
+  destination: { lat: number; lng: number },
+): Promise<DistanceQuoteResult> {
+  const airport = getAirport(airportId)
+  if (!airport) return { ok: false, error: "Unknown airport." }
+
+  try {
+    const miles = await calculateDrivingMiles(
+      { lat: airport.lat, lng: airport.lng },
+      destination,
+    )
+    if (miles == null) {
+      return { ok: false, error: "Couldn't find a driving route to that address." }
+    }
+    return { ok: true, distanceMiles: Math.round(miles * 10) / 10 }
+  } catch {
+    return { ok: false, error: "Distance service is temporarily unavailable." }
+  }
 }

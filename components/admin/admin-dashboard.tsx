@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getAirport, getLocation, getVehicle, formatCurrency } from "@/lib/fleet"
+import { getAirport, getVehicle, formatCurrency } from "@/lib/fleet"
 import { STATUS_LABELS, STATUS_ORDER, STATUS_STYLES } from "@/lib/status"
 import { updateBookingStatus } from "@/lib/actions"
 import type { Booking, BookingStatus } from "@/lib/types"
@@ -132,9 +132,8 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
               ) : (
                 filtered.map((b) => {
                   const airport = getAirport(b.airportId)
-                  const location = getLocation(b.locationId)
-                  const from = b.direction === "from-airport" ? airport?.name : location?.name
-                  const to = b.direction === "from-airport" ? location?.name : airport?.name
+                  const from = b.direction === "from-airport" ? airport?.name : b.destinationAddress
+                  const to = b.direction === "from-airport" ? b.destinationAddress : airport?.name
                   return (
                     <TableRow key={b.reference}>
                       <TableCell className="font-mono text-xs font-medium tracking-wider">

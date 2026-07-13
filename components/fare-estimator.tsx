@@ -15,35 +15,61 @@ import {
 import { AIRPORTS, LOCATIONS, computeFare, formatCurrency } from "@/lib/fleet"
 import type { TripDirection, VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
+import { getDistanceQuote } from "@/lib/actions"
+import { toast } from "sonner"
 
 
 export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   const router = useRouter()
   const [direction, setDirection] = useState<TripDirection>("from-airport")
   const [airportId, setAirportId] = useState(AIRPORTS[0].id)
-  const [locationId, setLocationId] = useState("")
   const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "executive")
 
+  const [destination, setDestination] = useState<PlaceSelection | null>(null)
+  const [distanceMiles, setDistanceMiles] = useState<number | null>(null)
+  const [distanceLoading, setDistanceLoading] = useState(false)
+
+  async function handlePlaceSelect(place: PlaceSelection) {
+    setDestination(place)
+    setDistanceMiles(null)
+    setDistanceLoading(true)
+    const res = await getDistanceQuote(airportId, { lat: place.lat, lng: place.lng })
+    setDistanceLoading(false)
+    if (res.ok && res.distanceMiles != null) {
+      setDistanceMiles(res.distanceMiles)
+    } else {
+      toast.error(res.error || "Couldn't calculate distance for that address.")
+    }
+  }
+
+
   const vehicle = vehicles.find((v) => v.id === vehicleId)
-  const quote = useMemo(() => {
-    if (!locationId || !vehicle) return null
-    return computeFare(vehicle, locationId)
-  }, [vehicle, locationId])
+
+  const quote = useMemo(
+    () => (vehicle && distanceMiles != null ? computeFare(vehicle, distanceMiles) : null),
+    [vehicle, distanceMiles],
+  )
 
   function handleContinue() {
     const params = new URLSearchParams({
       direction,
       airport: airportId,
-      location: locationId,
       vehicle: vehicleId,
     })
+    if (destination) {
+      params.set("destinationAddress", destination.address)
+      params.set("destinationLat", String(destination.lat))
+      params.set("destinationLng", String(destination.lng))
+      params.set("destinationPlaceId", destination.placeId)
+    }
     router.push(`/book?${params.toString()}`)
   }
 
   const airportField = (
     <div className="space-y-1.5">
       <Label className="text-xs font-medium text-muted-foreground">Airport</Label>
-      <Select value={airportId} onValueChange={setAirportId}>
+      <Select value={airportId} onValueChange={(value) => value && setAirportId(value)}>
         <SelectTrigger className="w-full">
           <Plane className="size-4 text-primary" />
           <SelectValue placeholder="Select airport" />
@@ -64,7 +90,15 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       <Label className="text-xs font-medium text-muted-foreground">
         {direction === "from-airport" ? "Drop-off" : "Pickup"}
       </Label>
-      <Select value={locationId} onValueChange={setLocationId}>
+      <DestinationPicker
+        onSelect={handlePlaceSelect}
+        onClear={() => {
+          setDestination(null)
+          setDistanceMiles(null)
+        }}
+        placeholder={direction === "from-airport" ? "Enter drop-off address" : "Enter pickup address"}
+      />
+      {/*
         <SelectTrigger className="w-full">
           <MapPin className="size-4 text-accent-foreground" />
           <SelectValue placeholder="Select location" />
@@ -76,7 +110,7 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
             </SelectItem>
           ))}
         </SelectContent>
-      </Select>
+      </Select> */}
     </div>
   )
 
@@ -120,7 +154,7 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
 
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Vehicle</Label>
-          <Select value={vehicleId} onValueChange={setVehicleId}>
+          <Select value={vehicleId} onValueChange={(value) => value && setVehicleId(value)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select vehicle" />
             </SelectTrigger>
@@ -157,7 +191,7 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       <Button
         className="mt-4 w-full"
         size="lg"
-        disabled={!locationId}
+        disabled={!destination || distanceLoading}
         onClick={handleContinue}
       >
         Continue to booking

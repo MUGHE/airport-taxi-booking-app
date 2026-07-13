@@ -11,7 +11,6 @@ const NAV = [
   { href: "/#fleet", label: "Our Fleet" },
   { href: "/#how", label: "How It Works" },
   { href: "/track", label: "Track Booking" },
-  { href: "/admin", label: "Admin" },
 ]
 
 export function SiteHeader() {

@@ -22,13 +22,19 @@ export interface VehicleClass {
   perMileAfter: number
   features: string[]
 }
-
 export interface ServiceLocation {
   id: string
   name: string
   area: string
-  /** Approximate driving distance from the airport in miles. */
-  distanceMiles: number
+  lat: number
+  lng: number
+}
+
+export interface Destination {
+  placeId: string
+  address: string
+  lat: number
+  lng: number
 }
 
 export interface Booking {
@@ -37,7 +43,9 @@ export interface Booking {
   paymentStatus: PaymentStatus
   direction: TripDirection
   airportId: string
-  locationId: string
+  destinationAddress: string
+  destinationLat: number
+  destinationLng: number
   vehicleId: string
   pickupDate: string
   pickupTime: string
@@ -56,7 +64,7 @@ export interface Booking {
   createdAt: string
 }
 
-export type NewBookingInput = Omit
+export type NewBookingInput = Omit<
   Booking,
-  "reference" | "status" | "createdAt" | "fare" | "distanceMiles"
+  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles"
 >

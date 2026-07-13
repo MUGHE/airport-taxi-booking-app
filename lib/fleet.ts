@@ -1,12 +1,33 @@
 import type { ServiceLocation, VehicleClass } from "./types"
 
 export const AIRPORTS: ServiceLocation[] = [
-  { id: "jfk", name: "JFK International", area: "Queens", distanceMiles: 0 },
-  { id: "lga", name: "LaGuardia (LGA)", area: "Queens", distanceMiles: 0 },
-  { id: "ewr", name: "Newark Liberty (EWR)", area: "New Jersey", distanceMiles: 0 },
-]
+  // --- HEATHROW (LHR) ---
+  { id: "lhr-t2", name: "London Heathrow (LHR) - Terminal 2", area: "Hillingdon", lat: 51.4714, lng: -0.4494 },
+  { id: "lhr-t3", name: "London Heathrow (LHR) - Terminal 3", area: "Hillingdon", lat: 51.4716, lng: -0.4578 },
+  { id: "lhr-t4", name: "London Heathrow (LHR) - Terminal 4", area: "Hillingdon", lat: 51.4595, lng: -0.4470 },
+  { id: "lhr-t5", name: "London Heathrow (LHR) - Terminal 5", area: "Hillingdon", lat: 51.4721, lng: -0.4878 },
 
-export const LOCATIONS: ServiceLocation[] = [
+  // --- GATWICK (LGW) ---
+  { id: "lgw-north", name: "London Gatwick (LGW) - North Terminal", area: "Crawley", lat: 51.1601, lng: -0.1771 },
+  { id: "lgw-south", name: "London Gatwick (LGW) - South Terminal", area: "Crawley", lat: 51.1492, lng: -0.1587 },
+
+  // --- STANSTED (STN) ---
+  { id: "stn", name: "London Stansted (STN)", area: "Uttlesford", lat: 51.8850, lng: 0.2350 },
+
+  // --- LUTON (LTN) ---
+  { id: "ltn", name: "London Luton (LTN)", area: "Luton", lat: 51.8747, lng: -0.3683 },
+
+  // --- LONDON CITY (LCY) ---
+  { id: "lcy", name: "London City (LCY)", area: "Newham", lat: 51.5053, lng: 0.0553 },
+
+  // --- SOUTHEND (SEN) ---
+  { id: "sen", name: "London Southend (SEN)", area: "Southend-on-Sea", lat: 51.5714, lng: 0.6956 }
+];
+
+
+type LegacyLocation = Omit<ServiceLocation, "lat" | "lng"> & { distanceMiles: number }
+
+export const LOCATIONS: LegacyLocation[] = [
   { id: "midtown", name: "Midtown Manhattan", area: "Manhattan", distanceMiles: 15 },
   { id: "downtown", name: "Downtown / Financial District", area: "Manhattan", distanceMiles: 17 },
   { id: "brooklyn", name: "Brooklyn Heights", area: "Brooklyn", distanceMiles: 11 },
@@ -26,10 +47,10 @@ export const MIN_DISTANCE_MILES = 10
 export const VEHICLE_CLASSES: VehicleClass[] = [
   {
     id: "standard",
-    name: "Standard Sedan",
-    description: "Comfortable everyday sedan, ideal for solo travelers and couples.",
+    name: "Standard Saloon",
+    description: "Comfortable everyday sedan, Up to 3 passengers plus 2 standard suitcases (25kg max), or 4 passengers plus hand luggage.",
     capacity: 3,
-    luggage: 2,
+    luggage: 2, 
     image: "/vehicles/standard-sedan.png",
     minFare: 40,
     perMileAfter: 1.7,
@@ -37,8 +58,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
   },
   {
     id: "executive",
-    name: "Executive Sedan",
-    description: "Premium business-class sedan with extra legroom and quiet ride.",
+    name: "Executive Car",
+    description: "Premium business-class sedan, Up to 3 passengers plus 3 standard suitcases (23kg max), or 4 passengers plus hand luggage.",
     capacity: 3,
     luggage: 3,
     image: "/vehicles/executive-sedan.png",
@@ -47,34 +68,56 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     features: ["Meet & greet", "Free 60 min wait", "Pro chauffeur", "Phone charger"],
   },
   {
-    id: "suv",
-    name: "SUV / Minivan",
-    description: "Spacious SUV for families or groups with plenty of luggage room.",
-    capacity: 6,
-    luggage: 6,
-    image: "/vehicles/suv-minivan.png",
+    id: "estate",
+    name: "Estate Car",
+    description: "Spacious Estate for families or groups, Up to 4 passengers plus 4 standard suitcases (23kg max).",
+    capacity: 4,
+    luggage: 4,
+    image: "/vehicles/estate-car.png",
+    minFare: 60,
+    perMileAfter: 2.5,
+    features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
+  },
+  {
+    id: "mpv",
+    name: "6 Seater MPV",
+    description: "Spacious, comfortable, and cost-effective travel, Up to 5 passengers plus 5 standard suitcases (23kg max), or 6 passengers plus hand luggage.",
+    capacity: 5,
+    luggage: 5,
+    image: "/vehicles/mpv-6seater.png",
     minFare: 65,
     perMileAfter: 2.5,
     features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
   },
   {
-    id: "luxury",
-    name: "First Class",
-    description: "Top-tier luxury vehicle for VIP arrivals and special occasions.",
-    capacity: 3,
-    luggage: 3,
-    image: "/vehicles/luxury-sedan.png",
-    minFare: 95,
-    perMileAfter: 3.5,
-    features: ["VIP meet & greet", "Free 90 min wait", "Premium interior", "Refreshments"],
+    id: "luxury_mpv",
+    name: "Executive MPV",
+    description: "premium luxury, sophisticated comfort, Up to 5 passengers plus 5 standard suitcases (23kg max), or 6 passengers plus hand luggage.",
+    capacity: 5,
+    luggage: 5,
+    image: "/vehicles/executive-mpv.png",
+    minFare: 85,
+    perMileAfter: 2.5,
+    features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
   },
+  // {
+  //   id: "luxury",
+  //   name: "First Class",
+  //   description: "Top-tier luxury vehicle for VIP arrivals and special occasions.",
+  //   capacity: 3,
+  //   luggage: 3,
+  //   image: "/vehicles/luxury-sedan.png",
+  //   minFare: 95,
+  //   perMileAfter: 3.5,
+  //   features: ["VIP meet & greet", "Free 90 min wait", "Premium interior", "Refreshments"],
+  // },
 ]
 
 export function getVehicle(id: string): VehicleClass | undefined {
   return VEHICLE_CLASSES.find((v) => v.id === id)
 }
 
-export function getLocation(id: string): ServiceLocation | undefined {
+export function getLocation(id: string): ServiceLocation | LegacyLocation | undefined {
   return [...LOCATIONS, ...AIRPORTS].find((l) => l.id === id)
 }
 
@@ -87,25 +130,13 @@ export interface FareQuote {
   fare: number
 }
 
-/**
- * Minimum-fare pricing: every trip costs at least the vehicle's minFare
- * (covers up to MIN_DISTANCE_MILES). Distance beyond that is billed per
- * mile at the vehicle's perMileAfter rate. Takes the vehicle object
- * directly so callers can pass live (admin-edited) pricing.
- */
 export function computeFare(
   vehicle: Pick<VehicleClass, "minFare" | "perMileAfter">,
-  locationId: string,
-): FareQuote | null {
-  const location = getLocation(locationId)
-  if (!location) return null
-
-  const distanceMiles = location.distanceMiles
+  distanceMiles: number,
+): FareQuote {
   const extraMiles = Math.max(0, distanceMiles - MIN_DISTANCE_MILES)
-  const raw = vehicle.minFare + extraMiles * vehicle.perMileAfter
-  const fare = Math.round(raw)
-
-  return { distanceMiles, fare }
+  const fare = Math.round(vehicle.minFare + extraMiles * vehicle.perMileAfter)
+  return { distanceMiles: Math.round(distanceMiles * 10) / 10, fare }
 }
 
 export function formatCurrency(value: number): string {
