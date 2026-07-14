@@ -160,7 +160,14 @@ export async function startBookingCheckout(
     }
 
     return { ok: true, url: checkoutSession.url }
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "STRIPE_SECRET_KEY is missing.") {
+      return {
+        ok: false,
+        error: "Payments are not configured. Add STRIPE_SECRET_KEY to the server environment and restart the app.",
+      }
+    }
+
     return {
       ok: false,
       error: "Payment is temporarily unavailable. Please try again.",
