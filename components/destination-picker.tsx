@@ -70,8 +70,17 @@ export function DestinationPicker({
         if (cancelled || !hostRef.current) return
 
         autocomplete = new PlaceAutocompleteElement()
+
         ;(autocomplete as any).placeholder = placeholder
         ;(autocomplete as any).value = defaultValue
+        const emptyIcon = document.createElement("span")
+        emptyIcon.slot = "input-icon"
+        autocomplete.appendChild(emptyIcon)
+        autocomplete.style.width = "100%"
+        autocomplete.style.maxWidth = "100%"
+        autocomplete.style.borderRadius = "var(--radius-lg)"
+        autocomplete.style.border = "1px solid var(--input)"
+        autocomplete.style.backgroundColor = "transparent"
 
         handleInput = () => onClearRef.current?.()
         handleSelect = async (event: Event) => {
@@ -108,10 +117,13 @@ export function DestinationPicker({
   }, [defaultValue, placeholder])
 
   return (
-    <div>
-      <div className="relative">
+    <div className="min-w-0">
+      <div className="relative min-w-0 overflow-hidden rounded-lg">
         <MapPin className="pointer-events-none absolute left-2.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-        <div ref={hostRef} className="min-h-9 [&>gmp-place-autocomplete]:block [&>gmp-place-autocomplete]:w-full" />
+        <div
+          ref={hostRef}
+          className="h-8 min-w-0 [&>gmp-place-autocomplete]:block [&>gmp-place-autocomplete]:h-full [&>gmp-place-autocomplete]:max-w-full [&>gmp-place-autocomplete]:w-full"
+        />
         {!ready && !error && (
           <Loader2 className="absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}

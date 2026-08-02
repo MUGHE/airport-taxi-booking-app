@@ -67,7 +67,7 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   }
 
   const airportField = (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label className="text-xs font-medium text-muted-foreground">Airport</Label>
       <Select value={airportId} onValueChange={(value) => value && setAirportId(value)}>
         <SelectTrigger className="w-full">
@@ -86,7 +86,7 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   )
 
   const locationField = (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label className="text-xs font-medium text-muted-foreground">
         {direction === "from-airport" ? "Drop-off" : "Pickup"}
       </Label>
@@ -115,7 +115,7 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   )
 
   return (
-    <div className="w-full rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6">
+    <div className="@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6">
       <div className="mb-4 inline-flex rounded-lg bg-secondary p-1 text-sm font-medium">
         <button
           type="button"
@@ -144,9 +144,9 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       </div>
 
       <div className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+        <div className="grid gap-4 @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]">
           {direction === "from-airport" ? airportField : locationField}
-          <div className="hidden pb-2.5 text-muted-foreground sm:block">
+          <div className="hidden  pt-2.5 items-center text-muted-foreground @min-[480px]:flex">
             <ArrowRightLeft className="size-4" />
           </div>
           {direction === "from-airport" ? locationField : airportField}

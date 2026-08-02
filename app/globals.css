@@ -156,6 +156,24 @@
   }
 }
 
+gmp-place-autocomplete {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--input);
+  background-color: transparent;
+  color-scheme: light dark;
+}
+
+.dark gmp-place-autocomplete {
+  background-color: color-mix(in oklch, var(--input) 30%, transparent);
+}
+
+gmp-place-autocomplete::part(input-icon) {
+  display: none !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
