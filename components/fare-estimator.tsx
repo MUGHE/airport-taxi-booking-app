@@ -107,7 +107,7 @@ export function FareEstimator() {
       <div className="grid gap-4">
         <div className="grid gap-4 @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end">
           {direction === "from-airport" ? airportField : locationField}
-          <div className="hidden items-center pb-2.5 text-muted-foreground @min-[480px]:flex">
+          <div className="hidden  pt-2.5 items-center text-muted-foreground @min-[480px]:flex">
             <ArrowRightLeft className="size-4" />
           </div>
           {direction === "from-airport" ? locationField : airportField}
