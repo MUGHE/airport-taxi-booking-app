@@ -1,10 +1,14 @@
 # airport-taxi-booking-app
 
+## Supabase database setup
+
+1. Create a Supabase project, then run `supabase/migrations/20260826000000_initial_schema.sql` in its SQL Editor.
+2. Copy `.env.example` to `.env.local`, and set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the project's API settings.
+3. Restart the development server.
+
+Bookings and vehicle pricing are now stored in Supabase. The service-role key is used only in server-side code; never expose it to the browser or commit it to git.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
-
-## Built with v0
-
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
 
 [Continue working on v0 →](https://v0.app/chat/projects/prj_X2Mpp5N4XB3AAQorNWs0Vgqky4sV)
 

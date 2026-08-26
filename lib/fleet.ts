@@ -54,6 +54,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     image: "/vehicles/standard-sedan.png",
     minFare: 40,
     perMileAfter: 1.7,
+    perMinuteRate: 0.5,
     features: ["Meet & greet", "Free 60 min wait", "Bottled water"],
   },
   {
@@ -65,6 +66,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     image: "/vehicles/executive-sedan.png",
     minFare: 55,
     perMileAfter: 2.2,
+    perMinuteRate: 0.5,
     features: ["Meet & greet", "Free 60 min wait", "Pro chauffeur", "Phone charger"],
   },
   {
@@ -76,6 +78,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     image: "/vehicles/estate-car.png",
     minFare: 60,
     perMileAfter: 2.5,
+    perMinuteRate: 0.5,
     features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
   },
   {
@@ -87,6 +90,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     image: "/vehicles/mpv-6seater.png",
     minFare: 65,
     perMileAfter: 2.5,
+    perMinuteRate: 0.5,
     features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
   },
   {
@@ -98,6 +102,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     image: "/vehicles/executive-mpv.png",
     minFare: 85,
     perMileAfter: 2.5,
+    perMinuteRate: 0.5,
     features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
   },
   // {
@@ -127,16 +132,26 @@ export function getAirport(id: string): ServiceLocation | undefined {
 
 export interface FareQuote {
   distanceMiles: number
+  durationMinutes: number
   fare: number
 }
 
 export function computeFare(
-  vehicle: Pick<VehicleClass, "minFare" | "perMileAfter">,
+  vehicle: Pick<VehicleClass, "minFare" | "perMileAfter" | "perMinuteRate">,
   distanceMiles: number,
+  durationMinutes: number,
 ): FareQuote {
   const extraMiles = Math.max(0, distanceMiles - MIN_DISTANCE_MILES)
-  const fare = Math.round(vehicle.minFare + extraMiles * vehicle.perMileAfter)
-  return { distanceMiles: Math.round(distanceMiles * 10) / 10, fare }
+  const fare = Math.round(
+    vehicle.minFare +
+      extraMiles * vehicle.perMileAfter +
+      Math.max(0, durationMinutes) * vehicle.perMinuteRate,
+  )
+  return {
+    distanceMiles: Math.round(distanceMiles * 10) / 10,
+    durationMinutes: Math.max(0, Math.ceil(durationMinutes)),
+    fare,
+  }
 }
 
 export function formatCurrency(value: number): string {

@@ -11,14 +11,18 @@ import { updateVehiclePricing } from "@/lib/actions"
 import type { VehicleClass } from "@/lib/types"
 import { toast } from "sonner"
 
+function formatRate(value: number): string {
+  return `£${value.toFixed(2)}`
+}
+
 export function PricingPanel({ vehicles }: { vehicles: VehicleClass[] }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="mb-4">
         <h2 className="text-lg font-semibold tracking-tight">Vehicle pricing</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Set the minimum fare (covers the first 10 miles) and the per-mile
-          rate charged beyond that, for each vehicle class.
+          Set the minimum fare, distance rate, and driving-time rate for each
+          vehicle class.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -34,14 +38,18 @@ function VehicleRateRow({ vehicle }: { vehicle: VehicleClass }) {
   const router = useRouter()
   const [minFare, setMinFare] = useState(String(vehicle.minFare))
   const [perMileAfter, setPerMileAfter] = useState(String(vehicle.perMileAfter))
+  const [perMinuteRate, setPerMinuteRate] = useState(String(vehicle.perMinuteRate))
   const [isPending, startTransition] = useTransition()
 
   const dirty =
-    Number(minFare) !== vehicle.minFare || Number(perMileAfter) !== vehicle.perMileAfter
+    Number(minFare) !== vehicle.minFare ||
+    Number(perMileAfter) !== vehicle.perMileAfter ||
+    Number(perMinuteRate) !== vehicle.perMinuteRate
 
   function save() {
     const minFareNum = Number(minFare)
     const perMileNum = Number(perMileAfter)
+    const perMinuteNum = Number(perMinuteRate)
     if (!Number.isFinite(minFareNum) || minFareNum < 0) {
       toast.error("Enter a valid minimum fare.")
       return
@@ -50,8 +58,12 @@ function VehicleRateRow({ vehicle }: { vehicle: VehicleClass }) {
       toast.error("Enter a valid per-mile rate.")
       return
     }
+    if (!Number.isFinite(perMinuteNum) || perMinuteNum < 0) {
+      toast.error("Enter a valid per-minute rate.")
+      return
+    }
     startTransition(async () => {
-      const res = await updateVehiclePricing(vehicle.id, minFareNum, perMileNum)
+      const res = await updateVehiclePricing(vehicle.id, minFareNum, perMileNum, perMinuteNum)
       if (res.ok) {
         toast.success(`${vehicle.name} pricing updated.`)
         router.refresh()
@@ -66,10 +78,10 @@ function VehicleRateRow({ vehicle }: { vehicle: VehicleClass }) {
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-medium">{vehicle.name}</h3>
         <span className="text-xs text-muted-foreground">
-          currently {formatCurrency(vehicle.minFare)} min · {formatCurrency(vehicle.perMileAfter)}/mi
+          {formatCurrency(vehicle.minFare)} min · {formatRate(vehicle.perMileAfter)}/mi · {formatRate(vehicle.perMinuteRate)}/min
         </span>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">Min fare (£, first 10mi)</Label>
           <Input
@@ -78,6 +90,16 @@ function VehicleRateRow({ vehicle }: { vehicle: VehicleClass }) {
             step="0.5"
             value={minFare}
             onChange={(e) => setMinFare(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Per driving minute (£)</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.1"
+            value={perMinuteRate}
+            onChange={(e) => setPerMinuteRate(e.target.value)}
           />
         </div>
         <div className="space-y-1.5">

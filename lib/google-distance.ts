@@ -3,10 +3,15 @@ interface LatLng {
   lng: number
 }
 
-export async function calculateDrivingMiles(
+export interface DrivingRoute {
+  distanceMiles: number
+  durationMinutes: number
+}
+
+export async function calculateDrivingRoute(
   origin: LatLng,
   destination: LatLng,
-): Promise<number | null> {
+): Promise<DrivingRoute | null> {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
   if (!apiKey) throw new Error("GOOGLE_MAPS_SERVER_API_KEY is missing.")
 
@@ -15,7 +20,7 @@ export async function calculateDrivingMiles(
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": "routes.distanceMeters",
+      "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
     },
     body: JSON.stringify({
       origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
@@ -28,6 +33,13 @@ export async function calculateDrivingMiles(
   if (!res.ok) return null
 
   const data = await res.json()
-  const distanceMeters = data?.routes?.[0]?.distanceMeters
-  return typeof distanceMeters === "number" ? distanceMeters / 1609.344 : null
+  const route = data?.routes?.[0]
+  const distanceMeters = route?.distanceMeters
+  const durationSeconds = typeof route?.duration === "string" ? Number.parseFloat(route.duration) : NaN
+  if (typeof distanceMeters !== "number" || !Number.isFinite(durationSeconds)) return null
+
+  return {
+    distanceMiles: distanceMeters / 1609.344,
+    durationMinutes: Math.ceil(durationSeconds / 60),
+  }
 }

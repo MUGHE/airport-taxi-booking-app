@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import {
@@ -26,11 +26,9 @@ import {
 } from "@/components/ui/select"
 import {
   AIRPORTS,
-  VEHICLE_CLASSES,
   computeFare,
   formatCurrency,
   getAirport,
-  getLocation,
   getVehicle,
 } from "@/lib/fleet"
 import { createBooking, getDistanceQuote } from "@/lib/actions"
@@ -45,8 +43,17 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   const router = useRouter()
   const params = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const hasPrefilledTrip = Boolean(
+    params.get("destinationAddress") &&
+      params.get("destinationLat") != null &&
+      params.get("destinationLng") != null &&
+      Number.isFinite(Number(params.get("destinationLat"))) &&
+      Number.isFinite(Number(params.get("destinationLng"))) &&
+      params.get("pickupDate") &&
+      params.get("pickupTime"),
+  )
 
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => (hasPrefilledTrip ? 1 : 0))
   const [direction, setDirection] = useState<TripDirection>(
     (params.get("direction") as TripDirection) || "from-airport",
   )
@@ -60,8 +67,8 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       : null
   })
   const [vehicleId, setVehicleId] = useState(params.get("vehicle") || "")
-  const [pickupDate, setPickupDate] = useState("")
-  const [pickupTime, setPickupTime] = useState("")
+  const [pickupDate, setPickupDate] = useState(params.get("pickupDate") || "")
+  const [pickupTime, setPickupTime] = useState(params.get("pickupTime") || "")
   const [flightNumber, setFlightNumber] = useState("")
   const [passengers, setPassengers] = useState(1)
   const [bags, setBags] = useState(1)
@@ -73,25 +80,51 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   const vehicle = vehicles.find((v) => v.id === vehicleId)
 
   const [distanceMiles, setDistanceMiles] = useState<number | null>(null)
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
   const [distanceLoading, setDistanceLoading] = useState(false)
 
 
-  async function handlePlaceSelect(place: PlaceSelection) {
+  function handlePlaceSelect(place: PlaceSelection) {
     setDestination(place)
-    setDistanceMiles(null)
-    setDistanceLoading(true)
-    const res = await getDistanceQuote(airportId, { lat: place.lat, lng: place.lng })
-    setDistanceLoading(false)
-    if (res.ok && res.distanceMiles != null) {
-      setDistanceMiles(res.distanceMiles)
-    } else {
-      toast.error(res.error || "Couldn't calculate distance for that address.")
-    }
   }
 
+  useEffect(() => {
+    let active = true
+
+    if (!destination) {
+      setDistanceMiles(null)
+      setDurationMinutes(null)
+      setDistanceLoading(false)
+      return
+    }
+
+    setDistanceMiles(null)
+    setDistanceLoading(true)
+    void getDistanceQuote(airportId, { lat: destination.lat, lng: destination.lng })
+      .then((res) => {
+        if (!active) return
+        if (res.ok && res.distanceMiles != null && res.durationMinutes != null) {
+          setDistanceMiles(res.distanceMiles)
+          setDurationMinutes(res.durationMinutes)
+        } else {
+          toast.error(res.error || "Couldn't calculate distance for that address.")
+        }
+      })
+      .catch(() => {
+        if (active) toast.error("Couldn't calculate distance for that address.")
+      })
+      .finally(() => {
+        if (active) setDistanceLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [airportId, destination])
+
   const quote = useMemo(
-    () => (vehicle && distanceMiles != null ? computeFare(vehicle, distanceMiles) : null),
-    [vehicle, distanceMiles],
+    () => (vehicle && distanceMiles != null && durationMinutes != null ? computeFare(vehicle, distanceMiles, durationMinutes) : null),
+    [vehicle, distanceMiles, durationMinutes],
   )
   const airport = getAirport(airportId)
   const today = new Date().toISOString().slice(0, 10)
@@ -159,13 +192,12 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
               onDestinationClear={() => {
                 setDestination(null)
                 setDistanceMiles(null)
+                setDurationMinutes(null)
               }}
               pickupDate={pickupDate}
               setPickupDate={setPickupDate}
               pickupTime={pickupTime}
               setPickupTime={setPickupTime}
-              flightNumber={flightNumber}
-              setFlightNumber={setFlightNumber}
               today={today}
             />
           )}
@@ -175,6 +207,7 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
               vehicleId={vehicleId}
               setVehicleId={setVehicleId}
               distanceMiles={distanceMiles}
+              durationMinutes={durationMinutes}
               vehicles={vehicles}
             />
           )}
@@ -193,6 +226,9 @@ export function BookingFlow({ vehicles = [] }: { vehicles: VehicleClass[] }) {
               setBags={setBags}
               notes={notes}
               setNotes={setNotes}
+              direction={direction}
+              flightNumber={flightNumber}
+              setFlightNumber={setFlightNumber}
               maxCapacity={vehicle?.capacity ?? 6}
             />
           )}
@@ -305,8 +341,6 @@ function TripStep(props: {
   setPickupDate: (v: string) => void
   pickupTime: string
   setPickupTime: (v: string) => void
-  flightNumber: string
-  setFlightNumber: (v: string) => void
   today: string
 }) {
   return (
@@ -400,19 +434,6 @@ function TripStep(props: {
           />
         </Field>
 
-        <Field
-          label={
-            props.direction === "from-airport"
-              ? "Arriving flight number (recommended)"
-              : "Departing flight number (optional)"
-          }
-        >
-          <Input
-            placeholder="e.g. BA117"
-            value={props.flightNumber}
-            onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())}
-          />
-        </Field>
       </div>
     </div>
   )
@@ -422,11 +443,13 @@ function VehicleStep({
   vehicleId,
   setVehicleId,
   distanceMiles,
+  durationMinutes,
   vehicles,
 }: {
   vehicleId: string
   setVehicleId: (v: string) => void
   distanceMiles: number | null
+  durationMinutes: number | null
   vehicles: VehicleClass[]
 }) {
   return (
@@ -436,8 +459,10 @@ function VehicleStep({
         desc="Fares are fixed and include all taxes, tolls, and gratuity."
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        {VEHICLE_CLASSES.map((v) => {
-          const q = distanceMiles != null ? computeFare(v, distanceMiles) : null
+        {vehicles.map((v) => {
+          const q = distanceMiles != null && durationMinutes != null
+            ? computeFare(v, distanceMiles, durationMinutes)
+            : null
           const selected = v.id === vehicleId
           return (
             <button
@@ -501,6 +526,9 @@ function DetailsStep(props: {
   setBags: (v: number) => void
   notes: string
   setNotes: (v: string) => void
+  direction: TripDirection
+  flightNumber: string
+  setFlightNumber: (v: string) => void
   maxCapacity: number
 }) {
   return (
@@ -531,6 +559,19 @@ function DetailsStep(props: {
             value={props.phone}
             onChange={(e) => props.setPhone(e.target.value)}
             placeholder="+1 555 000 0000"
+          />
+        </Field>
+        <Field
+          label={
+            props.direction === "from-airport"
+              ? "Arriving flight number (recommended)"
+              : "Departing flight number (optional)"
+          }
+        >
+          <Input
+            placeholder="e.g. BA117"
+            value={props.flightNumber}
+            onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())}
           />
         </Field>
         <div className="grid grid-cols-2 gap-4">

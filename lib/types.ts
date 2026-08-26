@@ -20,6 +20,8 @@ export interface VehicleClass {
   minFare: number
   /** Rate charged per mile once distance exceeds MIN_DISTANCE_MILES. */
   perMileAfter: number
+  /** Rate charged for each minute of driving time. */
+  perMinuteRate: number
   features: string[]
 }
 export interface ServiceLocation {

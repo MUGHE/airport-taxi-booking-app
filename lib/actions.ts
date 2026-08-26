@@ -16,7 +16,7 @@ import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./aut
 import { isAdminAuthenticated } from "./session"
 import type { Booking, BookingStatus, NewBookingInput, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
-import { calculateDrivingMiles } from "./google-distance"
+import { calculateDrivingRoute } from "./google-distance"
 import { computeFare, getAirport } from "./fleet"
 
 
@@ -80,13 +80,13 @@ export async function createBooking(input: NewBookingInput): Promise<CreateBooki
   const vehicle = vehicles.find((v) => v.id === input.vehicleId)
   if (!vehicle) return { ok: false, error: "Unknown vehicle." }
 
-  const miles = await calculateDrivingMiles(
+  const route = await calculateDrivingRoute(
     { lat: airport.lat, lng: airport.lng },
     { lat: input.destinationLat, lng: input.destinationLng },
   )
-  if (miles == null) return { ok: false, error: "Unable to price this trip." }
+  if (route == null) return { ok: false, error: "Unable to price this trip." }
 
-  const quote = computeFare(vehicle, miles)
+  const quote = computeFare(vehicle, route.distanceMiles, route.durationMinutes)
 
   const booking: Booking = {
     ...input,
@@ -264,6 +264,7 @@ export async function updateVehiclePricing(
   vehicleId: string,
   minFare: number,
   perMileAfter: number,
+  perMinuteRate: number,
 ): Promise<UpdateVehiclePricingResult> {
   if (!(await isAdminAuthenticated())) {
     return { ok: false, error: "Not authorized." }
@@ -274,7 +275,10 @@ export async function updateVehiclePricing(
   if (!Number.isFinite(perMileAfter) || perMileAfter < 0) {
     return { ok: false, error: "Per-mile rate must be a positive number." }
   }
-  const updated = await setVehiclePricing(vehicleId, minFare, perMileAfter)
+  if (!Number.isFinite(perMinuteRate) || perMinuteRate < 0) {
+    return { ok: false, error: "Per-minute rate must be a positive number." }
+  }
+  const updated = await setVehiclePricing(vehicleId, minFare, perMileAfter, perMinuteRate)
   if (!updated) return { ok: false, error: "Vehicle not found." }
   revalidatePath("/admin")
   revalidatePath("/")
@@ -285,6 +289,7 @@ export async function updateVehiclePricing(
 export interface DistanceQuoteResult {
   ok: boolean
   distanceMiles?: number
+  durationMinutes?: number
   error?: string
 }
 
@@ -296,14 +301,18 @@ export async function getDistanceQuote(
   if (!airport) return { ok: false, error: "Unknown airport." }
 
   try {
-    const miles = await calculateDrivingMiles(
+    const route = await calculateDrivingRoute(
       { lat: airport.lat, lng: airport.lng },
       destination,
     )
-    if (miles == null) {
+    if (route == null) {
       return { ok: false, error: "Couldn't find a driving route to that address." }
     }
-    return { ok: true, distanceMiles: Math.round(miles * 10) / 10 }
+    return {
+      ok: true,
+      distanceMiles: Math.round(route.distanceMiles * 10) / 10,
+      durationMinutes: route.durationMinutes,
+    }
   } catch {
     return { ok: false, error: "Distance service is temporarily unavailable." }
   }

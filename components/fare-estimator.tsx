@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRight, ArrowRightLeft, MapPin, Plane } from "lucide-react"
+import { ArrowRight, ArrowRightLeft, Plane } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -12,62 +13,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { AIRPORTS, LOCATIONS, computeFare, formatCurrency } from "@/lib/fleet"
-import type { TripDirection, VehicleClass } from "@/lib/types"
+import { AIRPORTS } from "@/lib/fleet"
+import type { TripDirection } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
-import { getDistanceQuote } from "@/lib/actions"
-import { toast } from "sonner"
 
-
-export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
+export function FareEstimator() {
   const router = useRouter()
   const [direction, setDirection] = useState<TripDirection>("from-airport")
   const [airportId, setAirportId] = useState(AIRPORTS[0].id)
-  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "executive")
-
   const [destination, setDestination] = useState<PlaceSelection | null>(null)
-  const [distanceMiles, setDistanceMiles] = useState<number | null>(null)
-  const [distanceLoading, setDistanceLoading] = useState(false)
-
-  async function handlePlaceSelect(place: PlaceSelection) {
-    setDestination(place)
-    setDistanceMiles(null)
-    setDistanceLoading(true)
-    const res = await getDistanceQuote(airportId, { lat: place.lat, lng: place.lng })
-    setDistanceLoading(false)
-    if (res.ok && res.distanceMiles != null) {
-      setDistanceMiles(res.distanceMiles)
-    } else {
-      toast.error(res.error || "Couldn't calculate distance for that address.")
-    }
-  }
-
-
-  const vehicle = vehicles.find((v) => v.id === vehicleId)
-
-  const quote = useMemo(
-    () => (vehicle && distanceMiles != null ? computeFare(vehicle, distanceMiles) : null),
-    [vehicle, distanceMiles],
-  )
+  const [pickupDate, setPickupDate] = useState("")
+  const [pickupTime, setPickupTime] = useState("")
+  const today = new Date().toISOString().slice(0, 10)
 
   function handleContinue() {
+    if (!destination || !pickupDate || !pickupTime) return
+
     const params = new URLSearchParams({
       direction,
       airport: airportId,
-      vehicle: vehicleId,
+      pickupDate,
+      pickupTime,
+      destinationAddress: destination.address,
+      destinationLat: String(destination.lat),
+      destinationLng: String(destination.lng),
+      destinationPlaceId: destination.placeId,
     })
-    if (destination) {
-      params.set("destinationAddress", destination.address)
-      params.set("destinationLat", String(destination.lat))
-      params.set("destinationLng", String(destination.lng))
-      params.set("destinationPlaceId", destination.placeId)
-    }
     router.push(`/book?${params.toString()}`)
   }
 
   const airportField = (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label className="text-xs font-medium text-muted-foreground">Airport</Label>
       <Select value={airportId} onValueChange={(value) => value && setAirportId(value)}>
         <SelectTrigger className="w-full">
@@ -75,9 +52,9 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
           <SelectValue placeholder="Select airport" />
         </SelectTrigger>
         <SelectContent>
-          {AIRPORTS.map((a) => (
-            <SelectItem key={a.id} value={a.id}>
-              {a.name}
+          {AIRPORTS.map((airport) => (
+            <SelectItem key={airport.id} value={airport.id}>
+              {airport.name}
             </SelectItem>
           ))}
         </SelectContent>
@@ -86,36 +63,20 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
   )
 
   const locationField = (
-    <div className="space-y-1.5">
+    <div className="min-w-0 space-y-1.5">
       <Label className="text-xs font-medium text-muted-foreground">
         {direction === "from-airport" ? "Drop-off" : "Pickup"}
       </Label>
       <DestinationPicker
-        onSelect={handlePlaceSelect}
-        onClear={() => {
-          setDestination(null)
-          setDistanceMiles(null)
-        }}
+        onSelect={setDestination}
+        onClear={() => setDestination(null)}
         placeholder={direction === "from-airport" ? "Enter drop-off address" : "Enter pickup address"}
       />
-      {/*
-        <SelectTrigger className="w-full">
-          <MapPin className="size-4 text-accent-foreground" />
-          <SelectValue placeholder="Select location" />
-        </SelectTrigger>
-        <SelectContent>
-          {LOCATIONS.map((l) => (
-            <SelectItem key={l.id} value={l.id}>
-              {l.name} · {l.area}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select> */}
     </div>
   )
 
   return (
-    <div className="w-full rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6">
+    <div className="@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6">
       <div className="mb-4 inline-flex rounded-lg bg-secondary p-1 text-sm font-medium">
         <button
           type="button"
@@ -144,57 +105,42 @@ export function FareEstimator({ vehicles = [] }: { vehicles: VehicleClass[] }) {
       </div>
 
       <div className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+        <div className="grid gap-4 @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end">
           {direction === "from-airport" ? airportField : locationField}
-          <div className="hidden pb-2.5 text-muted-foreground sm:block">
+          <div className="hidden items-center pb-2.5 text-muted-foreground @min-[480px]:flex">
             <ArrowRightLeft className="size-4" />
           </div>
           {direction === "from-airport" ? locationField : airportField}
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Vehicle</Label>
-          <Select value={vehicleId} onValueChange={(value) => value && setVehicleId(value)}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select vehicle" />
-            </SelectTrigger>
-            <SelectContent>
-              {vehicles.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.name} · up to {v.capacity} pax
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="mt-5 flex items-center justify-between rounded-xl bg-secondary/70 px-4 py-3">
-        <div>
-          <p className="text-xs text-muted-foreground">Estimated fixed fare</p>
-          <p className="text-2xl font-semibold tabular-nums">
-            {quote ? formatCurrency(quote.fare) : "—"}
-          </p>
-        </div>
-        <div className="text-right text-xs text-muted-foreground">
-          {quote ? (
-            <>
-              <p>{quote.distanceMiles} miles</p>
-              <p>All taxes included</p>
-            </>
-          ) : (
-            <p>Select a location</p>
-          )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Pickup date</Label>
+            <Input
+              type="date"
+              min={today}
+              value={pickupDate}
+              onChange={(event) => setPickupDate(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Pickup time</Label>
+            <Input
+              type="time"
+              value={pickupTime}
+              onChange={(event) => setPickupTime(event.target.value)}
+            />
+          </div>
         </div>
       </div>
 
       <Button
-        className="mt-4 w-full"
+        className="mt-5 w-full"
         size="lg"
-        disabled={!destination || distanceLoading}
+        disabled={!destination || !pickupDate || !pickupTime}
         onClick={handleContinue}
       >
-        Continue to booking
+        Choose your vehicle
         <ArrowRight className="size-4" />
       </Button>
     </div>
