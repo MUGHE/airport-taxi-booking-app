@@ -7,7 +7,7 @@ export type BookingStatus =
 
 export type PaymentStatus = "unpaid" | "paid"
 
-export type TripDirection = "from-airport" | "to-airport"
+export type TripDirection = "from-airport" | "to-airport" | "custom"
 
 export interface VehicleClass {
   id: string
@@ -39,6 +39,12 @@ export interface Destination {
   lng: number
 }
 
+export interface BookingAddOn {
+  id: string
+  name: string
+  price: number
+}
+
 export interface Booking {
   reference: string
   status: BookingStatus
@@ -48,6 +54,12 @@ export interface Booking {
   destinationAddress: string
   destinationLat: number
   destinationLng: number
+  pickupAddress?: string
+  pickupLat?: number
+  pickupLng?: number
+  dropoffAddress?: string
+  dropoffLat?: number
+  dropoffLng?: number
   vehicleId: string
   pickupDate: string
   pickupTime: string
@@ -60,6 +72,8 @@ export interface Booking {
   notes: string
   fare: number
   distanceMiles: number
+  addOns: BookingAddOn[]
+  addOnsTotal: number
   stripeCheckoutSessionId?: string
   stripePaymentIntentId?: string
   paidAt?: string
@@ -68,5 +82,5 @@ export interface Booking {
 
 export type NewBookingInput = Omit<
   Booking,
-  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles"
+  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal"
 >

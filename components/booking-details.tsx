@@ -17,8 +17,8 @@ import { STATUS_LABELS, STATUS_STYLES } from "@/lib/status"
 export function BookingDetails({ booking }: { booking: Booking }) {
   const airport = getAirport(booking.airportId)
   const vehicle = getVehicle(booking.vehicleId)
-  const from = booking.direction === "from-airport" ? airport?.name : booking.destinationAddress
-  const to = booking.direction === "from-airport" ? booking.destinationAddress : airport?.name
+  const from = booking.pickupAddress ?? (booking.direction === "from-airport" ? airport?.name : booking.destinationAddress)
+  const to = booking.dropoffAddress ?? (booking.direction === "from-airport" ? booking.destinationAddress : airport?.name)
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -47,6 +47,11 @@ export function BookingDetails({ booking }: { booking: Booking }) {
         <Item icon={<CarFront className="size-4" />} label="Vehicle">
           {vehicle?.name}
         </Item>
+        {booking.addOns.length > 0 && (
+          <Item icon={<CircleDollarSign className="size-4" />} label="Add-ons">
+            {booking.addOns.map((addOn) => addOn.name).join(", ")} ({formatCurrency(booking.addOnsTotal)})
+          </Item>
+        )}
         {booking.flightNumber && (
           <Item icon={<Plane className="size-4" />} label="Flight">
             {booking.flightNumber}
@@ -54,6 +59,9 @@ export function BookingDetails({ booking }: { booking: Booking }) {
         )}
         <Item icon={<Users className="size-4" />} label="Party">
           {booking.passengers} passenger(s), {booking.bags} bag(s)
+        </Item>
+        <Item icon={<Users className="size-4" />} label="Customer">
+          {booking.customerName}
         </Item>
         <Item icon={<Mail className="size-4" />} label="Email">
           {booking.email}

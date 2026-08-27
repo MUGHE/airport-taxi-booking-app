@@ -6,18 +6,21 @@ import {
   findBooking,
   generateReference,
   listBookings,
+  listActiveAddOns,
+  listAddOns,
   listVehiclesWithPricing,
   markBookingAsPaid,
   saveBooking,
   setBookingStatus,
   updateVehiclePricing as setVehiclePricing,
+  upsertAddOn as saveAddOn,
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingStatus, NewBookingInput, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, NewBookingInput, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
-import { computeFare, getAirport } from "./fleet"
+import { computeFare } from "./fleet"
 
 
 export interface LoginResult {
@@ -61,40 +64,46 @@ export interface CreateBookingResult {
   error?: string
 }
 
-export async function createBooking(input: NewBookingInput): Promise<CreateBookingResult> {
+export async function createBooking(input: NewBookingInput & { addOnIds: string[] }): Promise<CreateBookingResult> {
   if (!input.customerName?.trim()) return { ok: false, error: "Name is required." }
   if (!input.email?.trim()) return { ok: false, error: "Email is required." }
   if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
-  if (!input.airportId || !input.vehicleId) return { ok: false, error: "Please complete your trip details." }
-  if (!Number.isFinite(input.destinationLat) || !Number.isFinite(input.destinationLng)) {
-    return { ok: false, error: "Please select a destination address." }
+  if (!input.vehicleId) return { ok: false, error: "Please complete your trip details." }
+  if (!Number.isFinite(input.pickupLat) || !Number.isFinite(input.pickupLng) || !Number.isFinite(input.dropoffLat) || !Number.isFinite(input.dropoffLng)) {
+    return { ok: false, error: "Please select both pickup and drop-off locations." }
   }
   if (!input.pickupDate || !input.pickupTime) {
     return { ok: false, error: "Please choose a pickup date and time." }
   }
 
-  const airport = getAirport(input.airportId)
-  if (!airport) return { ok: false, error: "Unknown airport." }
-
   const vehicles = await listVehiclesWithPricing()
   const vehicle = vehicles.find((v) => v.id === input.vehicleId)
   if (!vehicle) return { ok: false, error: "Unknown vehicle." }
+  if (input.passengers > vehicle.capacity || input.bags > vehicle.luggage) {
+    return { ok: false, error: "Passenger or bag count exceeds this vehicle's capacity." }
+  }
 
   const route = await calculateDrivingRoute(
-    { lat: airport.lat, lng: airport.lng },
-    { lat: input.destinationLat, lng: input.destinationLng },
+    { lat: input.pickupLat!, lng: input.pickupLng! },
+    { lat: input.dropoffLat!, lng: input.dropoffLng! },
   )
   if (route == null) return { ok: false, error: "Unable to price this trip." }
 
   const quote = computeFare(vehicle, route.distanceMiles, route.durationMinutes)
+  const availableAddOns = await listActiveAddOns()
+  const selectedIds = new Set(input.addOnIds)
+  const addOns = availableAddOns.filter((addOn) => selectedIds.has(addOn.id))
+  const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
 
   const booking: Booking = {
     ...input,
     reference: generateReference(),
     status: "pending",
     paymentStatus: "unpaid",
-    fare: quote.fare,
+    fare: quote.fare + addOnsTotal,
     distanceMiles: quote.distanceMiles,
+    addOns,
+    addOnsTotal,
     createdAt: new Date().toISOString(),
   }
 
@@ -254,6 +263,26 @@ export async function getVehicleFleet(): Promise<VehicleClass[]> {
   return listVehiclesWithPricing()
 }
 
+export async function getBookingAddOns(): Promise<BookingAddOn[]> {
+  return listActiveAddOns()
+}
+
+export async function getAllBookingAddOns() {
+  if (!(await isAdminAuthenticated())) return []
+  return listAddOns()
+}
+
+export async function upsertBookingAddOn(addOn: { id?: string; name: string; price: number; active: boolean }) {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  const name = addOn.name.trim()
+  if (!name) return { ok: false, error: "Add-on name is required." }
+  if (!Number.isFinite(addOn.price) || addOn.price < 0) return { ok: false, error: "Enter a valid add-on price." }
+  const saved = await saveAddOn({ id: addOn.id || crypto.randomUUID(), name, price: addOn.price, active: addOn.active })
+  if (!saved) return { ok: false, error: "Could not save the add-on." }
+  revalidatePath("/admin"); revalidatePath("/book"); revalidatePath("/")
+  return { ok: true, addOn: saved }
+}
+
 export interface UpdateVehiclePricingResult {
   ok: boolean
   vehicle?: VehicleClass
@@ -294,16 +323,13 @@ export interface DistanceQuoteResult {
 }
 
 export async function getDistanceQuote(
-  airportId: string,
-  destination: { lat: number; lng: number },
+  pickup: { lat: number; lng: number },
+  dropoff: { lat: number; lng: number },
 ): Promise<DistanceQuoteResult> {
-  const airport = getAirport(airportId)
-  if (!airport) return { ok: false, error: "Unknown airport." }
-
   try {
     const route = await calculateDrivingRoute(
-      { lat: airport.lat, lng: airport.lng },
-      destination,
+      pickup,
+      dropoff,
     )
     if (route == null) {
       return { ok: false, error: "Couldn't find a driving route to that address." }

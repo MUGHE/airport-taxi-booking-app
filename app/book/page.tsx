@@ -3,9 +3,9 @@ import { Loader2 } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { BookingFlow } from "@/components/booking/booking-flow"
-import { getVehicleFleet } from "@/lib/actions"
+import { getBookingAddOns, getVehicleFleet } from "@/lib/actions"
 export default async function BookPage() {
-  const vehicles =  await getVehicleFleet();
+  const [vehicles, addOns] = await Promise.all([getVehicleFleet(), getBookingAddOns()])
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -24,7 +24,7 @@ export default async function BookPage() {
             </div>
           }
         >
-          <BookingFlow vehicles={vehicles} />
+          <BookingFlow vehicles={vehicles} addOns={addOns} />
         </Suspense>
       </main>
       <SiteFooter />

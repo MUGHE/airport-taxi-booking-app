@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarClock, Car, CircleDollarSign, Search, TicketCheck } from "lucide-react"
+import { CalendarClock, Car, CircleDollarSign, Eye, Search, TicketCheck, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { BookingDetails } from "@/components/booking-details"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -33,6 +35,7 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const stats = useMemo(() => {
@@ -120,20 +123,21 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
                 <TableHead>Vehicle</TableHead>
                 <TableHead className="text-right">Fare</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                     No bookings match your filters.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((b) => {
                   const airport = getAirport(b.airportId)
-                  const from = b.direction === "from-airport" ? airport?.name : b.destinationAddress
-                  const to = b.direction === "from-airport" ? b.destinationAddress : airport?.name
+                  const from = b.pickupAddress ?? (b.direction === "from-airport" ? airport?.name : b.destinationAddress)
+                  const to = b.dropoffAddress ?? (b.direction === "from-airport" ? b.destinationAddress : airport?.name)
                   return (
                     <TableRow key={b.reference}>
                       <TableCell className="font-mono text-xs font-medium tracking-wider">
@@ -143,6 +147,7 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
                         <div className="font-medium">{b.customerName}</div>
                         <div className="text-xs text-muted-foreground">{b.phone}</div>
                       </TableCell>
+                      <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => setSelectedBooking(b)}><Eye className="size-3.5" />View</Button></TableCell>
                       <TableCell className="text-sm">
                         <span className="text-muted-foreground">{from}</span> →{" "}
                         <span className="text-muted-foreground">{to}</span>
@@ -188,6 +193,7 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
           </Table>
         </div>
       </div>
+      {selectedBooking && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Booking details"><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"><div className="mb-2 flex justify-end"><Button variant="secondary" size="icon-sm" onClick={() => setSelectedBooking(null)} aria-label="Close booking details"><X /></Button></div><BookingDetails booking={selectedBooking} /></div></div>}
     </div>
   )
 }

@@ -198,6 +198,7 @@ export function DestinationPicker({
             await place.fetchFields({
               fields: [
                 "id",
+                "displayName",
                 "formattedAddress",
                 "location",
               ],
@@ -216,7 +217,20 @@ export function DestinationPicker({
               return
             }
 
-            const address = place.formattedAddress ?? ""
+            // Google can return a broad formatted address for stations and
+            // landmarks (for example, "Hounslow, UK"). Preserve the place's
+            // display name so customers can recognise their exact selection.
+            const displayName =
+              typeof place.displayName === "string"
+                ? place.displayName
+                : place.displayName?.text ?? ""
+            const formattedAddress = place.formattedAddress ?? ""
+            const address =
+              displayName &&
+              formattedAddress &&
+              !formattedAddress.toLocaleLowerCase().includes(displayName.toLocaleLowerCase())
+                ? `${displayName}, ${formattedAddress}`
+                : displayName || formattedAddress
 
             const selection: PlaceSelection = {
               placeId: place.id ?? "",

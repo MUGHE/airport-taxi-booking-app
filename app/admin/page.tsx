@@ -3,12 +3,13 @@ import { SiteFooter } from "@/components/site-footer"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import { PricingPanel } from "@/components/admin/pricing-panel"
 import { LogoutButton } from "@/components/admin/logout-button"
-import { getAllBookings, getVehicleFleet } from "@/lib/actions"
+import { AddOnsPanel } from "@/components/admin/add-ons-panel"
+import { getAllBookingAddOns, getAllBookings, getVehicleFleet } from "@/lib/actions"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminPage() {
-  const [bookings, vehicles] = await Promise.all([getAllBookings(), getVehicleFleet()])
+  const [bookings, vehicles, addOns] = await Promise.all([getAllBookings(), getVehicleFleet(), getAllBookingAddOns()])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -26,6 +27,7 @@ export default async function AdminPage() {
         </div>
         <div className="space-y-8">
           <PricingPanel vehicles={vehicles} />
+          <AddOnsPanel addOns={addOns} />
           <AdminDashboard bookings={bookings} />
         </div>
       </main>

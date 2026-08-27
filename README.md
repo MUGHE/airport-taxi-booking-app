@@ -2,7 +2,7 @@
 
 ## Supabase database setup
 
-1. Create a Supabase project, then run `supabase/migrations/20260826000000_initial_schema.sql` in its SQL Editor.
+1. Create a Supabase project, then run every SQL file in `supabase/migrations/` in filename order in its SQL Editor. If the project already exists, run `supabase/migrations/20260828000000_add_custom_route_locations.sql` to enable map-selected pickup and drop-off locations.
 2. Copy `.env.example` to `.env.local`, and set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the project's API settings.
 3. Restart the development server.
 
