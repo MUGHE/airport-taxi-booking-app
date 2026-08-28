@@ -28,6 +28,7 @@ function bookingSummaryRows(booking: Booking): string {
     ["Passengers", String(booking.passengers)],
     ["Bags", String(booking.bags)],
     ["Flight number", booking.flightNumber || "—"],
+    ...(booking.promoCode && booking.discountAmount > 0 ? [["Promo code", `${booking.promoCode} (-${formatCurrency(booking.discountAmount)})`] as [string, string]] : []),
     ["Fare", formatCurrency(booking.fare)],
   ]
 

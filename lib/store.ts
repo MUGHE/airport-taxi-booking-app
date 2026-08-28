@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
-import type { Booking, BookingAddOn, BookingStatus, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, PromoCode, PromoDiscountType, SitePromotion, VehicleClass } from "./types"
 import { VEHICLE_CLASSES } from "./fleet"
 
 type BookingRow = {
@@ -11,6 +11,7 @@ type BookingRow = {
   flight_number: string; passengers: number; bags: number; customer_name: string; email: string; phone: string
   notes: string; fare: number; distance_miles: number; stripe_checkout_session_id: string | null
   add_ons: BookingAddOn[] | null; add_ons_total: number | null
+  promo_code: string | null; discount_amount: number | null
   stripe_payment_intent_id: string | null; paid_at: string | null; created_at: string
 }
 
@@ -33,6 +34,7 @@ function toBooking(row: BookingRow): Booking {
     passengers: row.passengers, bags: row.bags, customerName: row.customer_name, email: row.email, phone: row.phone,
     notes: row.notes, fare: Number(row.fare), distanceMiles: Number(row.distance_miles),
     addOns: row.add_ons ?? [], addOnsTotal: Number(row.add_ons_total ?? 0),
+    promoCode: row.promo_code ?? undefined, discountAmount: Number(row.discount_amount ?? 0),
     stripeCheckoutSessionId: row.stripe_checkout_session_id ?? undefined,
     stripePaymentIntentId: row.stripe_payment_intent_id ?? undefined, paidAt: row.paid_at ?? undefined, createdAt: row.created_at,
   }
@@ -49,11 +51,20 @@ function toBookingRow(booking: Booking): BookingRow {
     passengers: booking.passengers, bags: booking.bags, customer_name: booking.customerName, email: booking.email,
     phone: booking.phone, notes: booking.notes, fare: booking.fare, distance_miles: booking.distanceMiles,
     add_ons: booking.addOns, add_ons_total: booking.addOnsTotal,
+    promo_code: booking.promoCode ?? null, discount_amount: booking.discountAmount,
     stripe_checkout_session_id: booking.stripeCheckoutSessionId ?? null,
     stripe_payment_intent_id: booking.stripePaymentIntentId ?? null, paid_at: booking.paidAt ?? null, created_at: booking.createdAt,
   }
 }
-function throwDatabaseError(error: { message: string }): never { throw new Error(`Database request failed: ${error.message}`) }
+type DatabaseError = { code?: string; message: string }
+
+function isMissingRelationError(error: DatabaseError): boolean {
+  // PostgREST returns PGRST205 when its schema cache cannot find a table.
+  // Keep the message fallback for older PostgREST responses which omit a code.
+  return error.code === "PGRST205" || /could not find (?:the )?(?:table|relation)/i.test(error.message)
+}
+
+function throwDatabaseError(error: DatabaseError): never { throw new Error(`Database request failed: ${error.message}`) }
 
 export function generateReference(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -108,7 +119,13 @@ export type AddOnRow = BookingAddOn & { active: boolean }
 
 export async function listActiveAddOns(): Promise<BookingAddOn[]> {
   const { data, error } = await getSupabase().from("booking_add_ons").select("id, name, price").eq("active", true).order("name")
-  if (error) throwDatabaseError(error)
+  // Existing projects can be upgraded one migration at a time. Until the
+  // add-ons migration is applied, keep booking available without add-ons
+  // rather than crashing the whole page with Supabase's 404 response.
+  if (error) {
+    if (isMissingRelationError(error)) return []
+    throwDatabaseError(error)
+  }
   return (data as BookingAddOn[]).map((item) => ({ ...item, price: Number(item.price) }))
 }
 export async function listAddOns(): Promise<AddOnRow[]> {
@@ -120,4 +137,50 @@ export async function upsertAddOn(addOn: AddOnRow): Promise<AddOnRow | null> {
   const { data, error } = await getSupabase().from("booking_add_ons").upsert(addOn).select("id, name, price, active").maybeSingle()
   if (error) throwDatabaseError(error)
   return data ? { ...(data as AddOnRow), price: Number(data.price) } : null
+}
+
+type PromoCodeRow = { code: string; discount_type: PromoDiscountType; discount_value: number; active: boolean; created_at: string }
+function toPromoCode(row: PromoCodeRow): PromoCode {
+  return { code: row.code, discountType: row.discount_type, discountValue: Number(row.discount_value), active: row.active, createdAt: row.created_at }
+}
+export async function listPromoCodes(): Promise<PromoCode[]> {
+  const { data, error } = await getSupabase().from("promo_codes").select("*").order("created_at", { ascending: false })
+  if (error) throwDatabaseError(error)
+  return (data as PromoCodeRow[]).map(toPromoCode)
+}
+/** Looks up a code and returns it only if it is currently enabled — the sole gate admins use to turn a code on/off. */
+export async function findActivePromoCode(code: string): Promise<PromoCode | null> {
+  const { data, error } = await getSupabase().from("promo_codes").select("*").eq("code", code.trim().toUpperCase()).eq("active", true).maybeSingle()
+  if (error) throwDatabaseError(error)
+  return data ? toPromoCode(data as PromoCodeRow) : null
+}
+export async function upsertPromoCode(promo: { code: string; discountType: PromoDiscountType; discountValue: number; active: boolean }): Promise<PromoCode | null> {
+  const { data, error } = await getSupabase().from("promo_codes")
+    .upsert({ code: promo.code.trim().toUpperCase(), discount_type: promo.discountType, discount_value: promo.discountValue, active: promo.active }, { onConflict: "code" })
+    .select("*").maybeSingle()
+  if (error) throwDatabaseError(error)
+  return data ? toPromoCode(data as PromoCodeRow) : null
+}
+
+type SitePromotionRow = { active: boolean; discount_percent: number; updated_at: string }
+function toSitePromotion(row: SitePromotionRow): SitePromotion {
+  return { active: row.active, discountPercent: Number(row.discount_percent), updatedAt: row.updated_at }
+}
+const DEFAULT_PROMOTION: SitePromotion = { active: false, discountPercent: 0, updatedAt: new Date(0).toISOString() }
+export async function getSitePromotion(): Promise<SitePromotion> {
+  const { data, error } = await getSupabase().from("site_promotion").select("active, discount_percent, updated_at").eq("id", true).maybeSingle()
+  // A missing optional promotions table must not make public pages 404 while
+  // an existing Supabase project is being migrated.
+  if (error) {
+    if (isMissingRelationError(error)) return DEFAULT_PROMOTION
+    throwDatabaseError(error)
+  }
+  return data ? toSitePromotion(data as SitePromotionRow) : DEFAULT_PROMOTION
+}
+export async function updateSitePromotion(active: boolean, discountPercent: number): Promise<SitePromotion> {
+  const { data, error } = await getSupabase().from("site_promotion")
+    .upsert({ id: true, active, discount_percent: discountPercent, updated_at: new Date().toISOString() }, { onConflict: "id" })
+    .select("active, discount_percent, updated_at").single()
+  if (error) throwDatabaseError(error)
+  return toSitePromotion(data as SitePromotionRow)
 }

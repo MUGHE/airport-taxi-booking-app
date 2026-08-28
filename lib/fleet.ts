@@ -1,4 +1,4 @@
-import type { ServiceLocation, VehicleClass } from "./types"
+import type { PromoCode, ServiceLocation, VehicleClass } from "./types"
 
 export const AIRPORTS: ServiceLocation[] = [
   // --- HEATHROW (LHR) ---
@@ -152,6 +152,17 @@ export function computeFare(
     durationMinutes: Math.max(0, Math.ceil(durationMinutes)),
     fare,
   }
+}
+
+/** Discount amount for a subtotal, clamped so it never exceeds the subtotal itself. */
+export function computeDiscount(subtotal: number, promo: Pick<PromoCode, "discountType" | "discountValue">): number {
+  const raw = promo.discountType === "percent" ? subtotal * (promo.discountValue / 100) : promo.discountValue
+  return Math.min(subtotal, Math.max(0, Math.round(raw)))
+}
+
+/** Applies the site-wide "X% off" promotion to a price. */
+export function applyPromotion(amount: number, discountPercent: number): number {
+  return Math.max(0, Math.round(amount * (1 - discountPercent / 100)))
 }
 
 export function formatCurrency(value: number): string {

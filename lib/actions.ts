@@ -3,24 +3,29 @@
 import { cookies, headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 import {
+  findActivePromoCode,
   findBooking,
   generateReference,
+  getSitePromotion as getStoredSitePromotion,
   listBookings,
   listActiveAddOns,
   listAddOns,
+  listPromoCodes,
   listVehiclesWithPricing,
   markBookingAsPaid,
   saveBooking,
   setBookingStatus,
+  updateSitePromotion as setSitePromotion,
   updateVehiclePricing as setVehiclePricing,
   upsertAddOn as saveAddOn,
+  upsertPromoCode as savePromoCode,
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingAddOn, BookingStatus, NewBookingInput, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, NewBookingInput, PromoCode, PromoDiscountType, SitePromotion, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
-import { computeFare } from "./fleet"
+import { applyPromotion, computeDiscount, computeFare } from "./fleet"
 import { sendBookingNotificationEmails } from "./email"
 
 
@@ -95,20 +100,36 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
   if (route == null) return { ok: false, error: "Unable to price this trip." }
 
   const quote = computeFare(vehicle, route.distanceMiles, route.durationMinutes)
+  const promotion = await getStoredSitePromotion()
+  const vehicleFare = promotion.active ? applyPromotion(quote.fare, promotion.discountPercent) : quote.fare
   const availableAddOns = await listActiveAddOns()
   const selectedIds = new Set(input.addOnIds)
   const addOns = availableAddOns.filter((addOn) => selectedIds.has(addOn.id))
   const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
+  const subtotal = vehicleFare + addOnsTotal
+
+  // Never trust a client-supplied discount amount — re-look-up the code and recompute
+  // server-side, since it may have been disabled or changed since the customer applied it.
+  let discountAmount = 0
+  let promoCode: string | undefined
+  if (input.promoCode?.trim()) {
+    const promo = await findActivePromoCode(input.promoCode)
+    if (!promo) return { ok: false, error: "This promo code is no longer valid. Remove it to continue." }
+    discountAmount = computeDiscount(subtotal, promo)
+    promoCode = promo.code
+  }
 
   const booking: Booking = {
     ...input,
     reference: generateReference(),
     status: "pending",
     paymentStatus: "unpaid",
-    fare: quote.fare + addOnsTotal,
+    fare: Math.max(0, subtotal - discountAmount),
     distanceMiles: quote.distanceMiles,
     addOns,
     addOnsTotal,
+    promoCode,
+    discountAmount,
     createdAt: new Date().toISOString(),
   }
 
@@ -295,6 +316,68 @@ export async function upsertBookingAddOn(addOn: { id?: string; name: string; pri
   return { ok: true, addOn: saved }
 }
 
+export async function getAllPromoCodes(): Promise<PromoCode[]> {
+  if (!(await isAdminAuthenticated())) return []
+  return listPromoCodes()
+}
+
+export interface UpsertPromoCodeResult {
+  ok: boolean
+  promoCode?: PromoCode
+  error?: string
+}
+
+export async function upsertPromoCodeAction(promo: { code: string; discountType: PromoDiscountType; discountValue: number; active: boolean }): Promise<UpsertPromoCodeResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  const code = promo.code.trim().toUpperCase()
+  if (!code) return { ok: false, error: "Promo code is required." }
+  if (!/^[A-Z0-9_-]+$/.test(code)) return { ok: false, error: "Use letters, numbers, - or _ only." }
+  if (!Number.isFinite(promo.discountValue) || promo.discountValue <= 0) return { ok: false, error: "Enter a valid discount value." }
+  if (promo.discountType === "percent" && promo.discountValue > 100) return { ok: false, error: "Percentage discount can't exceed 100." }
+  const saved = await savePromoCode({ ...promo, code })
+  if (!saved) return { ok: false, error: "Could not save the promo code." }
+  revalidatePath("/admin")
+  return { ok: true, promoCode: saved }
+}
+
+export interface PreviewPromoCodeResult {
+  ok: boolean
+  code?: string
+  discountType?: PromoDiscountType
+  discountValue?: number
+  discountAmount?: number
+  error?: string
+}
+
+/** Client-side preview only — createBooking always re-validates and recomputes the discount itself. */
+export async function previewPromoCode(code: string, subtotal: number): Promise<PreviewPromoCodeResult> {
+  if (!code?.trim()) return { ok: false, error: "Enter a promo code." }
+  if (!Number.isFinite(subtotal) || subtotal <= 0) return { ok: false, error: "Select a vehicle before applying a promo code." }
+  const promo = await findActivePromoCode(code)
+  if (!promo) return { ok: false, error: "Invalid or inactive promo code." }
+  return { ok: true, code: promo.code, discountType: promo.discountType, discountValue: promo.discountValue, discountAmount: computeDiscount(subtotal, promo) }
+}
+
+export async function getSitePromotion(): Promise<SitePromotion> {
+  return getStoredSitePromotion()
+}
+
+export interface UpdateSitePromotionResult {
+  ok: boolean
+  promotion?: SitePromotion
+  error?: string
+}
+
+export async function updateSitePromotionAction(active: boolean, discountPercent: number): Promise<UpdateSitePromotionResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+    return { ok: false, error: "Enter a discount percentage between 0 and 100." }
+  }
+  const promotion = await setSitePromotion(active, discountPercent)
+  revalidatePath("/admin"); revalidatePath("/book"); revalidatePath("/")
+  return { ok: true, promotion }
+}
+
 export interface UpdateVehiclePricingResult {
   ok: boolean
   vehicle?: VehicleClass
@@ -351,7 +434,17 @@ export async function getDistanceQuote(
       distanceMiles: Math.round(route.distanceMiles * 10) / 10,
       durationMinutes: route.durationMinutes,
     }
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    if (message === "GOOGLE_MAPS_SERVER_API_KEY is missing.") {
+      return {
+        ok: false,
+        error: "Distance pricing is not configured. Add GOOGLE_MAPS_SERVER_API_KEY on the server.",
+      }
+    }
+    if (message.startsWith("Google Routes API rejected")) {
+      return { ok: false, error: message }
+    }
     return { ok: false, error: "Distance service is temporarily unavailable." }
   }
 }

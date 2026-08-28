@@ -52,6 +52,11 @@ export function BookingDetails({ booking }: { booking: Booking }) {
             {booking.addOns.map((addOn) => addOn.name).join(", ")} ({formatCurrency(booking.addOnsTotal)})
           </Item>
         )}
+        {booking.promoCode && booking.discountAmount > 0 && (
+          <Item icon={<CircleDollarSign className="size-4" />} label="Promo code">
+            {booking.promoCode} (-{formatCurrency(booking.discountAmount)})
+          </Item>
+        )}
         {booking.flightNumber && (
           <Item icon={<Plane className="size-4" />} label="Flight">
             {booking.flightNumber}

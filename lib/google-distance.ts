@@ -30,7 +30,19 @@ export async function calculateDrivingRoute(
     cache: "no-store",
   })
 
-  if (!res.ok) return null
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null) as { error?: { message?: string } } | null
+    const message = detail?.error?.message
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        "Google Routes API rejected the server key. Enable the Routes API and allow this server key to use it.",
+      )
+    }
+    // A 400/404 can genuinely mean there is no drivable route. Preserve that
+    // distinction for callers instead of presenting every API error as one.
+    if (res.status === 400 || res.status === 404) return null
+    throw new Error(message || `Google Routes API request failed (${res.status}).`)
+  }
 
   const data = await res.json()
   const route = data?.routes?.[0]
