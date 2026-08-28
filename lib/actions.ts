@@ -76,6 +76,10 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
   if (!input.pickupDate || !input.pickupTime) {
     return { ok: false, error: "Please choose a pickup date and time." }
   }
+  const serverToday = new Date().toISOString().slice(0, 10)
+  if (input.pickupDate < serverToday) {
+    return { ok: false, error: "Pickup date can't be in the past." }
+  }
 
   const vehicles = await listVehiclesWithPricing()
   const vehicle = vehicles.find((v) => v.id === input.vehicleId)
