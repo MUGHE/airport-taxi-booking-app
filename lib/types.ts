@@ -45,6 +45,23 @@ export interface BookingAddOn {
   price: number
 }
 
+export type PromoDiscountType = "percent" | "fixed"
+
+export interface PromoCode {
+  code: string
+  discountType: PromoDiscountType
+  discountValue: number
+  active: boolean
+  createdAt: string
+}
+
+/** Site-wide "X% off everything" promotion — a single on/off switch, distinct from one-off promo codes. */
+export interface SitePromotion {
+  active: boolean
+  discountPercent: number
+  updatedAt: string
+}
+
 export interface Booking {
   reference: string
   status: BookingStatus
@@ -74,6 +91,8 @@ export interface Booking {
   distanceMiles: number
   addOns: BookingAddOn[]
   addOnsTotal: number
+  promoCode?: string
+  discountAmount: number
   stripeCheckoutSessionId?: string
   stripePaymentIntentId?: string
   paidAt?: string
@@ -82,5 +101,5 @@ export interface Booking {
 
 export type NewBookingInput = Omit<
   Booking,
-  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal"
+  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal" | "discountAmount"
 >
