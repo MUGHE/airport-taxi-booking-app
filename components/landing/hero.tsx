@@ -1,8 +1,10 @@
 import Image from "next/image"
-import { ShieldCheck, Star, Clock } from "lucide-react"
+import { ShieldCheck, Star, Clock, Sparkles } from "lucide-react"
 import { FareEstimator } from "@/components/fare-estimator"
+import { getSitePromotion } from "@/lib/actions"
 
 export async function Hero() {
+  const promotion = await getSitePromotion()
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -18,10 +20,17 @@ export async function Hero() {
 
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 lg:grid-cols-2 lg:py-24">
         <div className="max-w-xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
-            <Star className="size-3.5 fill-accent text-accent" />
-            Rated 4.9/5 by 12,000+ travelers
-          </span>
+          {promotion.active ? (
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary backdrop-blur">
+              <Sparkles className="size-3.5" />
+              Limited time: {promotion.discountPercent}% off every airport transfer
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+              <Star className="size-3.5 fill-accent text-accent" />
+              Rated 4.9/5 by 12,000+ travelers
+            </span>
+          )}
           <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
             Airport transfers, done right.
           </h1>
