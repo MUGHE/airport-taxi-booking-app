@@ -18,6 +18,10 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const STEPS = ["Trip", "Vehicle", "Details", "Review"] as const
+// Local calendar date/time as "YYYY-MM-DD" / "HH:MM" — deliberately NOT toISOString(),
+// which converts to UTC and can be a day off from the device's actual local date.
+function localDate(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` }
+function localTime(d: Date) { return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` }
 const fromParams = (params: URLSearchParams, prefix: "pickup" | "dropoff"): PlaceSelection | null => {
   const address = params.get(`${prefix}Address`)
   const lat = Number(params.get(`${prefix}Lat`))
@@ -49,7 +53,7 @@ export function BookingFlow({ vehicles = [], addOns = [] }: { vehicles: VehicleC
   const [distanceLoading, setDistanceLoading] = useState(false)
   const [isPending, startTransition] = useTransition()
   const vehicle = vehicles.find((item) => item.id === vehicleId)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDate(new Date())
 
   useEffect(() => {
     if (vehicle && bags > vehicle.luggage) setBags(vehicle.luggage)
@@ -61,7 +65,7 @@ export function BookingFlow({ vehicles = [], addOns = [] }: { vehicles: VehicleC
 
   useEffect(() => {
     if (pickupDate === today && pickupTime) {
-      const nowTime = new Date().toTimeString().slice(0, 5)
+      const nowTime = localTime(new Date())
       if (pickupTime < nowTime) setPickupTime(nowTime)
     }
   }, [pickupDate, today])
@@ -104,13 +108,14 @@ function Heading({ title, desc }: { title: string; desc: string }) { return <div
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-1.5"><Label className="text-sm">{label}</Label>{children}</div> }
 function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPickupDate, pickupTime, setPickupTime, today }: { pickup: PlaceSelection | null; setPickup: (value: PlaceSelection | null) => void; dropoff: PlaceSelection | null; setDropoff: (value: PlaceSelection | null) => void; pickupDate: string; setPickupDate: (value: string) => void; pickupTime: string; setPickupTime: (value: string) => void; today: string }) {
   const isToday = pickupDate === today
-  const minTime = isToday ? new Date().toTimeString().slice(0, 5) : undefined
+  const minTime = isToday ? localTime(new Date()) : undefined
   function handleDateChange(value: string) {
     if (value && value < today) { toast.error("Pickup date can't be in the past."); setPickupDate(today); return }
     setPickupDate(value)
   }
   function handleTimeChange(value: string) {
-    if (isToday && value && value < new Date().toTimeString().slice(0, 5)) { toast.error("Pickup time can't be in the past."); setPickupTime(new Date().toTimeString().slice(0, 5)); return }
+    const nowTime = localTime(new Date())
+    if (isToday && value && value < nowTime) { toast.error("Pickup time can't be in the past."); setPickupTime(nowTime); return }
     setPickupTime(value)
   }
   return <div><Heading title="Plan your trip" desc="Choose your pickup and drop-off locations from Google Maps." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Pickup location"><DestinationPicker defaultValue={pickup?.address} placeholder="Start typing a pickup address" onSelect={setPickup} onClear={() => setPickup(null)} /></Field><Field label="Drop-off location"><DestinationPicker defaultValue={dropoff?.address} placeholder="Start typing a drop-off address" onSelect={setDropoff} onClear={() => setDropoff(null)} /></Field><Field label="Pickup date"><Input type="date" min={today} value={pickupDate} onChange={(e) => handleDateChange(e.target.value)} /></Field><Field label="Pickup time"><Input type="time" min={minTime} value={pickupTime} onChange={(e) => handleTimeChange(e.target.value)} /></Field></div></div>
