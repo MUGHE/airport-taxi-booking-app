@@ -4,12 +4,14 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import { PricingPanel } from "@/components/admin/pricing-panel"
 import { LogoutButton } from "@/components/admin/logout-button"
 import { AddOnsPanel } from "@/components/admin/add-ons-panel"
-import { getAllBookingAddOns, getAllBookings, getVehicleFleet } from "@/lib/actions"
+import { PromoCodesPanel } from "@/components/admin/promo-codes-panel"
+import { SitePromotionPanel } from "@/components/admin/site-promotion-panel"
+import { getAllBookingAddOns, getAllBookings, getAllPromoCodes, getSitePromotion, getVehicleFleet } from "@/lib/actions"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminPage() {
-  const [bookings, vehicles, addOns] = await Promise.all([getAllBookings(), getVehicleFleet(), getAllBookingAddOns()])
+  const [bookings, vehicles, addOns, promoCodes, promotion] = await Promise.all([getAllBookings(), getVehicleFleet(), getAllBookingAddOns(), getAllPromoCodes(), getSitePromotion()])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -27,7 +29,9 @@ export default async function AdminPage() {
         </div>
         <div className="space-y-8">
           <PricingPanel vehicles={vehicles} />
+          <SitePromotionPanel promotion={promotion} />
           <AddOnsPanel addOns={addOns} />
+          <PromoCodesPanel promoCodes={promoCodes} />
           <AdminDashboard bookings={bookings} />
         </div>
       </main>
