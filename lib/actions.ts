@@ -434,7 +434,17 @@ export async function getDistanceQuote(
       distanceMiles: Math.round(route.distanceMiles * 10) / 10,
       durationMinutes: route.durationMinutes,
     }
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    if (message === "GOOGLE_MAPS_SERVER_API_KEY is missing.") {
+      return {
+        ok: false,
+        error: "Distance pricing is not configured. Add GOOGLE_MAPS_SERVER_API_KEY on the server.",
+      }
+    }
+    if (message.startsWith("Google Routes API rejected")) {
+      return { ok: false, error: message }
+    }
     return { ok: false, error: "Distance service is temporarily unavailable." }
   }
 }

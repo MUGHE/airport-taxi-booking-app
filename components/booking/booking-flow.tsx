@@ -165,7 +165,7 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
       </PopoverContent>
     </Popover>
   </Field><Field label="Pickup time">
-    <Select value={pickupTime} onValueChange={handleTimeChange}>
+    <Select value={pickupTime} onValueChange={(value) => { if (value) handleTimeChange(value) }}>
       <SelectTrigger className="w-full"><SelectValue placeholder="Select time" /></SelectTrigger>
       <SelectContent>{availableTimes.map((t) => <SelectItem key={t} value={t}>{formatTimeLabel(t)}</SelectItem>)}</SelectContent>
     </Select>

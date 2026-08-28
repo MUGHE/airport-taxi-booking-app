@@ -56,7 +56,15 @@ function toBookingRow(booking: Booking): BookingRow {
     stripe_payment_intent_id: booking.stripePaymentIntentId ?? null, paid_at: booking.paidAt ?? null, created_at: booking.createdAt,
   }
 }
-function throwDatabaseError(error: { message: string }): never { throw new Error(`Database request failed: ${error.message}`) }
+type DatabaseError = { code?: string; message: string }
+
+function isMissingRelationError(error: DatabaseError): boolean {
+  // PostgREST returns PGRST205 when its schema cache cannot find a table.
+  // Keep the message fallback for older PostgREST responses which omit a code.
+  return error.code === "PGRST205" || /could not find (?:the )?(?:table|relation)/i.test(error.message)
+}
+
+function throwDatabaseError(error: DatabaseError): never { throw new Error(`Database request failed: ${error.message}`) }
 
 export function generateReference(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -111,7 +119,13 @@ export type AddOnRow = BookingAddOn & { active: boolean }
 
 export async function listActiveAddOns(): Promise<BookingAddOn[]> {
   const { data, error } = await getSupabase().from("booking_add_ons").select("id, name, price").eq("active", true).order("name")
-  if (error) throwDatabaseError(error)
+  // Existing projects can be upgraded one migration at a time. Until the
+  // add-ons migration is applied, keep booking available without add-ons
+  // rather than crashing the whole page with Supabase's 404 response.
+  if (error) {
+    if (isMissingRelationError(error)) return []
+    throwDatabaseError(error)
+  }
   return (data as BookingAddOn[]).map((item) => ({ ...item, price: Number(item.price) }))
 }
 export async function listAddOns(): Promise<AddOnRow[]> {
@@ -155,7 +169,12 @@ function toSitePromotion(row: SitePromotionRow): SitePromotion {
 const DEFAULT_PROMOTION: SitePromotion = { active: false, discountPercent: 0, updatedAt: new Date(0).toISOString() }
 export async function getSitePromotion(): Promise<SitePromotion> {
   const { data, error } = await getSupabase().from("site_promotion").select("active, discount_percent, updated_at").eq("id", true).maybeSingle()
-  if (error) throwDatabaseError(error)
+  // A missing optional promotions table must not make public pages 404 while
+  // an existing Supabase project is being migrated.
+  if (error) {
+    if (isMissingRelationError(error)) return DEFAULT_PROMOTION
+    throwDatabaseError(error)
+  }
   return data ? toSitePromotion(data as SitePromotionRow) : DEFAULT_PROMOTION
 }
 export async function updateSitePromotion(active: boolean, discountPercent: number): Promise<SitePromotion> {

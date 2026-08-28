@@ -2,11 +2,25 @@
 
 ## Supabase database setup
 
-1. Create a Supabase project, then run every SQL file in `supabase/migrations/` in filename order in its SQL Editor. If the project already exists, run `supabase/migrations/20260828000000_add_custom_route_locations.sql` to enable map-selected pickup and drop-off locations.
+1. Create a Supabase project, then run **every** SQL file in `supabase/migrations/` in filename order in its SQL Editor. If the project already exists, run every migration added after your last setup—not only the custom-route migration. In particular, the booking add-ons, promo codes, and site promotion features require the `20260828000001`, `20260828000002`, and `20260828000003` migrations. Missing one of these tables makes Supabase return a 404 for that feature.
 2. Copy `.env.example` to `.env.local`, and set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the project's API settings.
 3. Restart the development server.
 
 Bookings and vehicle pricing are now stored in Supabase. The service-role key is used only in server-side code; never expose it to the browser or commit it to git.
+
+## Google Maps route pricing
+
+The map picker and the driving-distance quote use separate Google Maps APIs. Set both keys in `.env.local` and restart the server:
+
+```bash
+# Maps JavaScript API + Places API (New); restrict this key to your site URL.
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_browser_key
+
+# Routes API; keep this server-only and restrict it to the server IP in production.
+GOOGLE_MAPS_SERVER_API_KEY=your_server_key
+```
+
+Enable **Maps JavaScript API**, **Places API (New)**, and **Routes API** in the same Google Cloud project with billing enabled. A working map only confirms the browser key; without the server Routes key, the app cannot calculate a driving distance or distance-based fare.
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
 
