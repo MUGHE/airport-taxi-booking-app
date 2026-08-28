@@ -79,6 +79,33 @@ pnpm install
 
 After success, Stripe redirects back to the booking page and the booking is marked as paid/confirmed.
 
+## Booking Confirmation Emails
+
+When a booking is created, a confirmation email is sent to the customer and a notification email is sent to support staff. Emails are sent via [Resend](https://resend.com).
+
+### 1) Create a Resend account and API key
+
+1. Go to [https://resend.com](https://resend.com) and sign up
+2. Open **API Keys** and create a new key
+3. To send from your own address (e.g. `info@oneairporttaxi.com`), go to **Domains → Add Domain**, enter `oneairporttaxi.com`, and add the SPF/DKIM (and DMARC) DNS records Resend gives you at your domain registrar. Sending from that address won't work until the domain shows as **Verified** in Resend.
+
+### 2) Configure environment variables
+
+Add to `.env.local`:
+
+```bash
+RESEND_API_KEY=re_your_key
+EMAIL_FROM="One Airport Taxi <info@oneairporttaxi.com>"
+SUPPORT_EMAIL=info@oneairporttaxi.com
+```
+
+Notes:
+
+- `RESEND_API_KEY` must stay server-side only.
+- `EMAIL_FROM` must be an address on a domain verified with Resend. Until `oneairporttaxi.com` is verified, use the shared `onboarding@resend.dev` test address instead so emails still send.
+- `SUPPORT_EMAIL` is where the new-booking notification is sent. If unset, only the customer email is sent.
+- If `RESEND_API_KEY` is unset, booking creation still succeeds — emails are simply skipped (a warning is logged).
+
 ## Learn More
 
 To learn more, take a look at the following resources:
