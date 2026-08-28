@@ -21,6 +21,7 @@ import type { Booking, BookingAddOn, BookingStatus, NewBookingInput, VehicleClas
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { computeFare } from "./fleet"
+import { sendBookingNotificationEmails } from "./email"
 
 
 export interface LoginResult {
@@ -109,6 +110,13 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
 
   await saveBooking(booking)
   revalidatePath("/admin")
+
+  // Don't let a slow/failing email provider hold up the booking response —
+  // sendBookingNotificationEmails already swallows and logs its own errors.
+  sendBookingNotificationEmails(booking).catch((error) => {
+    console.error("Unexpected error sending booking emails:", error)
+  })
+
   return { ok: true, reference: booking.reference }
 }
 
