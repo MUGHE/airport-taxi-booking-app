@@ -10,9 +10,12 @@ import { toast } from "sonner"
 export function PaymentStep({
   reference,
   amount,
+  note,
 }: {
   reference: string
   amount: number
+  /** Optional clarifying note shown under the amount — e.g. that this charge also covers a linked return trip. */
+  note?: string
 }) {
   const [isPending, startTransition] = useTransition()
 
@@ -38,6 +41,7 @@ export function PaymentStep({
         <div>
           <p className="text-xs text-muted-foreground">Amount due</p>
           <p className="text-xl font-semibold tabular-nums">{formatCurrency(amount)}</p>
+          {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
         </div>
         <Button onClick={handlePayNow} disabled={isPending}>
           {isPending ? (
