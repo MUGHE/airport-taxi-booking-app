@@ -6,27 +6,33 @@ import {
   findActivePromoCode,
   findBooking,
   generateReference,
+  getReturnTripDiscount as getStoredReturnTripDiscount,
   getSitePromotion as getStoredSitePromotion,
+  getStopPricing as getStoredStopPricing,
+  linkReturnTrip,
   listBookings,
   listActiveAddOns,
   listAddOns,
   listPromoCodes,
   listVehiclesWithPricing,
   markBookingAsPaid,
+  replaceBooking,
   saveBooking,
   setBookingStatus,
+  updateReturnTripDiscount as setReturnTripDiscount,
   updateSitePromotion as setSitePromotion,
+  updateStopPricing as setStopPricing,
   updateVehiclePricing as setVehiclePricing,
   upsertAddOn as saveAddOn,
   upsertPromoCode as savePromoCode,
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingAddOn, BookingStatus, NewBookingInput, PromoCode, PromoDiscountType, SitePromotion, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare } from "./fleet"
-import { sendBookingNotificationEmails } from "./email"
+import { sendBookingNotificationEmails, sendBookingUpdateEmail } from "./email"
 
 
 export interface LoginResult {
@@ -70,10 +76,17 @@ export interface CreateBookingResult {
   error?: string
 }
 
-export async function createBooking(input: NewBookingInput & { addOnIds: string[] }): Promise<CreateBookingResult> {
+// Keeps routes reasonable and bounds the per-booking cost of extra Routes API stops.
+const MAX_STOPS = 3
+
+async function buildAndSaveBooking(
+  input: NewBookingInput & { addOnIds: string[] },
+  options: { extraDiscountPercent?: number; outboundTripReference?: string } = {},
+): Promise<CreateBookingResult> {
   if (!input.customerName?.trim()) return { ok: false, error: "Name is required." }
   if (!input.email?.trim()) return { ok: false, error: "Email is required." }
   if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
+  if (input.paymentMethod !== "card" && input.paymentMethod !== "cash") return { ok: false, error: "Please choose how you'd like to pay." }
   if (!input.vehicleId) return { ok: false, error: "Please complete your trip details." }
   if (!Number.isFinite(input.pickupLat) || !Number.isFinite(input.pickupLng) || !Number.isFinite(input.dropoffLat) || !Number.isFinite(input.dropoffLng)) {
     return { ok: false, error: "Please select both pickup and drop-off locations." }
@@ -84,6 +97,10 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
   const serverToday = new Date().toISOString().slice(0, 10)
   if (input.pickupDate < serverToday) {
     return { ok: false, error: "Pickup date can't be in the past." }
+  }
+  const stops = (input.stops || []).slice(0, MAX_STOPS)
+  if (stops.some((stop) => !stop.address?.trim() || !Number.isFinite(stop.lat) || !Number.isFinite(stop.lng))) {
+    return { ok: false, error: "Please select a valid location for each stop." }
   }
 
   const vehicles = await listVehiclesWithPricing()
@@ -96,17 +113,24 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
   const route = await calculateDrivingRoute(
     { lat: input.pickupLat!, lng: input.pickupLng! },
     { lat: input.dropoffLat!, lng: input.dropoffLng! },
+    stops.map((stop) => ({ lat: stop.lat, lng: stop.lng })),
   )
   if (route == null) return { ok: false, error: "Unable to price this trip." }
 
   const quote = computeFare(vehicle, route.distanceMiles, route.durationMinutes)
   const promotion = await getStoredSitePromotion()
-  const vehicleFare = promotion.active ? applyPromotion(quote.fare, promotion.discountPercent) : quote.fare
+  let vehicleFare = promotion.active ? applyPromotion(quote.fare, promotion.discountPercent) : quote.fare
+  // The return-trip discount (if any) stacks on top of the site-wide promotion — same
+  // rule promo codes already follow below.
+  if (options.extraDiscountPercent) vehicleFare = applyPromotion(vehicleFare, options.extraDiscountPercent)
   const availableAddOns = await listActiveAddOns()
   const selectedIds = new Set(input.addOnIds)
   const addOns = availableAddOns.filter((addOn) => selectedIds.has(addOn.id))
   const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
-  const subtotal = vehicleFare + addOnsTotal
+  // Never trust a client-supplied per-stop price — always the current admin-set rate.
+  const stopPricing = await getStoredStopPricing()
+  const stopsTotal = stops.length * stopPricing.pricePerStop
+  const subtotal = vehicleFare + addOnsTotal + stopsTotal
 
   // Never trust a client-supplied discount amount — re-look-up the code and recompute
   // server-side, since it may have been disabled or changed since the customer applied it.
@@ -122,14 +146,20 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
   const booking: Booking = {
     ...input,
     reference: generateReference(),
-    status: "pending",
+    // A card booking is "pending" until Stripe checkout completes; a cash booking has
+    // nothing left to collect online, so it's confirmed immediately — the fare is paid
+    // to the driver at the end of the journey instead.
+    status: input.paymentMethod === "cash" ? "confirmed" : "pending",
     paymentStatus: "unpaid",
     fare: Math.max(0, subtotal - discountAmount),
     distanceMiles: quote.distanceMiles,
     addOns,
     addOnsTotal,
+    stops,
+    stopsTotal,
     promoCode,
     discountAmount,
+    outboundTripReference: options.outboundTripReference,
     createdAt: new Date().toISOString(),
   }
 
@@ -143,6 +173,36 @@ export async function createBooking(input: NewBookingInput & { addOnIds: string[
   })
 
   return { ok: true, reference: booking.reference }
+}
+
+export async function createBooking(input: NewBookingInput & { addOnIds: string[] }): Promise<CreateBookingResult> {
+  return buildAndSaveBooking(input)
+}
+
+/**
+ * Books the return leg for an existing (outbound) booking. Route and fare are computed the
+ * same way as any other booking — pickup/drop-off are simply reversed by the caller — with
+ * the admin-configured return-trip discount (if active) applied on top.
+ */
+export async function createReturnBooking(
+  outboundReference: string,
+  input: NewBookingInput & { addOnIds: string[] },
+): Promise<CreateBookingResult> {
+  const outbound = await findBooking(outboundReference)
+  if (!outbound) return { ok: false, error: "Outbound booking not found." }
+  if (outbound.outboundTripReference) return { ok: false, error: "Can't attach a return trip to a return trip." }
+  if (outbound.returnTripReference) return { ok: false, error: "This booking already has a return trip." }
+
+  const discount = await getStoredReturnTripDiscount()
+  const result = await buildAndSaveBooking(input, {
+    extraDiscountPercent: discount.active ? discount.discountPercent : 0,
+    outboundTripReference: outboundReference,
+  })
+  if (result.ok && result.reference) {
+    await linkReturnTrip(outboundReference, result.reference)
+    revalidatePath(`/booking/${outboundReference}`)
+  }
+  return result
 }
 
 export interface StartCheckoutResult {
@@ -165,6 +225,9 @@ export async function startBookingCheckout(
   }
   if (booking.paymentStatus === "paid") {
     return { ok: false, error: "This booking is already paid." }
+  }
+  if (booking.paymentMethod === "cash") {
+    return { ok: false, error: "This booking is set to pay cash to the driver." }
   }
 
   try {
@@ -292,6 +355,119 @@ export async function updateBookingStatus(
   return updated
 }
 
+/** Fields support can correct from the admin control panel. */
+export interface BookingEditInput {
+  pickupAddress: string; pickupLat: number; pickupLng: number
+  dropoffAddress: string; dropoffLat: number; dropoffLng: number
+  stops: Destination[]
+  vehicleId: string
+  pickupDate: string; pickupTime: string
+  flightNumber: string
+  passengers: number
+  bags: number
+  customerName: string; email: string; phone: string; notes: string
+  addOnIds: string[]
+  paymentMethod: PaymentMethod
+}
+
+export interface UpdateBookingResult {
+  ok: boolean
+  booking?: Booking
+  error?: string
+}
+
+/**
+ * Lets an admin correct a booking's locations, stops, vehicle, add-ons, or contact details —
+ * the fare is always fully recomputed from the current rate card so pricing stays accurate,
+ * the same way a fresh booking is priced. The site-wide promotion and return-trip discount are
+ * deliberately not re-applied here (they're customer-facing incentives for new bookings, not
+ * something a support correction should silently add); an existing promo code is re-validated
+ * and recomputed against the new subtotal.
+ */
+export async function updateBookingAction(reference: string, input: BookingEditInput): Promise<UpdateBookingResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  const existing = await findBooking(reference)
+  if (!existing) return { ok: false, error: "Booking not found." }
+
+  if (!input.customerName?.trim()) return { ok: false, error: "Name is required." }
+  if (!input.email?.trim()) return { ok: false, error: "Email is required." }
+  if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
+  if (input.paymentMethod !== "card" && input.paymentMethod !== "cash") return { ok: false, error: "Please choose how the customer is paying." }
+  if (!input.vehicleId) return { ok: false, error: "Please choose a vehicle." }
+  if (!Number.isFinite(input.pickupLat) || !Number.isFinite(input.pickupLng) || !Number.isFinite(input.dropoffLat) || !Number.isFinite(input.dropoffLng)) {
+    return { ok: false, error: "Please select both pickup and drop-off locations." }
+  }
+  if (!input.pickupDate || !input.pickupTime) return { ok: false, error: "Please choose a pickup date and time." }
+  const stops = (input.stops || []).slice(0, MAX_STOPS)
+  if (stops.some((stop) => !stop.address?.trim() || !Number.isFinite(stop.lat) || !Number.isFinite(stop.lng))) {
+    return { ok: false, error: "Please select a valid location for each stop." }
+  }
+
+  const vehicles = await listVehiclesWithPricing()
+  const vehicle = vehicles.find((v) => v.id === input.vehicleId)
+  if (!vehicle) return { ok: false, error: "Unknown vehicle." }
+  if (input.passengers > vehicle.capacity || input.bags > vehicle.luggage) {
+    return { ok: false, error: "Passenger or bag count exceeds this vehicle's capacity." }
+  }
+
+  const route = await calculateDrivingRoute(
+    { lat: input.pickupLat, lng: input.pickupLng },
+    { lat: input.dropoffLat, lng: input.dropoffLng },
+    stops.map((stop) => ({ lat: stop.lat, lng: stop.lng })),
+  )
+  if (route == null) return { ok: false, error: "Unable to price this trip." }
+
+  const quote = computeFare(vehicle, route.distanceMiles, route.durationMinutes)
+  // Look up by id against every add-on (including disabled ones) so a since-deactivated
+  // add-on that's still on this booking keeps its price rather than disappearing.
+  const allAddOns = await listAddOns()
+  const selectedIds = new Set(input.addOnIds)
+  const addOns: BookingAddOn[] = allAddOns.filter((addOn) => selectedIds.has(addOn.id)).map(({ id, name, price }) => ({ id, name, price }))
+  const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
+  const stopPricing = await getStoredStopPricing()
+  const stopsTotal = stops.length * stopPricing.pricePerStop
+  const subtotal = quote.fare + addOnsTotal + stopsTotal
+
+  let discountAmount = 0
+  let promoCode = existing.promoCode
+  if (promoCode) {
+    const promo = await findActivePromoCode(promoCode)
+    if (promo) discountAmount = computeDiscount(subtotal, promo)
+    else promoCode = undefined
+  }
+
+  const updated: Booking = {
+    ...existing,
+    direction: "custom",
+    airportId: "custom",
+    pickupAddress: input.pickupAddress, pickupLat: input.pickupLat, pickupLng: input.pickupLng,
+    dropoffAddress: input.dropoffAddress, dropoffLat: input.dropoffLat, dropoffLng: input.dropoffLng,
+    destinationAddress: input.dropoffAddress, destinationLat: input.dropoffLat, destinationLng: input.dropoffLng,
+    vehicleId: input.vehicleId,
+    pickupDate: input.pickupDate, pickupTime: input.pickupTime,
+    flightNumber: input.flightNumber.trim(), passengers: input.passengers, bags: input.bags,
+    customerName: input.customerName.trim(), email: input.email.trim(), phone: input.phone.trim(), notes: input.notes.trim(),
+    paymentMethod: input.paymentMethod,
+    stops, stopsTotal, addOns, addOnsTotal,
+    distanceMiles: route.distanceMiles,
+    promoCode, discountAmount,
+    fare: Math.max(0, subtotal - discountAmount),
+  }
+
+  const saved = await replaceBooking(updated)
+  if (!saved) return { ok: false, error: "Could not save these changes." }
+  revalidatePath("/admin")
+  revalidatePath(`/booking/${saved.reference}`)
+
+  // Don't let a slow/failing email provider hold up the admin's save —
+  // sendBookingUpdateEmail already swallows and logs its own errors.
+  sendBookingUpdateEmail(saved).catch((error) => {
+    console.error("Unexpected error sending booking update email:", error)
+  })
+
+  return { ok: true, booking: saved }
+}
+
 export async function getVehicleFleet(): Promise<VehicleClass[]> {
   return listVehiclesWithPricing()
 }
@@ -378,6 +554,46 @@ export async function updateSitePromotionAction(active: boolean, discountPercent
   return { ok: true, promotion }
 }
 
+export async function getReturnTripDiscount(): Promise<ReturnTripDiscount> {
+  return getStoredReturnTripDiscount()
+}
+
+export interface UpdateReturnTripDiscountResult {
+  ok: boolean
+  discount?: ReturnTripDiscount
+  error?: string
+}
+
+export async function updateReturnTripDiscountAction(active: boolean, discountPercent: number): Promise<UpdateReturnTripDiscountResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+    return { ok: false, error: "Enter a discount percentage between 0 and 100." }
+  }
+  const discount = await setReturnTripDiscount(active, discountPercent)
+  revalidatePath("/admin"); revalidatePath("/book")
+  return { ok: true, discount }
+}
+
+export async function getStopPricing(): Promise<StopPricing> {
+  return getStoredStopPricing()
+}
+
+export interface UpdateStopPricingResult {
+  ok: boolean
+  pricing?: StopPricing
+  error?: string
+}
+
+export async function updateStopPricingAction(pricePerStop: number): Promise<UpdateStopPricingResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!Number.isFinite(pricePerStop) || pricePerStop < 0) {
+    return { ok: false, error: "Enter a valid price per stop." }
+  }
+  const pricing = await setStopPricing(pricePerStop)
+  revalidatePath("/admin"); revalidatePath("/book")
+  return { ok: true, pricing }
+}
+
 export interface UpdateVehiclePricingResult {
   ok: boolean
   vehicle?: VehicleClass
@@ -420,11 +636,13 @@ export interface DistanceQuoteResult {
 export async function getDistanceQuote(
   pickup: { lat: number; lng: number },
   dropoff: { lat: number; lng: number },
+  stops: { lat: number; lng: number }[] = [],
 ): Promise<DistanceQuoteResult> {
   try {
     const route = await calculateDrivingRoute(
       pickup,
       dropoff,
+      stops,
     )
     if (route == null) {
       return { ok: false, error: "Couldn't find a driving route to that address." }

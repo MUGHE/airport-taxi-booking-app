@@ -12,6 +12,7 @@ interface TripMapProps {
   destLng: number
   destLabel: string
   destTime?: string
+  waypoints?: { lat: number; lng: number; address: string }[]
   className?: string
 }
 
@@ -73,6 +74,7 @@ export function TripMap({
   destLng,
   destLabel,
   destTime,
+  waypoints = [],
   className,
 }: TripMapProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -85,6 +87,9 @@ export function TripMap({
     Number.isFinite(originLng) &&
     Number.isFinite(destLat) &&
     Number.isFinite(destLng)
+  // Stable key so the effect only re-runs when the actual waypoints change, not on every
+  // render (the array is a new reference each time otherwise).
+  const waypointsKey = waypoints.map((w) => `${w.lat},${w.lng}`).join("|")
 
   useEffect(() => {
     if (!isValidCoords) {
@@ -133,6 +138,22 @@ export function TripMap({
 
         new g.maps.Marker({ position: { lat: destLat, lng: destLng }, map })
 
+        waypoints.forEach((point, index) => {
+          new g.maps.Marker({
+            position: { lat: point.lat, lng: point.lng },
+            map,
+            label: { text: String(index + 1), color: "#ffffff", fontSize: "11px", fontWeight: "600" },
+            icon: {
+              path: g.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: "#f59e0b",
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2,
+            },
+          })
+        })
+
         const directionsRenderer = new DirectionsRenderer({
           map,
           suppressMarkers: true,
@@ -143,6 +164,7 @@ export function TripMap({
           {
             origin: { lat: originLat, lng: originLng },
             destination: { lat: destLat, lng: destLng },
+            waypoints: waypoints.map((point) => ({ location: { lat: point.lat, lng: point.lng }, stopover: true })),
             travelMode: g.maps.TravelMode.DRIVING,
           },
           (result: any, status: string) => {
@@ -153,6 +175,7 @@ export function TripMap({
               const bounds = new g.maps.LatLngBounds()
               bounds.extend({ lat: originLat, lng: originLng })
               bounds.extend({ lat: destLat, lng: destLng })
+              waypoints.forEach((point) => bounds.extend({ lat: point.lat, lng: point.lng }))
               map.fitBounds(bounds, 64)
             }
           }
@@ -169,7 +192,8 @@ export function TripMap({
     return () => {
       cancelled = true
     }
-  }, [originLat, originLng, destLat, destLng, isValidCoords])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originLat, originLng, destLat, destLng, isValidCoords, waypointsKey])
 
   return (
     <div className={cn("relative overflow-hidden rounded-2xl border border-border", className)}>

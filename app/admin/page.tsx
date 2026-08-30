@@ -6,12 +6,14 @@ import { LogoutButton } from "@/components/admin/logout-button"
 import { AddOnsPanel } from "@/components/admin/add-ons-panel"
 import { PromoCodesPanel } from "@/components/admin/promo-codes-panel"
 import { SitePromotionPanel } from "@/components/admin/site-promotion-panel"
-import { getAllBookingAddOns, getAllBookings, getAllPromoCodes, getSitePromotion, getVehicleFleet } from "@/lib/actions"
+import { ReturnTripPanel } from "@/components/admin/return-trip-panel"
+import { StopPricingPanel } from "@/components/admin/stop-pricing-panel"
+import { getAllBookingAddOns, getAllBookings, getAllPromoCodes, getReturnTripDiscount, getSitePromotion, getStopPricing, getVehicleFleet } from "@/lib/actions"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminPage() {
-  const [bookings, vehicles, addOns, promoCodes, promotion] = await Promise.all([getAllBookings(), getVehicleFleet(), getAllBookingAddOns(), getAllPromoCodes(), getSitePromotion()])
+  const [bookings, vehicles, addOns, promoCodes, promotion, returnTripDiscount, stopPricing] = await Promise.all([getAllBookings(), getVehicleFleet(), getAllBookingAddOns(), getAllPromoCodes(), getSitePromotion(), getReturnTripDiscount(), getStopPricing()])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -30,9 +32,11 @@ export default async function AdminPage() {
         <div className="space-y-8">
           <PricingPanel vehicles={vehicles} />
           <SitePromotionPanel promotion={promotion} />
+          <ReturnTripPanel discount={returnTripDiscount} />
+          <StopPricingPanel pricing={stopPricing} />
           <AddOnsPanel addOns={addOns} />
           <PromoCodesPanel promoCodes={promoCodes} />
-          <AdminDashboard bookings={bookings} />
+          <AdminDashboard bookings={bookings} vehicles={vehicles} addOns={addOns} />
         </div>
       </main>
       <SiteFooter />

@@ -40,8 +40,8 @@ export function SiteFooter() {
           title="Support"
           links={[
             { href: "/", label: "Help Center" },
-            { href: "/", label: "Contact" },
-            { href: "/", label: "Terms" },
+            { href: "/contact", label: "Contact" },
+            { href: "/terms", label: "Terms" },
             { href: "/", label: "Privacy" },
           ]}
         />

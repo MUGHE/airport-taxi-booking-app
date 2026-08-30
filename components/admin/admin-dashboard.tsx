@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarClock, Car, CircleDollarSign, Eye, Search, TicketCheck, X } from "lucide-react"
+import { Banknote, CalendarClock, Car, CircleDollarSign, CreditCard, Eye, Pencil, Search, TicketCheck, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BookingDetails } from "@/components/booking-details"
+import { EditBookingDialog } from "@/components/admin/edit-booking-dialog"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -26,16 +27,25 @@ import {
 import { getAirport, getVehicle, formatCurrency } from "@/lib/fleet"
 import { STATUS_LABELS, STATUS_ORDER, STATUS_STYLES } from "@/lib/status"
 import { updateBookingStatus } from "@/lib/actions"
-import type { Booking, BookingStatus } from "@/lib/types"
+import type { Booking, BookingAddOn, BookingStatus, VehicleClass } from "@/lib/types"
 import { toast } from "sonner"
 
 type Filter = "all" | BookingStatus
 
-export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
+export function AdminDashboard({
+  bookings,
+  vehicles,
+  addOns,
+}: {
+  bookings: Booking[]
+  vehicles: VehicleClass[]
+  addOns: Array<BookingAddOn & { active: boolean }>
+}) {
   const router = useRouter()
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const stats = useMemo(() => {
@@ -122,6 +132,7 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
                 <TableHead>Pickup</TableHead>
                 <TableHead>Vehicle</TableHead>
                 <TableHead className="text-right">Fare</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Details</TableHead>
               </TableRow>
@@ -129,7 +140,7 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     No bookings match your filters.
                   </TableCell>
                 </TableRow>
@@ -142,15 +153,25 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
                     <TableRow key={b.reference}>
                       <TableCell className="font-mono text-xs font-medium tracking-wider">
                         {b.reference}
+                        {(b.returnTripReference || b.outboundTripReference) && (
+                          <span className="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-sans font-medium tracking-normal text-primary">
+                            {b.outboundTripReference ? "Return" : "Outbound"}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">{b.customerName}</div>
                         <div className="text-xs text-muted-foreground">{b.phone}</div>
                       </TableCell>
-                      <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => setSelectedBooking(b)}><Eye className="size-3.5" />View</Button></TableCell>
+                      <TableCell className="text-right"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setSelectedBooking(b)}><Eye className="size-3.5" />View</Button><Button size="sm" variant="outline" onClick={() => setEditingBooking(b)}><Pencil className="size-3.5" />Edit</Button></div></TableCell>
                       <TableCell className="text-sm">
                         <span className="text-muted-foreground">{from}</span> →{" "}
                         <span className="text-muted-foreground">{to}</span>
+                        {b.stops.length > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{b.stops.length} stop{b.stops.length > 1 ? "s" : ""} ({formatCurrency(b.stopsTotal)})
+                          </div>
+                        )}
                         {b.flightNumber && (
                           <div className="text-xs text-muted-foreground">
                             Flight {b.flightNumber}
@@ -164,6 +185,16 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
                       <TableCell className="text-sm">{getVehicle(b.vehicleId)?.name}</TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
                         {formatCurrency(b.fare)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {b.paymentMethod === "cash" ? (
+                            <Banknote className="size-3.5" />
+                          ) : (
+                            <CreditCard className="size-3.5" />
+                          )}
+                          {b.paymentMethod === "cash" ? "Cash" : "Card"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <Select
@@ -194,6 +225,7 @@ export function AdminDashboard({ bookings }: { bookings: Booking[] }) {
         </div>
       </div>
       {selectedBooking && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Booking details"><div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"><div className="mb-2 flex justify-end"><Button variant="secondary" size="icon-sm" onClick={() => setSelectedBooking(null)} aria-label="Close booking details"><X /></Button></div><BookingDetails booking={selectedBooking} /></div></div>}
+      {editingBooking && <EditBookingDialog booking={editingBooking} vehicles={vehicles} addOns={addOns} onClose={() => setEditingBooking(null)} />}
     </div>
   )
 }

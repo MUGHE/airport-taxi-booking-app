@@ -1,10 +1,10 @@
 import Image from "next/image"
 import { ShieldCheck, Star, Clock, Sparkles } from "lucide-react"
 import { FareEstimator } from "@/components/fare-estimator"
-import { getSitePromotion } from "@/lib/actions"
+import { getSitePromotion, getStopPricing } from "@/lib/actions"
 
 export async function Hero() {
-  const promotion = await getSitePromotion()
+  const [promotion, stopPricing] = await Promise.all([getSitePromotion(), getStopPricing()])
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -57,7 +57,7 @@ export async function Hero() {
         </div>
 
         <div className="lg:justify-self-end lg:max-w-md w-full">
-        <FareEstimator />
+        <FareEstimator stopPricing={stopPricing} />
         </div>
       </div>
     </section>

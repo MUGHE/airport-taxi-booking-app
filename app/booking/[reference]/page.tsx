@@ -1,12 +1,13 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { CheckCircle2, CircleAlert, Home, Search } from "lucide-react"
+import { Banknote, CheckCircle2, CircleAlert, Home, Repeat, Search } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { BookingDetails } from "@/components/booking-details"
 import { PaymentStep } from "@/components/booking/payment-step"
 import { Button } from "@/components/ui/button"
 import { confirmBookingPayment, lookupBooking } from "@/lib/actions"
+import { formatCurrency } from "@/lib/fleet"
 
 export default async function BookingConfirmationPage({
   params,
@@ -26,6 +27,7 @@ export default async function BookingConfirmationPage({
   if (!booking) notFound()
 
   const isPaid = booking.paymentStatus === "paid"
+  const isCash = booking.paymentMethod === "cash"
   const isCancelledPayment = query.payment === "cancelled"
 
   return (
@@ -33,9 +35,9 @@ export default async function BookingConfirmationPage({
       <SiteHeader />
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-12">
         <div className="mb-6 text-center">
-          {isPaid ? (
+          {isPaid || isCash ? (
             <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-              <CheckCircle2 className="size-7" />
+              {isCash ? <Banknote className="size-7" /> : <CheckCircle2 className="size-7" />}
             </span>
           ) : (
             <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300">
@@ -43,7 +45,7 @@ export default async function BookingConfirmationPage({
             </span>
           )}
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-            {isPaid ? "You&apos;re all set!" : "One last step: pay now"}
+            {isPaid || isCash ? "You're all set!" : "One last step: pay now"}
           </h1>
           <p className="mt-2 text-muted-foreground">
             {isPaid ? (
@@ -51,6 +53,14 @@ export default async function BookingConfirmationPage({
                 A confirmation has been sent to{" "}
                 <span className="font-medium text-foreground">{booking.email}</span>.
                 Save your reference to track this trip anytime.
+              </>
+            ) : isCash ? (
+              <>
+                Your trip is reserved under{" "}
+                <span className="font-medium text-foreground">{booking.reference}</span>.
+                Pay your driver{" "}
+                <span className="font-medium text-foreground">{formatCurrency(booking.fare)}</span>{" "}
+                in cash at the end of your journey.
               </>
             ) : (
               <>
@@ -64,7 +74,22 @@ export default async function BookingConfirmationPage({
 
         <BookingDetails booking={booking} />
 
-        {!isPaid && (
+        {(booking.returnTripReference || booking.outboundTripReference) && (
+          <Link
+            href={`/booking/${booking.returnTripReference || booking.outboundTripReference}`}
+            className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm transition-colors hover:border-primary/40"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <Repeat className="size-4 text-primary" />
+              {booking.returnTripReference
+                ? `View your return trip (${booking.returnTripReference})`
+                : `View your outbound trip (${booking.outboundTripReference})`}
+            </span>
+            <span className="text-muted-foreground">→</span>
+          </Link>
+        )}
+
+        {!isPaid && !isCash && (
           <>
             {isCancelledPayment && (
               <p className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">

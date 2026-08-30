@@ -140,6 +140,9 @@ export function DestinationPicker({
         ;(element as any).placeholder = placeholder
         ;(element as any).value = defaultValue
 	;(element as any).noInputIcon = true
+        // Restrict autocomplete suggestions to the UK so a keyword doesn't match
+        // addresses/places anywhere in the world.
+        ;(element as any).includedRegionCodes = ["gb"]
 
         element.style.width = "100%"
         element.style.maxWidth = "100%"

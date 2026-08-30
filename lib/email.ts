@@ -18,18 +18,27 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
 }
 
-function bookingSummaryRows(booking: Booking): string {
+function bookingSummaryRows(booking: Booking, appUrl: string): string {
+  const linkedReference = booking.returnTripReference || booking.outboundTripReference
   const rows: Array<[string, string]> = [
     ["Reference", booking.reference],
     ["Pickup", `${booking.pickupDate} at ${booking.pickupTime}`],
     ["From", booking.pickupAddress || booking.airportId],
     ["To", booking.dropoffAddress || booking.destinationAddress],
+    ...(booking.stops.length > 0 ? [["Stops", `${booking.stops.map((s) => s.address).join(", ")} (+${formatCurrency(booking.stopsTotal)})`] as [string, string]] : []),
     ["Vehicle", booking.vehicleId],
     ["Passengers", String(booking.passengers)],
     ["Bags", String(booking.bags)],
     ["Flight number", booking.flightNumber || "—"],
     ...(booking.promoCode && booking.discountAmount > 0 ? [["Promo code", `${booking.promoCode} (-${formatCurrency(booking.discountAmount)})`] as [string, string]] : []),
     ["Fare", formatCurrency(booking.fare)],
+    ["Payment", booking.paymentMethod === "cash" ? "Cash to driver" : "Card (online)"],
+    ...(linkedReference
+      ? [[
+          booking.returnTripReference ? "Return trip" : "Outbound trip",
+          appUrl ? `<a href="${appUrl}/booking/${linkedReference}" style="color:#2563eb;">${linkedReference}</a>` : linkedReference,
+        ] as [string, string]]
+      : []),
   ]
 
   return rows
@@ -57,13 +66,18 @@ export async function sendBookingNotificationEmails(booking: Booking): Promise<v
   const supportEmail = process.env.SUPPORT_EMAIL
   const appUrl = await getAppUrl()
   const trackingUrl = appUrl ? `${appUrl}/booking/${booking.reference}` : undefined
-  const summaryRows = bookingSummaryRows(booking)
+  const summaryRows = bookingSummaryRows(booking, appUrl)
 
   const customerHtml = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
       <h2 style="color:#111827;">Booking confirmed</h2>
       <p style="color:#374151;">Hi ${booking.customerName}, thanks for booking with us! Here are your trip details:</p>
       <table style="border-collapse:collapse;width:100%;">${summaryRows}</table>
+      ${
+        booking.paymentMethod === "cash"
+          ? `<p style="color:#374151;margin-top:16px;">Please have <strong>${formatCurrency(booking.fare)}</strong> in cash ready for your driver at the end of the journey.</p>`
+          : ""
+      }
       ${trackingUrl ? `<p style="margin-top:16px;"><a href="${trackingUrl}" style="color:#2563eb;">View or manage your booking</a></p>` : ""}
       <p style="color:#6b7280;font-size:13px;margin-top:24px;">If you have any questions, just reply to this email.</p>
     </div>
@@ -110,5 +124,48 @@ export async function sendBookingNotificationEmails(booking: Booking): Promise<v
     if (result.status === "rejected") {
       console.error("Failed to send booking email:", result.reason)
     }
+  }
+}
+
+/** Sent to the customer whenever support edits a booking from the admin panel (location, add-ons, vehicle, etc.) so the new price and details are never a surprise. */
+export async function sendBookingUpdateEmail(booking: Booking): Promise<void> {
+  const resend = getResendClient()
+  if (!resend) {
+    console.warn("RESEND_API_KEY is not set; skipping booking update email.")
+    return
+  }
+
+  const fromAddress = process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>"
+  const appUrl = await getAppUrl()
+  const trackingUrl = appUrl ? `${appUrl}/booking/${booking.reference}` : undefined
+  const summaryRows = bookingSummaryRows(booking, appUrl)
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#111827;">Your booking has been updated</h2>
+      <p style="color:#374151;">Hi ${booking.customerName}, one of our team has updated your booking. Here are your current trip details:</p>
+      <table style="border-collapse:collapse;width:100%;">${summaryRows}</table>
+      ${
+        booking.paymentMethod === "cash"
+          ? `<p style="color:#374151;margin-top:16px;">Please have <strong>${formatCurrency(booking.fare)}</strong> in cash ready for your driver at the end of the journey.</p>`
+          : `<p style="color:#374151;margin-top:16px;">If this change affects the amount owed, our team will follow up separately about payment.</p>`
+      }
+      ${trackingUrl ? `<p style="margin-top:16px;"><a href="${trackingUrl}" style="color:#2563eb;">View or manage your booking</a></p>` : ""}
+      <p style="color:#6b7280;font-size:13px;margin-top:24px;">If anything here looks wrong, just reply to this email.</p>
+    </div>
+  `
+
+  try {
+    const result = await resend.emails.send({
+      from: fromAddress,
+      to: booking.email,
+      subject: `Booking updated — ${booking.reference}`,
+      html,
+    })
+    if (result.error) {
+      console.error("Failed to send booking update email:", result.error)
+    }
+  } catch (error) {
+    console.error("Failed to send booking update email:", error)
   }
 }

@@ -11,6 +11,7 @@ export interface DrivingRoute {
 export async function calculateDrivingRoute(
   origin: LatLng,
   destination: LatLng,
+  waypoints: LatLng[] = [],
 ): Promise<DrivingRoute | null> {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
   if (!apiKey) throw new Error("GOOGLE_MAPS_SERVER_API_KEY is missing.")
@@ -25,6 +26,9 @@ export async function calculateDrivingRoute(
     body: JSON.stringify({
       origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
       destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },
+      // Intermediate stops, visited in order — the route (and its distance/duration, so its
+      // fare) accounts for the full journey through them, not just origin -> destination.
+      intermediates: waypoints.map((point) => ({ location: { latLng: { latitude: point.lat, longitude: point.lng } } })),
       travelMode: "DRIVE",
     }),
     cache: "no-store",
