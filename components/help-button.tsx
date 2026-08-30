@@ -102,13 +102,19 @@ function ContactAction({
       <span className="rounded-md bg-card px-2 py-1 text-xs font-medium whitespace-nowrap text-foreground opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
         {label}
       </span>
-      <span
-        className={cn(
-          "flex size-11 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95",
-          className,
-        )}
-      >
-        {children}
+      {/* Fixed size-14 slot matches the main toggle button below, so this smaller
+          size-11 circle shares the same center axis instead of only sharing a right
+          edge with it (the parent stack right-aligns so the icon doesn't shift when
+          the label reveals on hover). */}
+      <span className="flex size-14 items-center justify-center">
+        <span
+          className={cn(
+            "flex size-11 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95",
+            className,
+          )}
+        >
+          {children}
+        </span>
       </span>
     </a>
   )

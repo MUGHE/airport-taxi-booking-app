@@ -19,11 +19,16 @@ export default async function BookingConfirmationPage({
   const { reference } = await params
   const query = await searchParams
 
-  if (query.payment === "success" && query.session_id) {
-    await confirmBookingPayment(reference, query.session_id)
-  }
-
-  const booking = await lookupBooking(reference)
+  // When we've just come back from Stripe, confirmBookingPayment already returns the
+  // up-to-date booking — reuse that instead of a second lookupBooking call. A second call
+  // would issue an identical fetch to the one confirmBookingPayment made before updating the
+  // row, and React's per-request fetch memoization would hand back that stale, pre-payment
+  // copy instead of hitting the database again, which is why the page kept showing "pending"
+  // until a manual reload started a fresh request (and a fresh memoization cache).
+  const booking =
+    query.payment === "success" && query.session_id
+      ? await confirmBookingPayment(reference, query.session_id)
+      : await lookupBooking(reference)
   if (!booking) notFound()
 
   const isPaid = booking.paymentStatus === "paid"

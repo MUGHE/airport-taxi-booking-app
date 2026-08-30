@@ -126,15 +126,107 @@ gmp-place-autocomplete {
   border-radius: var(--radius-lg);
   border: 1px solid var(--input);
   background-color: transparent;
-  color-scheme: light dark;
-}
-
-.dark gmp-place-autocomplete {
-  background-color: color-mix(in oklch, var(--input) 30%, transparent);
+  /* The site is light-mode only (see :root above) — "light dark" here let the
+     browser's OS dark preference bleed into Google's shadow-DOM input text and
+     suggestion dropdown, rendering low-contrast gray-on-white text. */
+  color-scheme: light;
 }
 
 gmp-place-autocomplete::part(input) {
   padding-left: 2.0rem;
+  color: var(--foreground);
+}
+
+/* Hides the scrollbar on horizontally-scrolling carousels (fleet section) while keeping
+   the element natively scrollable/swipeable — the edge fade + arrow buttons are the
+   intended scroll affordance instead of a visible scrollbar track. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ambient site-wide backdrop (components/site-backdrop.tsx): two slow-drifting brand-color
+   glows plus a few diagonal light streaks. Fixed behind all content — placed first in <body>
+   so later, normal-flow page content paints over it — and never intercepts input. */
+.site-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.site-backdrop::before,
+.site-backdrop::after {
+  content: '';
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 9999px;
+  background: radial-gradient(circle, oklch(0.48 0.16 256 / 7%), transparent 70%);
+  animation: backdrop-drift 26s ease-in-out infinite alternate;
+}
+.site-backdrop::before {
+  top: -20vmax;
+  left: -15vmax;
+}
+.site-backdrop::after {
+  right: -20vmax;
+  bottom: -20vmax;
+  background: radial-gradient(circle, oklch(0.79 0.15 78 / 5%), transparent 70%);
+  animation-duration: 32s;
+  animation-direction: alternate-reverse;
+}
+@keyframes backdrop-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(4vmax, 3vmax) scale(1.08); }
+}
+
+.backdrop-streak {
+  position: absolute;
+  top: 20%;
+  left: -50vw;
+  width: 46vw;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, oklch(0.48 0.16 256 / 40%), transparent);
+  animation: backdrop-streak 9s linear infinite;
+}
+.backdrop-streak:nth-child(2) {
+  top: 48%;
+  animation-delay: 3s;
+}
+.backdrop-streak:nth-child(3) {
+  top: 76%;
+  animation-delay: 6s;
+}
+@keyframes backdrop-streak {
+  0% { transform: translateX(0) rotate(-8deg); opacity: 0; }
+  4% { opacity: 1; }
+  16% { opacity: 0; }
+  100% { transform: translateX(180vw) rotate(-8deg); opacity: 0; }
+}
+
+/* Card entrance: fade in + slide up. Pair with an inline animationDelay of index * 150ms
+   for a staggered grid (fleet carousel, vehicle-selection cards). */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-card-in {
+  animation: card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-backdrop::before,
+  .site-backdrop::after,
+  .backdrop-streak {
+    animation: none;
+  }
+  .animate-card-in {
+    animation: none;
+  }
 }
 
 @layer base {

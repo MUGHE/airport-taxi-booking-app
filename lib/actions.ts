@@ -32,7 +32,7 @@ import type { Booking, BookingAddOn, BookingStatus, Destination, NewBookingInput
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare } from "./fleet"
-import { sendBookingNotificationEmails, sendBookingUpdateEmail } from "./email"
+import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendInvoiceEmail } from "./email"
 
 
 export interface LoginResult {
@@ -166,11 +166,18 @@ async function buildAndSaveBooking(
   await saveBooking(booking)
   revalidatePath("/admin")
 
-  // Don't let a slow/failing email provider hold up the booking response —
-  // sendBookingNotificationEmails already swallows and logs its own errors.
-  sendBookingNotificationEmails(booking).catch((error) => {
-    console.error("Unexpected error sending booking emails:", error)
-  })
+  // Cash bookings are confirmed the moment they're placed — nothing is left to collect
+  // online — so the confirmation email goes out now. Card (online) bookings are still
+  // "pending" at this point; their confirmation is sent later, only once Stripe reports
+  // the payment as successful (see confirmBookingPayment), so a customer never gets a
+  // "booking confirmed" email for a payment that failed or was abandoned.
+  if (booking.paymentMethod === "cash") {
+    // Don't let a slow/failing email provider hold up the booking response —
+    // sendBookingNotificationEmails already swallows and logs its own errors.
+    sendBookingNotificationEmails(booking).catch((error) => {
+      console.error("Unexpected error sending booking emails:", error)
+    })
+  }
 
   return { ok: true, reference: booking.reference }
 }
@@ -294,8 +301,18 @@ export async function confirmBookingPayment(
   try {
     const stripe = getStripeClient()
     const session = await stripe.checkout.sessions.retrieve(checkoutSessionId)
-    if (session.payment_status !== "paid") return booking
-    if (session.metadata?.bookingReference !== booking.reference) return null
+    if (session.payment_status !== "paid") {
+      console.warn(
+        `confirmBookingPayment: session ${checkoutSessionId} for ${booking.reference} has payment_status "${session.payment_status}", not "paid" yet — leaving booking pending.`,
+      )
+      return booking
+    }
+    if (session.metadata?.bookingReference !== booking.reference) {
+      console.error(
+        `confirmBookingPayment: session ${checkoutSessionId} metadata.bookingReference "${session.metadata?.bookingReference}" does not match booking ${booking.reference} — refusing to confirm.`,
+      )
+      return null
+    }
 
     const paymentIntentId =
       typeof session.payment_intent === "string"
@@ -307,10 +324,28 @@ export async function confirmBookingPayment(
       session.id,
       paymentIntentId,
     )
-    revalidatePath("/admin")
-    revalidatePath(`/booking/${booking.reference}`)
+    // No revalidatePath() here: this function runs during the confirmation page's render
+    // (Stripe redirects straight back to it), and Next.js forbids calling revalidatePath
+    // during render — it throws "used revalidatePath during render which is unsupported",
+    // which was aborting this function before the email below ever ran. It's also unneeded:
+    // /admin is `force-dynamic` and this page is inherently dynamic (it reads searchParams),
+    // so neither route is ever cached in the first place.
+
+    // Online payment just succeeded — this is the first point a card booking is actually
+    // confirmed, so send the "booking confirmed" email now (the early "already paid" return
+    // above keeps this from firing again if the customer revisits the success page). This is
+    // called from the confirmation page's render, not a long-lived request, so the email send
+    // is awaited rather than fired-and-forgotten — otherwise the serverless function can be
+    // frozen/torn down right after the page responds, before the email ever goes out.
+    if (updated) {
+      await sendBookingNotificationEmails(updated).catch((error) => {
+        console.error("Unexpected error sending booking emails:", error)
+      })
+    }
+
     return updated
-  } catch {
+  } catch (error) {
+    console.error(`confirmBookingPayment: failed to confirm payment for ${booking.reference}:`, error)
     return booking
   }
 }
@@ -466,6 +501,22 @@ export async function updateBookingAction(reference: string, input: BookingEditI
   })
 
   return { ok: true, booking: saved }
+}
+
+export interface SendInvoiceResult {
+  ok: boolean
+  error?: string
+}
+
+/** Emails the customer an itemized invoice for a booking, on demand from the admin panel. */
+export async function sendInvoiceAction(reference: string): Promise<SendInvoiceResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  const booking = await findBooking(reference)
+  if (!booking) return { ok: false, error: "Booking not found." }
+
+  const result = await sendInvoiceEmail(booking)
+  if (!result.ok) return { ok: false, error: result.error || "Could not send the invoice." }
+  return { ok: true }
 }
 
 export async function getVehicleFleet(): Promise<VehicleClass[]> {

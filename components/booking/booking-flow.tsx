@@ -17,7 +17,7 @@ import { DestinationPicker, type PlaceSelection } from "@/components/destination
 import { TripMap } from "@/components/trip-map"
 import type { BookingAddOn, PaymentMethod, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate, formatTimeLabel, localDate, localTime, TIME_SLOTS } from "@/lib/datetime"
+import { BOOKING_LEAD_MINUTES, formatDate, formatTimeLabel, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import { toast } from "sonner"
 
 const STEPS = ["Trip", "Vehicle", "Details", "Review"] as const
@@ -93,8 +93,8 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
 
   useEffect(() => {
     if (pickupDate === today && pickupTime) {
-      const nowTime = localTime(new Date())
-      if (pickupTime < nowTime) setPickupTime(nowTime)
+      const minTime = minPickupTimeToday()
+      if (pickupTime < minTime) setPickupTime(minTime)
     }
   }, [pickupDate, today])
 
@@ -110,8 +110,8 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
 
   useEffect(() => {
     if (wantsReturn && returnDate === today && returnTime) {
-      const nowTime = localTime(new Date())
-      if (returnTime < nowTime) setReturnTime(nowTime)
+      const minTime = minPickupTimeToday()
+      if (returnTime < minTime) setReturnTime(minTime)
     }
   }, [wantsReturn, returnDate, today])
 
@@ -192,14 +192,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPickupDate, pickupTime, setPickupTime, today, stops, setStops, stopPricing }: { pickup: PlaceSelection | null; setPickup: (value: PlaceSelection | null) => void; dropoff: PlaceSelection | null; setDropoff: (value: PlaceSelection | null) => void; pickupDate: string; setPickupDate: (value: string) => void; pickupTime: string; setPickupTime: (value: string) => void; today: string; stops: PlaceSelection[]; setStops: (value: PlaceSelection[]) => void; stopPricing: StopPricing }) {
   const [dateOpen, setDateOpen] = useState(false)
   const isToday = pickupDate === today
-  const nowTime = localTime(new Date())
-  const availableTimes = isToday ? TIME_SLOTS.filter((t) => t >= nowTime) : TIME_SLOTS
+  // Same-day pickups need lead time to prepare a vehicle and driver — the earliest
+  // selectable slot is "now" plus a buffer, not "now" itself.
+  const minTimeToday = minPickupTimeToday()
+  const availableTimes = isToday ? TIME_SLOTS.filter((t) => t >= minTimeToday) : TIME_SLOTS
   function handleDateChange(value: string) {
     if (value && value < today) { toast.error("Pickup date can't be in the past."); setPickupDate(today); return }
     setPickupDate(value)
   }
   function handleTimeChange(value: string) {
-    if (isToday && value && value < nowTime) { toast.error("Pickup time can't be in the past."); setPickupTime(nowTime); return }
+    if (isToday && value && value < minTimeToday) { toast.error(`Pickup time must be at least ${BOOKING_LEAD_MINUTES} minutes from now.`); setPickupTime(minTimeToday); return }
     setPickupTime(value)
   }
   function addStop() { if (stops.length < MAX_STOPS) setStops([...stops, { placeId: "", address: "", lat: NaN, lng: NaN }]) }
@@ -245,16 +247,39 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
   </div>
   </div>
 }
-function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, vehicles, loading, promotion }: { vehicleId: string; setVehicleId: (value: string) => void; distanceMiles: number | null; durationMinutes: number | null; vehicles: VehicleClass[]; loading: boolean; promotion: SitePromotion }) { return <div><Heading title="Pick your vehicle" desc={loading ? "Calculating your route…" : "Fares are fixed and include all taxes, tolls, and gratuity."} /><div className="grid gap-4 sm:grid-cols-2">{vehicles.map((item) => { const quote = distanceMiles != null && durationMinutes != null ? computeFare(item, distanceMiles, durationMinutes) : null; const originalPrice = quote ? quote.fare : item.minFare; const price = promotion.active ? applyPromotion(originalPrice, promotion.discountPercent) : originalPrice; const selected = item.id === vehicleId; return <button key={item.id} type="button" onClick={() => setVehicleId(item.id)} className={cn("flex gap-4 rounded-2xl border p-4 text-left", selected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card")}><div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-secondary"><Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" sizes="96px" /></div><div><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span></div><div className="mt-2 flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(originalPrice)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quote ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div></button> })}</div></div> }
-function DetailsStep(props: any) { return <div><Heading title="Passenger details" desc="We'll send your confirmation and driver details to your email." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name"><Input value={props.customerName} onChange={(e) => props.setCustomerName(e.target.value)} /></Field><Field label="Email"><Input type="email" value={props.email} onChange={(e) => props.setEmail(e.target.value)} /></Field><Field label="Phone"><Input type="tel" value={props.phone} onChange={(e) => props.setPhone(e.target.value)} /></Field><Field label="Flight number (optional)"><Input value={props.flightNumber} onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())} /></Field><Field label="Passengers"><Select value={String(props.passengers)} onValueChange={(value) => props.setPassengers(Number(value))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxCapacity }, (_, index) => index + 1).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><Field label="Bags"><Select value={String(Math.min(props.bags, props.maxLuggage))} onValueChange={(value) => props.setBags(Number(value))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxLuggage + 1 }, (_, index) => index).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><div className="sm:col-span-2"><p className="mb-2 text-sm font-medium">Trip add-ons</p><div className="grid gap-2 sm:grid-cols-2">{props.addOns.map((addOn: BookingAddOn) => { const checked = props.selectedAddOnIds.includes(addOn.id); return <label key={addOn.id} className="flex cursor-pointer items-center justify-between rounded-xl border p-3"><span className="flex items-center gap-2"><input type="checkbox" checked={checked} onChange={() => props.setSelectedAddOnIds(checked ? props.selectedAddOnIds.filter((id: string) => id !== addOn.id) : [...props.selectedAddOnIds, addOn.id])} />{addOn.name}</span><span className="font-medium">{formatCurrency(addOn.price)}</span></label> })}</div></div><div className="sm:col-span-2"><Field label="Notes for your driver (optional)"><Textarea value={props.notes} onChange={(e) => props.setNotes(e.target.value)} rows={3} /></Field></div></div><ReturnTripOption {...props} /></div> }
+function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, vehicles, loading, promotion }: { vehicleId: string; setVehicleId: (value: string) => void; distanceMiles: number | null; durationMinutes: number | null; vehicles: VehicleClass[]; loading: boolean; promotion: SitePromotion }) { return <div><Heading title="Pick your vehicle" desc={loading ? "Calculating your route…" : "Fares are fixed and include all taxes, tolls, and gratuity."} /><div className="grid gap-4 sm:grid-cols-2">{vehicles.map((item, index) => { const quote = distanceMiles != null && durationMinutes != null ? computeFare(item, distanceMiles, durationMinutes) : null; const originalPrice = quote ? quote.fare : item.minFare; const price = promotion.active ? applyPromotion(originalPrice, promotion.discountPercent) : originalPrice; const selected = item.id === vehicleId;
+        // Unselected cards stay the same white card + secondary image panel as the selected one —
+        // selection is a soft primary halo + corner check mark, not a competing flat-color fill.
+        return <button key={item.id} type="button" onClick={() => setVehicleId(item.id)}
+          className={cn("animate-card-in overflow-hidden rounded-2xl border bg-card text-left", selected ? "border-primary" : "border-border")}
+          style={{ borderWidth: selected ? "1.5px" : "1px", boxShadow: selected ? "0 0 0 3px oklch(0.48 0.16 256 / 0.12), 0 6px 16px oklch(0.48 0.16 256 / 0.14)" : "0 1px 2px oklch(0.21 0.03 256 / 0.04)", animationDelay: `${index * 150}ms` }}>
+          <div className="relative aspect-[4/3] bg-secondary">
+            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-contain p-1.5" sizes="(max-width: 640px) 100vw, 320px" />
+            {selected && <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-primary shadow-sm"><Check className="size-3.5 text-primary-foreground" strokeWidth={3} /></span>}
+          </div>
+          <div className="p-4"><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span></div><div className="my-3 border-t border-border" /><div className="flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(originalPrice)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quote ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div></button> })}</div></div> }
+function DetailsStep(props: any) { return <div><Heading title="Passenger details" desc="We'll send your confirmation and driver details to your email." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name"><Input value={props.customerName} onChange={(e) => props.setCustomerName(e.target.value)} /></Field><Field label="Email"><Input type="email" value={props.email} onChange={(e) => props.setEmail(e.target.value)} /></Field><Field label="Phone"><Input type="tel" value={props.phone} onChange={(e) => props.setPhone(e.target.value)} /></Field><Field label="Flight number (optional)"><Input value={props.flightNumber} onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())} /></Field><Field label="Passengers"><Select value={String(props.passengers)} onValueChange={(value) => props.setPassengers(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxCapacity }, (_, index) => index + 1).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><Field label="Bags"><Select value={String(Math.min(props.bags, props.maxLuggage))} onValueChange={(value) => props.setBags(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxLuggage + 1 }, (_, index) => index).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><div className="sm:col-span-2"><p className="mb-2 text-sm font-medium">Trip add-ons</p><div className="grid gap-2 sm:grid-cols-2">{props.addOns.map((addOn: BookingAddOn) => {
+              const checked = props.selectedAddOnIds.includes(addOn.id)
+              // Same selectable-card language as the payment method picker below (border-primary +
+              // ring + tint when picked) instead of a bare, unstyled native checkbox.
+              return <label key={addOn.id} className={cn("flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 text-sm", checked ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card")}>
+                <span className="flex items-center gap-3">
+                  <input type="checkbox" className="sr-only" checked={checked} onChange={() => props.setSelectedAddOnIds(checked ? props.selectedAddOnIds.filter((id: string) => id !== addOn.id) : [...props.selectedAddOnIds, addOn.id])} />
+                  <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-md border", checked ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent")}><Check className="size-3.5" strokeWidth={3} /></span>
+                  <span className="font-medium">{addOn.name}</span>
+                </span>
+                <span className={cn("font-medium", checked && "text-primary")}>{formatCurrency(addOn.price)}</span>
+              </label>
+            })}</div></div><div className="sm:col-span-2"><Field label="Notes for your driver (optional)"><Textarea value={props.notes} onChange={(e) => props.setNotes(e.target.value)} rows={3} /></Field></div></div><ReturnTripOption {...props} /></div> }
 function ReturnTripOption(props: any) {
   const [returnDateOpen, setReturnDateOpen] = useState(false)
   const { pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare } = props
-  const nowTime = localTime(new Date())
+  const minTimeToday = minPickupTimeToday()
   const minReturnDate = pickupDate || today
   // The return leg can't start before the outbound one lands — floor is whichever of
-  // "now" (if the return date is today) and the outbound pickup time (if same day) is later.
-  const returnFloorTime = [pickupDate && returnDate === pickupDate ? pickupTime : null, returnDate === today ? nowTime : null]
+  // "now" plus the lead-time buffer (if the return date is today) and the outbound pickup
+  // time (if same day) is later.
+  const returnFloorTime = [pickupDate && returnDate === pickupDate ? pickupTime : null, returnDate === today ? minTimeToday : null]
     .filter((t: string | null): t is string => Boolean(t))
     .reduce((max: string | null, t: string) => (max == null || t > max ? t : max), null as string | null)
   const returnAvailableTimes = returnFloorTime ? TIME_SLOTS.filter((t) => t >= returnFloorTime) : TIME_SLOTS
@@ -286,7 +311,10 @@ function ReturnTripOption(props: any) {
               : "We'll drive you back too — just pick a date, time, and locations."}
         </span>
       </span>
-      <input type="checkbox" className="mt-2 size-5 shrink-0 accent-primary" checked={wantsReturn} onChange={(e) => setWantsReturn(e.target.checked)} />
+      {/* Same custom rounded checkbox as the trip add-ons below, instead of the browser's square
+          native one. */}
+      <input type="checkbox" className="sr-only" checked={wantsReturn} onChange={(e) => setWantsReturn(e.target.checked)} />
+      <span className={cn("mt-1.5 flex size-5 shrink-0 items-center justify-center rounded-md border", wantsReturn ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-transparent")}><Check className="size-3.5" strokeWidth={3} /></span>
     </label>
     {wantsReturn && <div className="mt-4 border-t border-primary/20 pt-4">
       <p className="mb-2 text-sm font-medium">Return locations</p>

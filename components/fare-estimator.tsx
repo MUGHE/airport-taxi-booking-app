@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency } from "@/lib/fleet"
-import { formatDate, formatTimeLabel, localDate, localTime, TIME_SLOTS } from "@/lib/datetime"
+import { BOOKING_LEAD_MINUTES, formatDate, formatTimeLabel, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import type { StopPricing } from "@/lib/types"
 import { toast } from "sonner"
 
@@ -28,21 +28,23 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
   const [dateOpen, setDateOpen] = useState(false)
   const today = localDate(new Date())
   const isToday = pickupDate === today
-  const nowTime = localTime(new Date())
-  const availableTimes = isToday ? TIME_SLOTS.filter((t) => t >= nowTime) : TIME_SLOTS
+  // Same-day pickups need lead time to prepare a vehicle and driver — the earliest
+  // selectable slot is "now" plus a buffer, not "now" itself.
+  const minTimeToday = minPickupTimeToday()
+  const availableTimes = isToday ? TIME_SLOTS.filter((t) => t >= minTimeToday) : TIME_SLOTS
 
   // Defends against the date having rolled over to a new day while the tab was open.
   useEffect(() => {
     if (pickupDate && pickupDate < today) setPickupDate(today)
   }, [pickupDate, today])
 
-  // If a time was picked before the date (so it wasn't yet checked against "now"),
-  // re-validate it once the date lands on today — otherwise a past time can stay
+  // If a time was picked before the date (so it wasn't yet checked against the lead-time
+  // floor), re-validate it once the date lands on today — otherwise a too-soon time can stay
   // selected. Mirrors the same effect in the booking flow's Trip step.
   useEffect(() => {
     if (pickupDate === today && pickupTime) {
-      const nowTime = localTime(new Date())
-      if (pickupTime < nowTime) setPickupTime(nowTime)
+      const minTime = minPickupTimeToday()
+      if (pickupTime < minTime) setPickupTime(minTime)
     }
   }, [pickupDate, today])
 
@@ -51,7 +53,7 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
     setPickupDate(value)
   }
   function handleTimeChange(value: string) {
-    if (isToday && value && value < nowTime) { toast.error("Pickup time can't be in the past."); setPickupTime(nowTime); return }
+    if (isToday && value && value < minTimeToday) { toast.error(`Pickup time must be at least ${BOOKING_LEAD_MINUTES} minutes from now.`); setPickupTime(minTimeToday); return }
     setPickupTime(value)
   }
 

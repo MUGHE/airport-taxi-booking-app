@@ -18,6 +18,28 @@ export const TIME_SLOTS = Array.from(
   (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`,
 )
 
+// A same-day pickup needs enough notice to line up a vehicle and driver, so "now" isn't
+// bookable — the earliest slot is always at least this far out.
+export const BOOKING_LEAD_MINUTES = 45
+
+/**
+ * Earliest pickup time selectable when the pickup date is today: "now" plus the lead-time
+ * buffer, rounded up to the next 15-minute slot (e.g. 6:15 PM -> 7:00 PM). If the buffer
+ * pushes past midnight, returns a value past every slot in TIME_SLOTS so none qualify —
+ * the customer has to pick a later date instead.
+ */
+export function minPickupTimeToday(referenceDate: Date = new Date()): string {
+  const withLead = new Date(referenceDate.getTime() + BOOKING_LEAD_MINUTES * 60_000)
+  const remainder = withLead.getMinutes() % 15
+  if (remainder !== 0) withLead.setMinutes(withLead.getMinutes() + (15 - remainder))
+  withLead.setSeconds(0, 0)
+  const rolledToNextDay =
+    withLead.getFullYear() !== referenceDate.getFullYear() ||
+    withLead.getMonth() !== referenceDate.getMonth() ||
+    withLead.getDate() !== referenceDate.getDate()
+  return rolledToNextDay ? "24:00" : localTime(withLead)
+}
+
 export function formatTimeLabel(value: string) {
   const [h, m] = value.split(":").map(Number)
   return new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })

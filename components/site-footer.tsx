@@ -1,5 +1,5 @@
+import Image from "next/image"
 import Link from "next/link"
-import { Plane } from "lucide-react"
 
 export function SiteFooter() {
   return (
@@ -7,9 +7,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
           <Link href="/" className="flex items-center gap-2 font-semibold">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Plane className="size-4" />
-            </span>
+            <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={40} height={40} className="size-10" />
             <span className="text-lg tracking-tight">ONE Airport Taxi</span>
           </Link>
           <p className="text-sm text-muted-foreground">
@@ -30,16 +28,14 @@ export function SiteFooter() {
         <FooterCol
           title="Company"
           links={[
-            { href: "/", label: "About Us" },
-            { href: "/", label: "Careers" },
-            { href: "/", label: "Partners" },
+            { href: "/about", label: "About Us" },
             { href: "/admin", label: "Admin Portal" },
           ]}
         />
         <FooterCol
           title="Support"
           links={[
-            { href: "/", label: "Help Center" },
+            { href: "/help", label: "Help Center" },
             { href: "/contact", label: "Contact" },
             { href: "/terms", label: "Terms" },
             { href: "/", label: "Privacy" },
