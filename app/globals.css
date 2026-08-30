@@ -173,9 +173,12 @@ gmp-place-autocomplete::part(input) {
   left: -15vmax;
 }
 .site-backdrop::after {
-  right: -20vmax;
-  bottom: -20vmax;
-  background: radial-gradient(circle, oklch(0.79 0.15 78 / 5%), transparent 70%);
+  /* Same top band as the left blob (rather than bottom-right, which sits mostly behind the
+     Fleet section and footer's opaque backgrounds and rarely peeks through) so it's reliably
+     visible in the same way the left glow is. */
+  top: -20vmax;
+  right: -15vmax;
+  background: radial-gradient(circle, oklch(0.21 0.03 256 / 10%), transparent 70%);
   animation-duration: 32s;
   animation-direction: alternate-reverse;
 }
@@ -218,6 +221,17 @@ gmp-place-autocomplete::part(input) {
   animation: card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Small lift + shadow on hover for static content cards (feature/step/value grids) — a
+   little life on an otherwise static page, without a new animation library. */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -10px oklch(0.21 0.03 256 / 16%);
+  border-color: oklch(0.48 0.16 256 / 25%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-backdrop::before,
   .site-backdrop::after,
@@ -226,6 +240,12 @@ gmp-place-autocomplete::part(input) {
   }
   .animate-card-in {
     animation: none;
+  }
+  .hover-lift {
+    transition: none;
+  }
+  .hover-lift:hover {
+    transform: none;
   }
 }
 

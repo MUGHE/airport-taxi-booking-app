@@ -39,7 +39,7 @@ export function HowItWorks() {
         {STEPS.map((step, i) => (
           <div
             key={step.title}
-            className="relative rounded-2xl border border-border/70 bg-card p-6"
+            className="hover-lift relative rounded-2xl border border-border/70 bg-card p-6"
           >
             <span className="absolute right-5 top-5 text-sm font-semibold text-muted-foreground/40">
               0{i + 1}

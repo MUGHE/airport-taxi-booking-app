@@ -65,7 +65,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-5xl px-4 py-10">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {STATS.map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-border/70 bg-card p-5 text-center">
+              <div key={stat.label} className="hover-lift rounded-2xl border border-border/70 bg-card p-5 text-center">
                 <span className="mx-auto flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <stat.icon className="size-5" />
                 </span>
@@ -88,7 +88,7 @@ export default function AboutPage() {
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {VALUES.map((value) => (
-              <div key={value.title} className="rounded-2xl border border-border/70 bg-card p-5">
+              <div key={value.title} className="hover-lift rounded-2xl border border-border/70 bg-card p-5">
                 <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <value.icon className="size-5" />
                 </span>

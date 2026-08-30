@@ -62,7 +62,7 @@ export function FleetCarousel({ vehicles }: { vehicles: VehicleClass[] }) {
           <div
             key={v.id}
             data-card
-            className="animate-card-in flex w-[calc(100vw-2rem)] max-w-sm shrink-0 snap-start snap-always flex-col overflow-hidden rounded-2xl border border-border/70 bg-background sm:w-72 sm:max-w-none"
+            className="animate-card-in hover-lift flex w-[calc(100vw-2rem)] max-w-sm shrink-0 snap-start snap-always flex-col overflow-hidden rounded-2xl border border-border/70 bg-background sm:w-72 sm:max-w-none"
             style={{ animationDelay: `${index * 150}ms` }}
           >
             <div className="relative aspect-[4/3] bg-secondary">

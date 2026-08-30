@@ -2,10 +2,12 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { LogoutButton } from "@/components/admin/logout-button"
 import { AdminNav } from "@/components/admin/admin-nav"
+import { IdleSessionGuard } from "@/components/admin/idle-session-guard"
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <IdleSessionGuard />
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 lg:py-12">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
