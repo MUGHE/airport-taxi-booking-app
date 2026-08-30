@@ -4,7 +4,7 @@
 //
 // Configure via env vars (see .env.example):
 //   NEXT_PUBLIC_WHATSAPP_NUMBER — digits only, with country code, no "+" or spaces
-//   NEXT_PUBLIC_CALL_NUMBER     — E.164 format, e.g. +442012345678
+//   NEXT_PUBLIC_CALL_NUMBER     — digits only, with country code, no "+" or spaces
 
 const DEFAULT_WHATSAPP_NUMBER = "10000000000"
 const DEFAULT_CALL_NUMBER = "+10000000000"
