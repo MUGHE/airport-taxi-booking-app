@@ -20,18 +20,35 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
 }
 
+// Every field below can originate from a public, unauthenticated booking form (or be posted
+// directly to the Server Action, bypassing the UI entirely), so anything customer-supplied
+// must be escaped before it's interpolated into an HTML email — otherwise a booking could
+// carry markup/links that render as if sent by us, to the customer's own inbox or to staff.
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case "&": return "&amp;"
+      case "<": return "&lt;"
+      case ">": return "&gt;"
+      case '"': return "&quot;"
+      case "'": return "&#39;"
+      default: return char
+    }
+  })
+}
+
 function bookingSummaryRows(booking: Booking, appUrl: string): string {
   const linkedReference = booking.returnTripReference || booking.outboundTripReference
   const rows: Array<[string, string]> = [
     ["Reference", booking.reference],
     ["Pickup", `${booking.pickupDate} at ${booking.pickupTime}`],
-    ["From", booking.pickupAddress || booking.airportId],
-    ["To", booking.dropoffAddress || booking.destinationAddress],
-    ...(booking.stops.length > 0 ? [["Stops", `${booking.stops.map((s) => s.address).join(", ")} (+${formatCurrency(booking.stopsTotal)})`] as [string, string]] : []),
+    ["From", escapeHtml(booking.pickupAddress || booking.airportId)],
+    ["To", escapeHtml(booking.dropoffAddress || booking.destinationAddress)],
+    ...(booking.stops.length > 0 ? [["Stops", `${escapeHtml(booking.stops.map((s) => s.address).join(", "))} (+${formatCurrency(booking.stopsTotal)})`] as [string, string]] : []),
     ["Vehicle", booking.vehicleId],
     ["Passengers", String(booking.passengers)],
     ["Bags", String(booking.bags)],
-    ["Flight number", booking.flightNumber || "—"],
+    ["Flight number", booking.flightNumber ? escapeHtml(booking.flightNumber) : "—"],
     ...(booking.promoCode && booking.discountAmount > 0 ? [["Promo code", `${booking.promoCode} (-${formatCurrency(booking.discountAmount)})`] as [string, string]] : []),
     ["Fare", formatCurrency(booking.fare)],
     ["Payment", booking.paymentMethod === "cash" ? "Cash to driver" : "Card (online)"],
@@ -73,7 +90,7 @@ export async function sendBookingNotificationEmails(booking: Booking): Promise<v
   const customerHtml = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
       <h2 style="color:#111827;">Booking confirmed</h2>
-      <p style="color:#374151;">Hi ${booking.customerName}, thanks for booking with us! Here are your trip details:</p>
+      <p style="color:#374151;">Hi ${escapeHtml(booking.customerName)}, thanks for booking with us! Here are your trip details:</p>
       <table style="border-collapse:collapse;width:100%;">${summaryRows}</table>
       ${
         booking.paymentMethod === "cash"
@@ -90,10 +107,10 @@ export async function sendBookingNotificationEmails(booking: Booking): Promise<v
       <h2 style="color:#111827;">New booking received</h2>
       <table style="border-collapse:collapse;width:100%;">${summaryRows}</table>
       <table style="border-collapse:collapse;width:100%;margin-top:12px;">
-        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Customer</td><td style="padding:6px 0;font-weight:600;color:#111827;">${booking.customerName}</td></tr>
-        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Email</td><td style="padding:6px 0;font-weight:600;color:#111827;">${booking.email}</td></tr>
-        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Phone</td><td style="padding:6px 0;font-weight:600;color:#111827;">${booking.phone}</td></tr>
-        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Notes</td><td style="padding:6px 0;font-weight:600;color:#111827;">${booking.notes || "—"}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Customer</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(booking.customerName)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Email</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(booking.email)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Phone</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(booking.phone)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Notes</td><td style="padding:6px 0;font-weight:600;color:#111827;">${booking.notes ? escapeHtml(booking.notes) : "—"}</td></tr>
       </table>
       ${trackingUrl ? `<p style="margin-top:16px;"><a href="${trackingUrl}" style="color:#2563eb;">View booking</a></p>` : ""}
     </div>
@@ -145,7 +162,7 @@ export async function sendBookingUpdateEmail(booking: Booking): Promise<void> {
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
       <h2 style="color:#111827;">Your booking has been updated</h2>
-      <p style="color:#374151;">Hi ${booking.customerName}, one of our team has updated your booking. Here are your current trip details:</p>
+      <p style="color:#374151;">Hi ${escapeHtml(booking.customerName)}, one of our team has updated your booking. Here are your current trip details:</p>
       <table style="border-collapse:collapse;width:100%;">${summaryRows}</table>
       ${
         booking.paymentMethod === "cash"

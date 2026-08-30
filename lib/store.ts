@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
 import type { Booking, BookingAddOn, BookingStatus, Destination, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { VEHICLE_CLASSES } from "./fleet"
@@ -75,9 +76,15 @@ function isMissingRelationError(error: DatabaseError): boolean {
 function throwDatabaseError(error: DatabaseError): never { throw new Error(`Database request failed: ${error.message}`) }
 
 export function generateReference(): string {
+  // A booking's reference doubles as the only credential needed to look it up (/track,
+  // /booking/[reference]) and to start checkout for it, so it needs to be hard to guess or
+  // brute-force, not just unique. 12 chars from this 32-symbol alphabet is ~60 bits of
+  // entropy (vs. ~30 bits at the old 6 chars) — computationally infeasible to enumerate —
+  // drawn from Node's CSPRNG (crypto.randomInt) rather than Math.random(), which is not
+  // cryptographically secure.
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
   let code = ""
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  for (let i = 0; i < 12; i++) code += chars[randomInt(chars.length)]
   return `AT-${code}`
 }
 export async function saveBooking(booking: Booking): Promise<void> {

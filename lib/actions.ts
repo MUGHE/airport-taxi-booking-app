@@ -209,6 +209,13 @@ export async function createReturnBooking(
   if (!outbound) return { ok: false, error: "Outbound booking not found." }
   if (outbound.outboundTripReference) return { ok: false, error: "Can't attach a return trip to a return trip." }
   if (outbound.returnTripReference) return { ok: false, error: "This booking already has a return trip." }
+  // Require the return leg's contact email to match the outbound booking's — the booking
+  // flow always sends the same customer's email for both legs, so this is a no-op for
+  // legitimate use, but stops a stranger who's merely guessed/obtained someone else's
+  // reference from grafting an unrelated (discounted) booking onto that customer's record.
+  if (outbound.email.trim().toLowerCase() !== input.email?.trim().toLowerCase()) {
+    return { ok: false, error: "Outbound booking not found." }
+  }
 
   const discount = await getStoredReturnTripDiscount()
   const result = await buildAndSaveBooking(input, {
