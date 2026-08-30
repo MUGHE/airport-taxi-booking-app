@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   CalendarClock,
   CarFront,
@@ -6,6 +7,7 @@ import {
   MapPin,
   Phone,
   Plane,
+  Repeat,
   StickyNote,
   Users,
 } from "lucide-react"
@@ -36,11 +38,20 @@ export function BookingDetails({ booking }: { booking: Booking }) {
 
       <dl className="divide-y divide-border">
         <Item icon={<CircleDollarSign className="size-4" />} label="Payment">
-          {booking.paymentStatus === "paid" ? "Paid" : "Awaiting payment"}
+          {booking.paymentStatus === "paid"
+            ? "Paid"
+            : booking.paymentMethod === "cash"
+              ? "Cash to driver"
+              : "Awaiting payment"}
         </Item>
         <Item icon={<MapPin className="size-4" />} label="Route">
           {from} <span className="text-muted-foreground">→</span> {to}
         </Item>
+        {booking.stops.length > 0 && (
+          <Item icon={<MapPin className="size-4" />} label="Stops">
+            {booking.stops.map((stop) => stop.address).join(", ")} ({formatCurrency(booking.stopsTotal)})
+          </Item>
+        )}
         <Item icon={<CalendarClock className="size-4" />} label="Pickup">
           {formatDate(booking.pickupDate)} at {booking.pickupTime}
         </Item>
@@ -77,6 +88,16 @@ export function BookingDetails({ booking }: { booking: Booking }) {
         {booking.notes && (
           <Item icon={<StickyNote className="size-4" />} label="Notes">
             {booking.notes}
+          </Item>
+        )}
+        {(booking.returnTripReference || booking.outboundTripReference) && (
+          <Item icon={<Repeat className="size-4" />} label={booking.returnTripReference ? "Return trip" : "Outbound trip"}>
+            <Link
+              href={`/booking/${booking.returnTripReference || booking.outboundTripReference}`}
+              className="font-mono text-primary hover:underline"
+            >
+              {booking.returnTripReference || booking.outboundTripReference}
+            </Link>
           </Item>
         )}
       </dl>

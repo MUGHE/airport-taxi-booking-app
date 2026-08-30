@@ -39,7 +39,7 @@ export function Features() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl border border-border/70 bg-card p-5">
+            <div key={f.title} className="hover-lift rounded-2xl border border-border/70 bg-card p-5">
               <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <f.icon className="size-5" />
               </span>

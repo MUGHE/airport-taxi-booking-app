@@ -7,6 +7,8 @@ export type BookingStatus =
 
 export type PaymentStatus = "unpaid" | "paid"
 
+export type PaymentMethod = "card" | "cash"
+
 export type TripDirection = "from-airport" | "to-airport" | "custom"
 
 export interface VehicleClass {
@@ -62,10 +64,24 @@ export interface SitePromotion {
   updatedAt: string
 }
 
+/** "Book a return and save X%" — a single on/off switch, admin-managed like SitePromotion but applies only to the return leg. */
+export interface ReturnTripDiscount {
+  active: boolean
+  discountPercent: number
+  updatedAt: string
+}
+
+/** Flat fee charged per extra stop a customer adds to their trip, admin-managed. */
+export interface StopPricing {
+  pricePerStop: number
+  updatedAt: string
+}
+
 export interface Booking {
   reference: string
   status: BookingStatus
   paymentStatus: PaymentStatus
+  paymentMethod: PaymentMethod
   direction: TripDirection
   airportId: string
   destinationAddress: string
@@ -91,8 +107,15 @@ export interface Booking {
   distanceMiles: number
   addOns: BookingAddOn[]
   addOnsTotal: number
+  /** Extra stops between pickup and drop-off, in visiting order. */
+  stops: Destination[]
+  stopsTotal: number
   promoCode?: string
   discountAmount: number
+  /** Set on the outbound leg once a return trip has been booked alongside it. */
+  returnTripReference?: string
+  /** Set on the return leg, pointing back to the outbound booking it belongs to. */
+  outboundTripReference?: string
   stripeCheckoutSessionId?: string
   stripePaymentIntentId?: string
   paidAt?: string
@@ -101,5 +124,5 @@ export interface Booking {
 
 export type NewBookingInput = Omit<
   Booking,
-  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal" | "discountAmount"
+  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal" | "discountAmount" | "returnTripReference" | "outboundTripReference" | "stopsTotal"
 >

@@ -15,6 +15,8 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const [isPending, startTransition] = useTransition()
 
+  const idleLoggedOut = params.get("reason") === "idle"
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
@@ -32,6 +34,11 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {idleLoggedOut && (
+        <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+          You were signed out after a period of inactivity. Please sign in again.
+        </p>
+      )}
       <div className="space-y-1.5">
         <Label htmlFor="admin-password" className="flex items-center gap-1.5">
           <Lock className="size-4 text-muted-foreground" />

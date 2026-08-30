@@ -33,7 +33,7 @@ export function TrackLookup() {
             setReference(e.target.value.toUpperCase())
             setNotFound(false)
           }}
-          placeholder="e.g. AT-7F3K9Q"
+          placeholder="e.g. AT-7F3K9QX2R8LM"
           className="font-mono uppercase tracking-wider"
           aria-label="Booking reference"
         />
