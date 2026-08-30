@@ -32,7 +32,7 @@ import type { Booking, BookingAddOn, BookingStatus, Destination, NewBookingInput
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare } from "./fleet"
-import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendInvoiceEmail } from "./email"
+import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
 
 
 export interface LoginResult {
@@ -254,11 +254,21 @@ export async function startBookingCheckout(
     return { ok: false, error: "This booking is set to pay cash to the driver." }
   }
 
+  // A return trip is booked as a second, linked booking (see createReturnBooking). When the
+  // linked leg is still unpaid too, fold it into this same Stripe session — one charge, one
+  // receipt — rather than sending the customer through a second, separate checkout for what
+  // they experience as a single booking.
+  const linkedReference = booking.returnTripReference || booking.outboundTripReference
+  const linkedBooking = linkedReference ? await findBooking(linkedReference) : null
+  const combineWithLinked = Boolean(
+    linkedBooking && linkedBooking.paymentStatus !== "paid" && linkedBooking.paymentMethod === "card",
+  )
+  const legs = combineWithLinked && linkedBooking ? [booking, linkedBooking] : [booking]
+
   try {
     const stripe = getStripeClient()
     const appUrl = await getAppUrl()
     const currency = (process.env.STRIPE_CURRENCY || "usd").toLowerCase()
-    const pickupLabel = `${booking.pickupDate} ${booking.pickupTime}`
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -268,20 +278,19 @@ export async function startBookingCheckout(
       payment_method_types: ["card"],
       metadata: {
         bookingReference: booking.reference,
+        linkedBookingReference: combineWithLinked && linkedBooking ? linkedBooking.reference : "",
       },
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency,
-            unit_amount: Math.round(booking.fare * 100),
-            product_data: {
-              name: `Airport transfer ${booking.reference}`,
-              description: `Pickup ${pickupLabel}`,
-            },
+      line_items: legs.map((leg) => ({
+        quantity: 1,
+        price_data: {
+          currency,
+          unit_amount: Math.round(leg.fare * 100),
+          product_data: {
+            name: `Airport transfer ${leg.reference}${leg.outboundTripReference ? " (return leg)" : leg.returnTripReference ? " (outbound leg)" : ""}`,
+            description: `Pickup ${leg.pickupDate} ${leg.pickupTime}`,
           },
         },
-      ],
+      })),
     })
 
     if (!checkoutSession.url) {
@@ -336,11 +345,21 @@ export async function confirmBookingPayment(
         ? session.payment_intent
         : session.payment_intent?.id
 
+    // A return-trip checkout combines both legs into this one session (see
+    // startBookingCheckout) — when that happened, metadata carries the linked leg's
+    // reference too, and it still needs marking as paid here, from the same charge.
+    const linkedReference = session.metadata?.linkedBookingReference?.trim() || undefined
+    const linkedBooking = linkedReference ? await findBooking(linkedReference) : null
+
     const updated = await markBookingAsPaid(
       booking.reference,
       session.id,
       paymentIntentId,
     )
+    const updatedLinked =
+      linkedBooking && linkedBooking.paymentStatus !== "paid"
+        ? await markBookingAsPaid(linkedBooking.reference, session.id, paymentIntentId)
+        : linkedBooking
     // No revalidatePath() here: this function runs during the confirmation page's render
     // (Stripe redirects straight back to it), and Next.js forbids calling revalidatePath
     // during render — it throws "used revalidatePath during render which is unsupported",
@@ -355,9 +374,20 @@ export async function confirmBookingPayment(
     // is awaited rather than fired-and-forgotten — otherwise the serverless function can be
     // frozen/torn down right after the page responds, before the email ever goes out.
     if (updated) {
-      await sendBookingNotificationEmails(updated).catch((error) => {
-        console.error("Unexpected error sending booking emails:", error)
-      })
+      if (updatedLinked) {
+        // One combined charge, one combined confirmation — not two separate
+        // "booking confirmed" emails for what the customer paid for as a single trip.
+        const [outboundBooking, returnBooking] = updated.outboundTripReference
+          ? [updatedLinked, updated]
+          : [updated, updatedLinked]
+        await sendCombinedBookingConfirmationEmails(outboundBooking, returnBooking).catch((error) => {
+          console.error("Unexpected error sending combined booking emails:", error)
+        })
+      } else {
+        await sendBookingNotificationEmails(updated).catch((error) => {
+          console.error("Unexpected error sending booking emails:", error)
+        })
+      }
     }
 
     return updated

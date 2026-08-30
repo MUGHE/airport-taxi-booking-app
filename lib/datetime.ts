@@ -18,14 +18,15 @@ export const TIME_SLOTS = Array.from(
   (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`,
 )
 
-// A same-day pickup needs enough notice to line up a vehicle and driver, so "now" isn't
-// bookable — the earliest slot is always at least this far out.
-export const BOOKING_LEAD_MINUTES = 45
+// No mandatory notice period before a same-day pickup — the earliest slot is just "now",
+// rounded up to line up with the 15-minute grid. Kept as a constant (rather than inlining 0)
+// so a lead time can be reintroduced later without touching the callers below.
+export const BOOKING_LEAD_MINUTES = 0
 
 /**
- * Earliest pickup time selectable when the pickup date is today: "now" plus the lead-time
- * buffer, rounded up to the next 15-minute slot (e.g. 6:15 PM -> 7:00 PM). If the buffer
- * pushes past midnight, returns a value past every slot in TIME_SLOTS so none qualify —
+ * Earliest pickup time selectable when the pickup date is today: "now" (plus the lead-time
+ * buffer, if any), rounded up to the next 15-minute slot (e.g. 6:07 PM -> 6:15 PM). If the
+ * buffer pushes past midnight, returns a value past every slot in TIME_SLOTS so none qualify —
  * the customer has to pick a later date instead.
  */
 export function minPickupTimeToday(referenceDate: Date = new Date()): string {

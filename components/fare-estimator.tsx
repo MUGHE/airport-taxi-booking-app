@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatCurrency } from "@/lib/fleet"
-import { BOOKING_LEAD_MINUTES, formatDate, formatTimeLabel, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
+import { formatDate, formatTimeLabel, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import type { StopPricing } from "@/lib/types"
 import { toast } from "sonner"
 
@@ -28,8 +28,8 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
   const [dateOpen, setDateOpen] = useState(false)
   const today = localDate(new Date())
   const isToday = pickupDate === today
-  // Same-day pickups need lead time to prepare a vehicle and driver — the earliest
-  // selectable slot is "now" plus a buffer, not "now" itself.
+  // For a same-day pickup, the earliest selectable slot is "now" rounded up to the
+  // 15-minute grid — not an arbitrary slot further out.
   const minTimeToday = minPickupTimeToday()
   const availableTimes = isToday ? TIME_SLOTS.filter((t) => t >= minTimeToday) : TIME_SLOTS
 
@@ -53,7 +53,7 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
     setPickupDate(value)
   }
   function handleTimeChange(value: string) {
-    if (isToday && value && value < minTimeToday) { toast.error(`Pickup time must be at least ${BOOKING_LEAD_MINUTES} minutes from now.`); setPickupTime(minTimeToday); return }
+    if (isToday && value && value < minTimeToday) { toast.error("Pickup time can't be in the past."); setPickupTime(minTimeToday); return }
     setPickupTime(value)
   }
 

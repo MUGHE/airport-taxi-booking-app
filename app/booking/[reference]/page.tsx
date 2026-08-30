@@ -35,6 +35,18 @@ export default async function BookingConfirmationPage({
   const isCash = booking.paymentMethod === "cash"
   const isCancelledPayment = query.payment === "cancelled"
 
+  // A return trip is a second, linked booking (see createReturnBooking). When it's also
+  // unpaid and paid by card, startBookingCheckout folds both legs into one Stripe session —
+  // so the amount shown here (and the button below) should reflect both fares, not just
+  // this leg's, and paying settles the pair in a single secure payment.
+  const linkedReference = booking.returnTripReference || booking.outboundTripReference
+  const linkedBooking = linkedReference ? await lookupBooking(linkedReference) : null
+  const combineWithLinked = Boolean(
+    linkedBooking && linkedBooking.paymentStatus !== "paid" && linkedBooking.paymentMethod === "card",
+  )
+  const paymentAmount = combineWithLinked && linkedBooking ? booking.fare + linkedBooking.fare : booking.fare
+  const bothLegsPaid = isPaid && Boolean(linkedBooking) && linkedBooking!.paymentStatus === "paid"
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -56,7 +68,8 @@ export default async function BookingConfirmationPage({
             {isPaid ? (
               <>
                 A confirmation has been sent to{" "}
-                <span className="font-medium text-foreground">{booking.email}</span>.
+                <span className="font-medium text-foreground">{booking.email}</span>
+                {bothLegsPaid ? " covering both your outbound and return trip" : ""}.
                 Save your reference to track this trip anytime.
               </>
             ) : isCash ? (
@@ -102,7 +115,11 @@ export default async function BookingConfirmationPage({
                 to complete your card payment.
               </p>
             )}
-            <PaymentStep reference={booking.reference} amount={booking.fare} />
+            <PaymentStep
+              reference={booking.reference}
+              amount={paymentAmount}
+              note={combineWithLinked ? "Covers both your outbound and return trip in one secure payment." : undefined}
+            />
           </>
         )}
 

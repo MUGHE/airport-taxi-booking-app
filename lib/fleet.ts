@@ -79,7 +79,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 60,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
-    features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
+    features: ["Meet & greet", "Free 60 min wait", "Child seat on request", "Extra luggage"],
   },
   {
     id: "mpv_4seater",
@@ -91,7 +91,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 62,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
-    features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
+    features: ["Meet & greet", "Free 60 min wait", "Child seat on request", "Extra luggage"],
   },
   {
     id: "mpv",
@@ -103,7 +103,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 65,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
-    features: ["Meet & greet", "Free 90 min wait", "Child seat on request", "Extra luggage"],
+    features: ["Meet & greet", "Free 60 min wait", "Child seat on request", "Extra luggage"],
   },
   {
     id: "minibus_8seater",
@@ -115,7 +115,7 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 95,
     perMileAfter: 2.8,
     perMinuteRate: 0.5,
-    features: ["Meet & greet", "Free 90 min wait", "Extra luggage", "Group travel specialist"],
+    features: ["Meet & greet", "Free 60 min wait", "Extra luggage", "Group travel specialist"],
   },
 ]
 

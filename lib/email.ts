@@ -17,7 +17,8 @@ function getResendClient(): Resend | null {
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
+  // Matches the GBP formatting used everywhere else on the site (lib/fleet.ts).
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(amount)
 }
 
 // Every field below can originate from a public, unauthenticated booking form (or be posted
@@ -142,6 +143,89 @@ export async function sendBookingNotificationEmails(booking: Booking): Promise<v
   for (const result of results) {
     if (result.status === "rejected") {
       console.error("Failed to send booking email:", result.reason)
+    }
+  }
+}
+
+/**
+ * Sent once for a return-trip pair charged together in a single Stripe checkout (see
+ * startBookingCheckout) — one "booking confirmed" email covering both legs, instead of the
+ * two separate emails sendBookingNotificationEmails would send if each leg were paid on its
+ * own. Same audience (customer + support) and layout as that function, just with two trip
+ * summaries stacked instead of one.
+ */
+export async function sendCombinedBookingConfirmationEmails(outbound: Booking, returnTrip: Booking): Promise<void> {
+  const resend = getResendClient()
+  if (!resend) {
+    console.warn("RESEND_API_KEY is not set; skipping booking confirmation emails.")
+    return
+  }
+
+  const fromAddress = process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>"
+  const supportEmail = process.env.SUPPORT_EMAIL
+  const appUrl = await getAppUrl()
+  const combinedTotal = outbound.fare + returnTrip.fare
+  const subject = `Booking confirmed — ${outbound.reference} & ${returnTrip.reference}`
+
+  const legSection = (label: string, booking: Booking) => `
+    <h3 style="margin:20px 0 6px;font-size:13px;font-weight:600;color:#111827;">${label} — ${booking.reference}</h3>
+    <table style="border-collapse:collapse;width:100%;">${bookingSummaryRows(booking, appUrl)}</table>
+  `
+
+  const customerHtml = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#111827;">Booking confirmed</h2>
+      <p style="color:#374151;">Hi ${escapeHtml(outbound.customerName)}, thanks for booking with us! Your card was charged <strong>${formatCurrency(combinedTotal)}</strong> in one payment covering both trips below.</p>
+      ${legSection("Outbound trip", outbound)}
+      ${legSection("Return trip", returnTrip)}
+      ${
+        appUrl
+          ? `<p style="margin-top:16px;"><a href="${appUrl}/booking/${outbound.reference}" style="color:#2563eb;">View or manage your outbound trip</a> &middot; <a href="${appUrl}/booking/${returnTrip.reference}" style="color:#2563eb;">return trip</a></p>`
+          : ""
+      }
+      <p style="color:#6b7280;font-size:13px;margin-top:24px;">If you have any questions, just reply to this email.</p>
+    </div>
+  `
+
+  const supportHtml = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#111827;">New return-trip booking received (paid together)</h2>
+      ${legSection("Outbound trip", outbound)}
+      ${legSection("Return trip", returnTrip)}
+      <table style="border-collapse:collapse;width:100%;margin-top:12px;">
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Customer</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(outbound.customerName)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Email</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(outbound.email)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Phone</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(outbound.phone)}</td></tr>
+      </table>
+    </div>
+  `
+
+  const sends: Array<Promise<unknown>> = [
+    resend.emails.send({
+      from: fromAddress,
+      to: outbound.email,
+      subject,
+      html: customerHtml,
+    }),
+  ]
+
+  if (supportEmail) {
+    sends.push(
+      resend.emails.send({
+        from: fromAddress,
+        to: supportEmail,
+        subject: `New return-trip booking — ${outbound.reference} & ${returnTrip.reference}`,
+        html: supportHtml,
+      }),
+    )
+  } else {
+    console.warn("SUPPORT_EMAIL is not set; skipping the support notification email.")
+  }
+
+  const results = await Promise.allSettled(sends)
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.error("Failed to send combined booking confirmation email:", result.reason)
     }
   }
 }
