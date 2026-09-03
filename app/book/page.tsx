@@ -1,9 +1,17 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import { Loader2 } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { BookingFlow } from "@/components/booking/booking-flow"
 import { getBookingAddOns, getReturnTripDiscount, getSitePromotion, getStopPricing, getVehicleFleet } from "@/lib/actions"
+
+export const metadata: Metadata = {
+  title: "Book Your Airport Transfer",
+  description:
+    "Get an instant, fixed-price fare and book a professional chauffeur for your London airport transfer in minutes.",
+}
+
 export default async function BookPage() {
   const [vehicles, addOns, promotion, returnDiscount, stopPricing] = await Promise.all([getVehicleFleet(), getBookingAddOns(), getSitePromotion(), getReturnTripDiscount(), getStopPricing()])
   return (

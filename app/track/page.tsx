@@ -1,6 +1,12 @@
+import type { Metadata } from "next"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { TrackLookup } from "@/components/track-lookup"
+
+export const metadata: Metadata = {
+  title: "Track Your Booking",
+  description: "Look up your ONE Airport Taxi booking by reference to check trip status and details.",
+}
 
 export default function TrackPage() {
   return (

@@ -7,7 +7,7 @@ import { CallToAction } from "@/components/landing/cta"
 import { AIRPORTS } from "@/lib/fleet"
 
 export const metadata: Metadata = {
-  title: "About Us | ONE Airport Taxi",
+  title: "About Us",
   description:
     "ONE Airport Taxi provides fixed-price, professionally driven airport transfers across London — with flight tracking and 24/7 support on every trip.",
 }

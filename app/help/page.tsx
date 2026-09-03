@@ -6,7 +6,7 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { FAQ_CATEGORIES } from "@/lib/help-content"
 
 export const metadata: Metadata = {
-  title: "Help Center | ONE Airport Taxi",
+  title: "Help Center",
   description:
     "Answers to the most common questions about booking, fares, flight tracking, payment, and managing your ONE Airport Taxi booking.",
 }

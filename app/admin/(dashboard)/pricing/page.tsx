@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { PricingPanel } from "@/components/admin/pricing-panel"
 import { AddOnsPanel } from "@/components/admin/add-ons-panel"
 import { PromoCodesPanel } from "@/components/admin/promo-codes-panel"
@@ -13,6 +14,7 @@ import {
   getVehicleFleet,
 } from "@/lib/actions"
 
+export const metadata: Metadata = { title: "Pricing" }
 export const dynamic = "force-dynamic"
 
 // Every input that feeds into how a trip's fare is calculated lives here — the base
