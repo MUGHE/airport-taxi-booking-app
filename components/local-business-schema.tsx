@@ -15,6 +15,8 @@ export function LocalBusinessSchema() {
     "@type": "LocalBusiness",
     name: COMPANY_NAME,
     url: SITE_URL,
+    logo: `${SITE_URL}/icon-96x96.png`,
+    image: `${SITE_URL}/icon-96x96.png`,
     telephone: CALL_NUMBER,
     email: CONTACT_EMAIL,
     address: {
