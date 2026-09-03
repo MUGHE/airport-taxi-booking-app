@@ -30,7 +30,11 @@ export const metadata: Metadata = {
     languages: { 'en-GB': '/' },
   },
   icons: {
-    icon: '/icon-light-32x32.png',
+    // Google's favicon crawler requires a square icon whose size is a multiple of 48px.
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/icon-96x96.png', type: 'image/png', sizes: '96x96' },
+    ],
     apple: '/apple-icon.png',
   },
   openGraph: {
