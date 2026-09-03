@@ -6,6 +6,7 @@ import { TrackLookup } from "@/components/track-lookup"
 export const metadata: Metadata = {
   title: "Track Your Booking",
   description: "Look up your ONE Airport Taxi booking by reference to check trip status and details.",
+  alternates: { canonical: "/track" },
 }
 
 export default function TrackPage() {

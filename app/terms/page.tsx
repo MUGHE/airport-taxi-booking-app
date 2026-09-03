@@ -14,6 +14,7 @@ import {
 export const metadata: Metadata = {
   title: TERMS_TITLE,
   description: `${TERMS_SUBTITLE}. Booking, cancellation, fare, and passenger terms for ONE Airport Taxi.`,
+  alternates: { canonical: "/terms" },
 }
 
 export default function TermsPage() {
