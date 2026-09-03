@@ -12,7 +12,7 @@ import {
 } from "@/lib/terms-content"
 
 export const metadata: Metadata = {
-  title: `${TERMS_TITLE} | ONE Airport Taxi`,
+  title: TERMS_TITLE,
   description: `${TERMS_SUBTITLE}. Booking, cancellation, fare, and passenger terms for ONE Airport Taxi.`,
 }
 

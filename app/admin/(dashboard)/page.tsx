@@ -1,6 +1,8 @@
+import type { Metadata } from "next"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import { getAllBookingAddOns, getAllBookings, getVehicleFleet } from "@/lib/actions"
 
+export const metadata: Metadata = { title: "Bookings" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminBookingsPage() {

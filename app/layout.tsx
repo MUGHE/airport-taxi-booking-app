@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { HelpButton } from '@/components/help-button'
 import { SiteBackdrop } from '@/components/site-backdrop'
+import { SITE_URL } from '@/lib/site'
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -12,14 +13,36 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+const SITE_TITLE = 'ONE Airport Taxi | Premium Airport Taxi & Transfers in London'
+const SITE_DESCRIPTION =
+  'Book reliable, fixed-price airport taxi transfers with professional chauffeurs. Instant fare estimates, flight tracking, and 24/7 meet & greet service.'
+
 export const metadata: Metadata = {
-  title: 'ONE Airport Taxi | Premium Airport Taxi & Transfers in London',
-  description:
-    'Book reliable, fixed-price airport taxi transfers with professional chauffeurs. Instant fare estimates, flight tracking, and 24/7 meet & greet service.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: '%s | ONE Airport Taxi',
+  },
+  description: SITE_DESCRIPTION,
   generator: 'v0.app',
   icons: {
     icon: '/icon-light-32x32.png',
     apple: '/apple-icon.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_GB',
+    url: '/',
+    siteName: 'ONE Airport Taxi',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [{ url: '/hero-airport-transfer.png', alt: 'ONE Airport Taxi' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ['/hero-airport-transfer.png'],
   },
 }
 

@@ -13,7 +13,7 @@ import {
 } from "@/lib/contact"
 
 export const metadata: Metadata = {
-  title: "Contact Us | ONE Airport Taxi",
+  title: "Contact Us",
   description:
     "Get in touch with ONE Airport Taxi by WhatsApp, phone, or email for bookings, changes, and support.",
 }

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import type { Metadata } from "next"
 import { Banknote, CheckCircle2, CircleAlert, Home, Repeat, Search } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
@@ -8,6 +9,15 @@ import { PaymentStep } from "@/components/booking/payment-step"
 import { Button } from "@/components/ui/button"
 import { confirmBookingPayment, lookupBooking } from "@/lib/actions"
 import { formatCurrency } from "@/lib/fleet"
+
+// Generic on purpose — never surface the reference or customer details in metadata.
+export function generateMetadata(): Metadata {
+  return {
+    title: "Your Booking",
+    description: "View your ONE Airport Taxi booking status and trip details.",
+    robots: { index: false, follow: false },
+  }
+}
 
 export default async function BookingConfirmationPage({
   params,
