@@ -22,7 +22,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={40} height={40} className="size-10" priority />
+          <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={40} height={40} className="size-10" />
           <span className="text-lg tracking-tight">ONE Airport Taxi</span>
         </Link>
 
