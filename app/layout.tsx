@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   generator: 'v0.app',
+  alternates: {
+    canonical: '/',
+    languages: { 'en-GB': '/' },
+  },
   icons: {
     icon: '/icon-light-32x32.png',
     apple: '/apple-icon.png',

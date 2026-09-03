@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "Book Your Airport Transfer",
   description:
     "Get an instant, fixed-price fare and book a professional chauffeur for your London airport transfer in minutes.",
+  alternates: { canonical: "/book" },
 }
 
 export default async function BookPage() {
