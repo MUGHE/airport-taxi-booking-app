@@ -29,6 +29,9 @@ export const metadata: Metadata = {
     canonical: '/',
     languages: { 'en-GB': '/' },
   },
+  verification: {
+    google: 'OAxbn6_wt0HbjrDzQdQ-3qtspGnBY8L_wP9Up80lbjQ',
+  },
   icons: {
     // Google's favicon crawler requires a square icon whose size is a multiple of 48px.
     icon: [
