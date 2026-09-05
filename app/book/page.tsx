@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Loader2 } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { BookingFlow } from "@/components/booking/booking-flow"
 import { getBookingAddOns, getReturnTripDiscount, getSitePromotion, getStopPricing, getVehicleFleet } from "@/lib/actions"
 
@@ -19,6 +20,7 @@ export default async function BookPage() {
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 lg:py-14">
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Book" }]} />
         <div className="mb-8 max-w-xl">
           <h1 className="text-3xl font-semibold tracking-tight">Book your transfer</h1>
           <p className="mt-2 text-muted-foreground">

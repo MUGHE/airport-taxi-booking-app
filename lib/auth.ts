@@ -2,7 +2,7 @@
  * Edge-safe primitives for the admin session cookie.
  *
  * This file intentionally avoids importing `next/headers` so it can be
- * used from `middleware.ts` (which runs in the Edge runtime) as well as
+ * used from `proxy.ts` (which runs in the Edge runtime) as well as
  * from Server Actions / Server Components.
  */
 
@@ -11,7 +11,7 @@ import { ADMIN_IDLE_TIMEOUT_MINUTES } from "./session-config"
 export const ADMIN_SESSION_COOKIE = "admin_session"
 
 // Sliding idle timeout: the admin is signed out after this many minutes of
-// no activity. Every authenticated request that reaches `middleware.ts`
+// no activity. Every authenticated request that reaches `proxy.ts`
 // re-issues the cookie with a fresh expiry, so an active admin never hits
 // this — only a genuinely idle tab does.
 const IDLE_TIMEOUT_SECONDS = ADMIN_IDLE_TIMEOUT_MINUTES * 60

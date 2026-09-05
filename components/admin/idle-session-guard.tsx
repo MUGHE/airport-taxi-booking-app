@@ -16,7 +16,7 @@ const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scr
  * Signs the admin out after ADMIN_IDLE_TIMEOUT_MINUTES of no mouse/keyboard/
  * scroll activity, with a warning toast shortly before it happens.
  *
- * This is the client-side half of the idle timeout — `middleware.ts` enforces
+ * This is the client-side half of the idle timeout — `proxy.ts` enforces
  * the same window server-side (a request older than the idle window is
  * rejected regardless of this component), so a closed/frozen tab still gets
  * signed out even if this code never runs. This component just makes an open,
@@ -45,7 +45,7 @@ export function IdleSessionGuard() {
     function staySignedIn() {
       lastActivityRef.current = Date.now()
       dismissWarning()
-      // Round-trips through middleware.ts, renewing the server-side cookie too.
+      // Round-trips through proxy.ts, renewing the server-side cookie too.
       pingAdminSession().catch(() => {})
     }
 

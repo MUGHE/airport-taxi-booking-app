@@ -3,6 +3,7 @@ import Link from "next/link"
 import { BadgeDollarSign, CarFront, Clock, Headset, MapPin, ShieldCheck, Star, Users } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { CallToAction } from "@/components/landing/cta"
 import { AIRPORTS } from "@/lib/fleet"
 
@@ -49,6 +50,10 @@ export default function AboutPage() {
       <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto max-w-3xl px-4 pt-14 pb-4 text-center lg:pt-20">
+          <Breadcrumbs
+            items={[{ label: "Home", href: "/" }, { label: "About Us" }]}
+            className="justify-center"
+          />
           <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
             <Star className="size-3.5 fill-accent text-accent" />
             Rated 4.9/5 by 12,000+ travelers

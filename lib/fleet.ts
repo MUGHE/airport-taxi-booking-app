@@ -25,21 +25,6 @@ export const AIRPORTS: ServiceLocation[] = [
 ];
 
 
-type LegacyLocation = Omit<ServiceLocation, "lat" | "lng"> & { distanceMiles: number }
-
-export const LOCATIONS: LegacyLocation[] = [
-  { id: "midtown", name: "Midtown Manhattan", area: "Manhattan", distanceMiles: 15 },
-  { id: "downtown", name: "Downtown / Financial District", area: "Manhattan", distanceMiles: 17 },
-  { id: "brooklyn", name: "Brooklyn Heights", area: "Brooklyn", distanceMiles: 11 },
-  { id: "williamsburg", name: "Williamsburg", area: "Brooklyn", distanceMiles: 10 },
-  { id: "uws", name: "Upper West Side", area: "Manhattan", distanceMiles: 18 },
-  { id: "harlem", name: "Harlem", area: "Manhattan", distanceMiles: 19 },
-  { id: "lic", name: "Long Island City", area: "Queens", distanceMiles: 7 },
-  { id: "jerseycity", name: "Jersey City", area: "New Jersey", distanceMiles: 14 },
-  { id: "stamford", name: "Stamford", area: "Connecticut", distanceMiles: 40 },
-  { id: "whiteplains", name: "White Plains", area: "Westchester", distanceMiles: 32 },
-]
-
 // Minimum fare covers the first MIN_DISTANCE_MILES; every mile beyond that
 // is charged at the vehicle's perMileAfter rate.
 export const MIN_DISTANCE_MILES = 10
@@ -121,10 +106,6 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
 
 export function getVehicle(id: string): VehicleClass | undefined {
   return VEHICLE_CLASSES.find((v) => v.id === id)
-}
-
-export function getLocation(id: string): ServiceLocation | LegacyLocation | undefined {
-  return [...LOCATIONS, ...AIRPORTS].find((l) => l.id === id)
 }
 
 export function getAirport(id: string): ServiceLocation | undefined {

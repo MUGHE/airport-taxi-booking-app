@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, renewSessionToken } from "@/lib/auth"
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Let the login page itself through, otherwise we'd redirect-loop.
