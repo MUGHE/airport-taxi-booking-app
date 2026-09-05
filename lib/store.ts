@@ -164,6 +164,11 @@ export async function upsertAddOn(addOn: AddOnRow): Promise<AddOnRow | null> {
   if (error) throwDatabaseError(error)
   return data ? { ...(data as AddOnRow), price: Number(data.price) } : null
 }
+export async function deleteAddOn(id: string): Promise<boolean> {
+  const { error } = await getSupabase().from("booking_add_ons").delete().eq("id", id)
+  if (error) throwDatabaseError(error)
+  return true
+}
 
 type PromoCodeRow = { code: string; discount_type: PromoDiscountType; discount_value: number; active: boolean; created_at: string }
 function toPromoCode(row: PromoCodeRow): PromoCode {
@@ -186,6 +191,11 @@ export async function upsertPromoCode(promo: { code: string; discountType: Promo
     .select("*").maybeSingle()
   if (error) throwDatabaseError(error)
   return data ? toPromoCode(data as PromoCodeRow) : null
+}
+export async function deletePromoCode(code: string): Promise<boolean> {
+  const { error } = await getSupabase().from("promo_codes").delete().eq("code", code.trim().toUpperCase())
+  if (error) throwDatabaseError(error)
+  return true
 }
 
 type SitePromotionRow = { active: boolean; discount_percent: number; updated_at: string }
