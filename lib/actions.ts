@@ -24,7 +24,9 @@ import {
   updateStopPricing as setStopPricing,
   updateVehiclePricing as setVehiclePricing,
   upsertAddOn as saveAddOn,
+  deleteAddOn as removeAddOn,
   upsertPromoCode as savePromoCode,
+  deletePromoCode as removePromoCode,
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
@@ -590,6 +592,19 @@ export async function upsertBookingAddOn(addOn: { id?: string; name: string; pri
   return { ok: true, addOn: saved }
 }
 
+export async function deleteBookingAddOnAction(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  // Re-check server-side rather than trusting the client's view of the add-on's state — only
+  // a disabled add-on can be deleted (an active one is still offered on the booking flow).
+  const existing = (await listAddOns()).find((addOn) => addOn.id === id)
+  if (!existing) return { ok: false, error: "Add-on not found." }
+  if (existing.active) return { ok: false, error: "Disable this add-on before deleting it." }
+  const deleted = await removeAddOn(id)
+  if (!deleted) return { ok: false, error: "Could not delete the add-on." }
+  revalidatePath("/admin"); revalidatePath("/book"); revalidatePath("/")
+  return { ok: true }
+}
+
 export async function getAllPromoCodes(): Promise<PromoCode[]> {
   if (!(await isAdminAuthenticated())) return []
   return listPromoCodes()
@@ -612,6 +627,19 @@ export async function upsertPromoCodeAction(promo: { code: string; discountType:
   if (!saved) return { ok: false, error: "Could not save the promo code." }
   revalidatePath("/admin")
   return { ok: true, promoCode: saved }
+}
+
+export async function deletePromoCodeAction(code: string): Promise<{ ok: boolean; error?: string }> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  // Re-check server-side rather than trusting the client's view of the code's state — only
+  // a disabled promo code can be deleted (an active one could still be applied at checkout).
+  const existing = (await listPromoCodes()).find((promo) => promo.code === code.trim().toUpperCase())
+  if (!existing) return { ok: false, error: "Promo code not found." }
+  if (existing.active) return { ok: false, error: "Disable this promo code before deleting it." }
+  const deleted = await removePromoCode(code)
+  if (!deleted) return { ok: false, error: "Could not delete the promo code." }
+  revalidatePath("/admin")
+  return { ok: true }
 }
 
 export interface PreviewPromoCodeResult {
