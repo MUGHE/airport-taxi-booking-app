@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { FAQ_CATEGORIES } from "@/lib/help-content"
 
@@ -18,6 +19,7 @@ export default function HelpPage() {
       <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-4 py-12 lg:py-16">
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Help Center" }]} />
           <div className="mb-8">
             <h1 className="text-3xl font-semibold tracking-tight">Help Center</h1>
             <p className="mt-2 text-muted-foreground">

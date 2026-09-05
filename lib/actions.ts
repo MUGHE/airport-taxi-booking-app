@@ -73,7 +73,7 @@ export async function logoutAdmin(): Promise<void> {
 /**
  * No-op server action the idle-session warning calls when the admin clicks
  * "Stay signed in". It does nothing on its own — the point is the round trip
- * itself, which passes through `middleware.ts` and renews the sliding session
+ * itself, which passes through `proxy.ts` and renews the sliding session
  * cookie the same way any other admin request would.
  */
 export async function pingAdminSession(): Promise<boolean> {

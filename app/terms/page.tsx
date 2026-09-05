@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import {
   TERMS_EFFECTIVE_DATE,
   TERMS_NOTICE,
@@ -23,6 +24,7 @@ export default function TermsPage() {
       <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-4 py-12 lg:py-16">
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: TERMS_TITLE }]} />
           <div className="mb-8">
             <h1 className="text-3xl font-semibold tracking-tight">{TERMS_TITLE}</h1>
             <p className="mt-2 text-muted-foreground">

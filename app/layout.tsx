@@ -24,7 +24,6 @@ export const metadata: Metadata = {
     template: '%s | ONE Airport Taxi',
   },
   description: SITE_DESCRIPTION,
-  generator: 'v0.app',
   alternates: {
     canonical: '/',
     languages: { 'en-GB': '/' },

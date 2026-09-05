@@ -22,9 +22,7 @@ GOOGLE_MAPS_SERVER_API_KEY=your_server_key
 
 Enable **Maps JavaScript API**, **Places API (New)**, and **Routes API** in the same Google Cloud project with billing enabled. A working map only confirms the browser key; without the server Routes key, the app cannot calculate a driving distance or distance-based fare.
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
-
-[Continue working on v0 →](https://v0.app/chat/projects/prj_X2Mpp5N4XB3AAQorNWs0Vgqky4sV)
+This is a [Next.js](https://nextjs.org) project.
 
 ## Getting Started
 
@@ -122,8 +120,4 @@ Notes:
 
 ## Learn More
 
-To learn more, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+To learn more about the framework, see the [Next.js Documentation](https://nextjs.org/docs).

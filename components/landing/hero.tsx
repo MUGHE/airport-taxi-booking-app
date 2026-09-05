@@ -13,6 +13,7 @@ export async function Hero() {
           alt="Chauffeur standing beside a premium sedan outside an airport terminal at dusk"
           fill
           priority
+          sizes="100vw"
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/30" />

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { Breadcrumbs } from "@/components/breadcrumbs"
 import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 import { PRIVACY_SECTIONS, PRIVACY_SUBTITLE, PRIVACY_TITLE } from "@/lib/privacy-content"
 
@@ -17,6 +18,7 @@ export default function PrivacyPage() {
       <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto w-full max-w-3xl px-4 py-12 lg:py-16">
+          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: PRIVACY_TITLE }]} />
           <div className="mb-8">
             <h1 className="text-3xl font-semibold tracking-tight">{PRIVACY_TITLE}</h1>
             <p className="mt-2 text-muted-foreground">{PRIVACY_SUBTITLE}</p>
