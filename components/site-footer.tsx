@@ -20,6 +20,7 @@ export function SiteFooter() {
           title="Service"
           links={[
             { href: "/book", label: "Book a Ride" },
+            { href: "/airport-transfers", label: "Airport Transfers" },
             { href: "/#fleet", label: "Our Fleet" },
             { href: "/#how", label: "How It Works" },
             { href: "/track", label: "Track Booking" },
