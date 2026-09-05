@@ -38,7 +38,7 @@ export function SiteFooter() {
             { href: "/help", label: "Help Center" },
             { href: "/contact", label: "Contact" },
             { href: "/terms", label: "Terms" },
-            { href: "/", label: "Privacy" },
+            { href: "/privacy", label: "Privacy" },
           ]}
         />
       </div>
