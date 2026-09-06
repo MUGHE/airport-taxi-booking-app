@@ -32,11 +32,20 @@ export function HelpButton() {
   return (
     <div
       ref={rootRef}
-      className="fixed right-4 bottom-4 z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
+      // bottom-[...] reads --mobile-action-bar-h — set by the booking flow's mobile action bar
+      // (booking-flow.tsx) while it's on screen — so this button lifts clear of it instead of
+      // sitting underneath. The variable is unset (falls back to 0px) on every other page, so
+      // this is identical to a plain bottom-4 there. sm and up never had the bar to begin with.
+      className="fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
     >
+      {/* Absolutely positioned, not a normal flex child: when closed, `pointer-events-none` alone
+          still leaves this reserving its full stacked-buttons height in the flex layout — an
+          invisible dead zone above the visible button that swallows clicks meant for whatever page
+          content sits underneath it. Taking it out of flow means the root's own box is only ever
+          as tall as the button that's actually visible. */}
       <div
         className={cn(
-          "flex flex-col items-end gap-3 transition-all duration-200",
+          "absolute right-0 bottom-[calc(3.5rem+0.75rem)] flex flex-col items-end gap-3 transition-all duration-200",
           open
             ? "translate-y-0 opacity-100"
             : "pointer-events-none translate-y-2 opacity-0",
