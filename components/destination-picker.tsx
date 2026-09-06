@@ -1,80 +1,38 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
-import { Loader2, MapPin } from "lucide-react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { createPortal, flushSync } from "react-dom"
+import { ArrowLeft, Loader2, MapPin, Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import {
+  fetchPlaceSuggestions,
+  resolvePlace,
+  usePlacesLibrary,
+  type PlaceSelection,
+  type PlaceSuggestion,
+} from "@/lib/places"
 
-export interface PlaceSelection {
-  placeId: string
-  address: string
-  lat: number
-  lng: number
-}
+export type { PlaceSelection } from "@/lib/places"
 
-type Suggestion = {
-  id: string
-  main: string
-  secondary: string
-  prediction: any
-}
+type Suggestion = PlaceSuggestion
 
-let mapsPromise: Promise<void> | null = null
+// Phone-sized screens get the full-screen search sheet; anything wider keeps the inline dropdown.
+// Matches Tailwind's `sm` breakpoint so the switch lines up with the rest of the layout.
+const COMPACT_QUERY = "(max-width: 639px)"
 
-function loadGoogleMaps(apiKey: string): Promise<void> {
-  if (mapsPromise) {
-    return mapsPromise
-  }
+function useIsCompact(): boolean {
+  const [isCompact, setIsCompact] = useState(false)
 
-  mapsPromise = new Promise((resolve, reject) => {
-    if ((window as any).google?.maps?.importLibrary) {
-      resolve()
-      return
-    }
+  useEffect(() => {
+    const query = window.matchMedia(COMPACT_QUERY)
+    const sync = () => setIsCompact(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [])
 
-    const callbackName = "__initGMaps"
-
-    ;(window as any)[callbackName] = () => {
-      resolve()
-    }
-
-    const existingScript = document.querySelector(
-      'script[src*="maps.googleapis.com/maps/api/js"]'
-    )
-
-    if (existingScript) {
-      return
-    }
-
-    const script = document.createElement("script")
-
-    script.src =
-      `https://maps.googleapis.com/maps/api/js` +
-      `?key=${encodeURIComponent(apiKey)}` +
-      `&loading=async` +
-      `&v=weekly` +
-      `&callback=${callbackName}`
-
-    script.async = true
-    script.defer = true
-
-    script.onerror = () => {
-      mapsPromise = null
-      reject(new Error("Failed to load Google Maps JavaScript API"))
-    }
-
-    document.head.appendChild(script)
-  })
-
-  return mapsPromise
-}
-
-// Reads Google's "formattable text" values, which sometimes come back as a plain string and
-// sometimes as an object with a `.text` field — same defensive shape used for displayName below.
-function textOf(value: any): string {
-  if (typeof value === "string") return value
-  return value?.text ?? ""
+  return isCompact
 }
 
 export function DestinationPicker({
@@ -89,93 +47,33 @@ export function DestinationPicker({
   placeholder?: string
 }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const inlineInputRef = useRef<HTMLInputElement | null>(null)
+  const sheetInputRef = useRef<HTMLInputElement | null>(null)
 
   const onSelectRef = useRef(onSelect)
   const onClearRef = useRef(onClear)
 
-  const placesLibRef = useRef<{ AutocompleteSuggestion: any; AutocompleteSessionToken: any } | null>(null)
   // One session token per "search session" (typing → either a selection or abandoning it),
   // per Google's billing guidance — reused across keystrokes, discarded after a selection.
   const sessionTokenRef = useRef<any>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestIdRef = useRef(0)
 
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState("")
   const [value, setValue] = useState(defaultValue)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  const [open, setOpen] = useState(false)
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [highlighted, setHighlighted] = useState(-1)
-  const [focused, setFocused] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null)
+
+  const [dropdownOpen, setDropdownOpen] = useState(false) // inline dropdown (pointer / wide screens)
+  const [sheetOpen, setSheetOpen] = useState(false) // full-screen search sheet (phones)
+  const [anchor, setAnchor] = useState<{ left: number; top: number; width: number } | null>(null)
+
+  const isCompact = useIsCompact()
+  const { library, error } = usePlacesLibrary()
+  const ready = library !== null
 
   useEffect(() => setMounted(true), [])
-
-  // The dropdown is portalled to <body> and positioned in fixed coordinates (see below) so it
-  // is never clipped by an ancestor's overflow — a scrollable modal (the admin edit dialog) or
-  // a card with rounded corners (the homepage fare estimator) would otherwise cut it off.
-  useEffect(() => {
-    if (!open) return
-    function updateRect() {
-      const el = wrapperRef.current
-      if (!el) return
-      const box = el.getBoundingClientRect()
-      setRect({ top: box.bottom, left: box.left, width: box.width })
-    }
-    updateRect()
-    window.addEventListener("scroll", updateRect, true)
-    window.addEventListener("resize", updateRect)
-    return () => {
-      window.removeEventListener("scroll", updateRect, true)
-      window.removeEventListener("resize", updateRect)
-    }
-  }, [open])
-
-  // visualViewport only shrinks when a real on-screen keyboard opens (a desktop focus never
-  // fires this, so this is naturally mobile-only), and that happens on focus — before the user
-  // has typed anything or any results exist — so this tracks focus, not the dropdown's open
-  // state. Only scrolls when the field (or the room a results list needs below it) would
-  // actually end up hidden behind the keyboard — a field already comfortably visible (e.g.
-  // drop-off, sitting right under pickup) shouldn't jump to the top and bury what's above it.
-  useEffect(() => {
-    if (!focused) return
-    const viewport = (window as any).visualViewport
-    if (!viewport) return
-
-    // The resize event also fires when the keyboard CLOSES (viewport grows back) — only
-    // consider a shrink, or closing the keyboard re-triggers an unwanted scroll-up.
-    let lastHeight = viewport.height
-    // Minimum room a results list needs below the field to be useful — not the full list,
-    // just enough that it doesn't read as "hidden".
-    const MIN_SPACE_BELOW = 150
-
-    function handleViewportResize() {
-      const shrank = viewport.height < lastHeight
-      lastHeight = viewport.height
-      if (!shrank) return
-
-      const box = wrapperRef.current?.getBoundingClientRect()
-      if (!box) return
-
-      if (box.top < 0) {
-        // Genuinely scrolled off the top already — bring it fully into view.
-        wrapperRef.current?.scrollIntoView({ block: "start", behavior: "smooth" })
-        return
-      }
-
-      const overflowBelow = box.bottom + MIN_SPACE_BELOW - viewport.height
-      if (overflowBelow > 0) {
-        // Scroll up by exactly the overlap, not all the way to the top — e.g. drop-off sits
-        // right under pickup, and jumping to "top" would needlessly scroll pickup out of view.
-        window.scrollBy({ top: overflowBelow, behavior: "smooth" })
-      }
-    }
-
-    viewport.addEventListener("resize", handleViewportResize)
-    return () => viewport.removeEventListener("resize", handleViewportResize)
-  }, [focused])
 
   useEffect(() => {
     onSelectRef.current = onSelect
@@ -189,47 +87,50 @@ export function DestinationPicker({
   }, [defaultValue])
 
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-
-    if (!apiKey) {
-      console.error("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not configured.")
-      setError("Google Maps is not configured.")
-      return
-    }
-
-    let cancelled = false
-
-    ;(async () => {
-      try {
-        await loadGoogleMaps(apiKey)
-        if (cancelled) return
-
-        const { AutocompleteSuggestion, AutocompleteSessionToken } =
-          await (window as any).google.maps.importLibrary("places")
-        if (cancelled) return
-
-        placesLibRef.current = { AutocompleteSuggestion, AutocompleteSessionToken }
-        setReady(true)
-        setError("")
-      } catch (initializationError) {
-        console.error("Google Maps Places initialization failed:", initializationError)
-        if (!cancelled) setError("Google Maps suggestions could not be loaded.")
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [])
 
+  // The inline dropdown is portalled to <body> so no ancestor's overflow can clip it (the homepage
+  // fare-estimator card and the admin edit dialog both clip their contents), and anchored in
+  // DOCUMENT coordinates so the browser keeps it glued to the field as the page scrolls — no
+  // per-frame JS, nothing to lag behind. Measured in a layout effect so it is right before paint.
+  useLayoutEffect(() => {
+    if (!dropdownOpen) return
+
+    function measure() {
+      const el = wrapperRef.current
+      if (!el) return
+      const box = el.getBoundingClientRect()
+      setAnchor({ left: box.left + window.scrollX, top: box.bottom + window.scrollY + 6, width: box.width })
+    }
+
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [dropdownOpen])
+
+  // Backstop for any path that opens the sheet outside a tap (keyboard navigation, restored
+  // state): the gesture-time focus above is what raises the on-screen keyboard, this only makes
+  // sure the caret is in the search field either way.
+  useEffect(() => {
+    if (!sheetOpen) return
+    if (document.activeElement !== sheetInputRef.current) sheetInputRef.current?.focus()
+  }, [sheetOpen])
+
+  // While the sheet is up it owns the screen — stop the page behind it from scrolling.
+  useEffect(() => {
+    if (!sheetOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [sheetOpen])
+
   function fetchSuggestions(query: string) {
-    const lib = placesLibRef.current
+    const lib = library
     if (!lib) return
 
     if (!sessionTokenRef.current) {
@@ -239,25 +140,12 @@ export function DestinationPicker({
     const requestId = ++requestIdRef.current
     setLoadingSuggestions(true)
 
-    lib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
-      input: query,
-      sessionToken: sessionTokenRef.current,
-      includedRegionCodes: ["gb"],
-    })
-      .then((response: any) => {
+    fetchPlaceSuggestions(lib, query, sessionTokenRef.current)
+      .then((next) => {
         if (requestId !== requestIdRef.current) return // a newer keystroke's request has since landed
-        const next: Suggestion[] = (response?.suggestions ?? [])
-          .map((suggestion: any) => suggestion.placePrediction)
-          .filter(Boolean)
-          .map((prediction: any) => ({
-            id: prediction.placeId ?? textOf(prediction.text),
-            main: textOf(prediction.mainText) || textOf(prediction.text),
-            secondary: textOf(prediction.secondaryText),
-            prediction,
-          }))
         setSuggestions(next)
         setHighlighted(-1)
-        setOpen(true)
+        if (!isCompact) setDropdownOpen(true)
       })
       .catch((suggestionError: any) => {
         console.error("Google Maps autocomplete suggestions failed:", suggestionError)
@@ -267,6 +155,15 @@ export function DestinationPicker({
         if (requestId === requestIdRef.current) setLoadingSuggestions(false)
       })
   }
+
+  // The places module can land after the first keystrokes; search whatever is already typed as
+  // soon as it does, instead of leaving the field looking like it found nothing.
+  useEffect(() => {
+    if (!library) return
+    const pending = value.trim()
+    if (pending && suggestions.length === 0) fetchSuggestions(pending)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [library])
 
   function handleChange(next: string) {
     setValue(next)
@@ -278,7 +175,7 @@ export function DestinationPicker({
     if (!trimmed) {
       requestIdRef.current++ // invalidate any in-flight request
       setSuggestions([])
-      setOpen(false)
+      setDropdownOpen(false)
       setLoadingSuggestions(false)
       return
     }
@@ -287,44 +184,24 @@ export function DestinationPicker({
   }
 
   async function selectSuggestion(suggestion: Suggestion) {
-    try {
-      const place = suggestion.prediction.toPlace()
-      await place.fetchFields({ fields: ["id", "displayName", "formattedAddress", "location"] })
+    const selection = await resolvePlace(suggestion)
+    if (!selection) return
 
-      if (!place.location) {
-        console.warn("Selected Google Place does not contain a location.", place)
-        return
-      }
-
-      // Google can return a broad formatted address for stations and landmarks (for example,
-      // "Hounslow, UK"). Preserve the place's display name so customers can recognise their
-      // exact selection.
-      const displayName = typeof place.displayName === "string" ? place.displayName : place.displayName?.text ?? ""
-      const formattedAddress = place.formattedAddress ?? ""
-      const address =
-        displayName && formattedAddress && !formattedAddress.toLocaleLowerCase().includes(displayName.toLocaleLowerCase())
-          ? `${displayName}, ${formattedAddress}`
-          : displayName || formattedAddress
-
-      const selection: PlaceSelection = {
-        placeId: place.id ?? "",
-        address,
-        lat: place.location.lat(),
-        lng: place.location.lng(),
-      }
-
-      setValue(address)
-      setOpen(false)
-      setSuggestions([])
-      sessionTokenRef.current = null // next search starts a fresh (separately-billed) session
-      onSelectRef.current(selection)
-    } catch (selectionError) {
-      console.error("Google Maps place selection failed:", selectionError)
-    }
+    setValue(selection.address)
+    setDropdownOpen(false)
+    setSheetOpen(false)
+    setSuggestions([])
+    sessionTokenRef.current = null // next search starts a fresh (separately-billed) session
+    onSelectRef.current(selection)
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open || suggestions.length === 0) return
+    if (event.key === "Escape") {
+      setDropdownOpen(false)
+      closeSheet()
+      return
+    }
+    if (suggestions.length === 0) return
 
     if (event.key === "ArrowDown") {
       event.preventDefault()
@@ -337,81 +214,245 @@ export function DestinationPicker({
         event.preventDefault()
         selectSuggestion(suggestions[highlighted])
       }
-    } else if (event.key === "Escape") {
-      setOpen(false)
     }
   }
 
-  const showSpinner = (!ready && !error) || loadingSuggestions
+  // One tap has to both open the sheet and raise the keyboard. Mobile browsers only raise it for a
+  // focus() call made during the user's own gesture, and a `hidden` element cannot take focus at
+  // all — so the state change is flushed synchronously here (un-hiding the input before the tap
+  // handler returns) and only then is it focused, all still inside the gesture.
+  function openSheet() {
+    flushSync(() => setSheetOpen(true))
+    sheetInputRef.current?.focus()
+  }
+
+  function closeSheet() {
+    setSheetOpen(false)
+    sheetInputRef.current?.blur()
+  }
+
+  function clearValue() {
+    setValue("")
+    setSuggestions([])
+    setLoadingSuggestions(false)
+    requestIdRef.current++
+    onClearRef.current?.()
+    sheetInputRef.current?.focus()
+  }
+
+  const disabled = !ready && !error
+  const showInlineSpinner = disabled || loadingSuggestions
+  const trimmed = value.trim()
 
   return (
-    // scroll-mt-10 (40px) keeps a little breathing room above the field when it's scrolled
-    // into view — flush against the very top edge looks cramped.
-    <div ref={wrapperRef} className="relative min-w-0 scroll-mt-10">
+    <div ref={wrapperRef} className="relative min-w-0">
       <MapPin className="pointer-events-none absolute left-2.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
 
-      <Input
-        value={value}
-        placeholder={placeholder}
-        disabled={!ready && !error}
-        className="pl-8 pr-8"
-        role="combobox"
-        aria-expanded={open}
-        aria-autocomplete="list"
-        autoComplete="off"
-        onChange={(e) => handleChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => { setFocused(true); if (suggestions.length > 0) setOpen(true) }}
-        // Suggestion buttons keep focus on the input via onMouseDown's preventDefault, so this
-        // only fires for a genuine focus-away (clicking elsewhere, tabbing out) — safe to close.
-        onBlur={() => { setFocused(false); setOpen(false) }}
-      />
+      {isCompact ? (
+        // Phones: the field is a button that opens the search sheet. No inline dropdown to place,
+        // no keyboard to scroll clear of — the sheet takes the screen and the list has all of it.
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={openSheet}
+          className={cn(
+            "flex h-8 w-full items-center rounded-lg border border-input bg-transparent pl-8 pr-8 text-left text-base transition-colors",
+            "disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50",
+            value ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          <span className="truncate">{value || placeholder}</span>
+        </button>
+      ) : (
+        <Input
+          ref={inlineInputRef}
+          value={value}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="pl-8 pr-8"
+          role="combobox"
+          aria-expanded={dropdownOpen}
+          aria-autocomplete="list"
+          autoComplete="off"
+          onChange={(e) => handleChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            if (suggestions.length > 0) setDropdownOpen(true)
+          }}
+          // Suggestion buttons keep focus on the input via onMouseDown's preventDefault, so this
+          // only fires for a genuine focus-away (clicking elsewhere, tabbing out) — safe to close.
+          onBlur={() => setDropdownOpen(false)}
+        />
+      )}
 
-      {showSpinner && (
+      {showInlineSpinner && (
         <Loader2 className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
       )}
 
-      {/* Our own dropdown — typing and results both live in this field, instead of Google's
-          PlaceAutocompleteElement, which takes over the whole screen on mobile. Portalled to
-          <body> in fixed coordinates so no ancestor's overflow/rounded-corner clipping can cut
-          the results off (a real bug: the homepage fare estimator card and the admin edit
-          dialog both scroll/clip their contents). */}
-      {mounted && open && rect && (suggestions.length > 0 || (!loadingSuggestions && value.trim())) &&
+      {/* Inline dropdown — pointer devices only. */}
+      {mounted && !isCompact && dropdownOpen && anchor && (suggestions.length > 0 || (!loadingSuggestions && trimmed)) &&
         createPortal(
           <div
-            className="fixed z-50 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover py-1 text-popover-foreground shadow-md"
-            style={{ top: rect.top + 4, left: rect.left, width: rect.width }}
+            className="absolute z-50 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg"
+            style={{ left: anchor.left, top: anchor.top, width: anchor.width }}
           >
-            {suggestions.length === 0 && !loadingSuggestions ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">No results found.</p>
-            ) : (
-              suggestions.map((suggestion, index) => (
-                <button
-                  key={suggestion.id}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectSuggestion(suggestion)}
-                  onMouseEnter={() => setHighlighted(index)}
-                  className={cn(
-                    "flex w-full items-start gap-2 px-3 py-2 text-left text-sm",
-                    index === highlighted ? "bg-accent text-accent-foreground" : "hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{suggestion.main}</span>
-                    {suggestion.secondary && (
-                      <span className="block truncate text-xs text-muted-foreground">{suggestion.secondary}</span>
-                    )}
-                  </span>
-                </button>
-              ))
-            )}
+            <SuggestionList
+              suggestions={suggestions}
+              highlighted={highlighted}
+              loading={loadingSuggestions}
+              onHighlight={setHighlighted}
+              onPick={selectSuggestion}
+              className="max-h-72 overflow-y-auto py-1"
+            />
           </div>,
           document.body
         )}
 
-      {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+      {/* Full-screen search sheet — phones only. Mounted for the whole time the screen is phone-
+          sized (not just while open) so the tap that opens it can focus the input synchronously,
+          which is the only way iOS raises the keyboard; `hidden` keeps it out of the layout and
+          the accessibility tree in between. On wider screens it is not in the DOM at all. */}
+      {mounted && isCompact &&
+        createPortal(
+          <div
+            hidden={!sheetOpen}
+            role="dialog"
+            aria-modal="true"
+            aria-label={placeholder}
+            className="fixed inset-0 z-50 flex flex-col bg-background"
+          >
+            <div className="flex items-center gap-2 border-b border-border px-3 py-3">
+              <button
+                type="button"
+                onClick={closeSheet}
+                aria-label="Close search"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <ArrowLeft className="size-5" />
+              </button>
+
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  ref={sheetInputRef}
+                  value={value}
+                  placeholder={placeholder}
+                  enterKeyHint="search"
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded={suggestions.length > 0}
+                  aria-autocomplete="list"
+                  className="h-11 w-full rounded-xl border border-input bg-card pl-9 pr-9 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  onChange={(e) => handleChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                {value && (
+                  <button
+                    type="button"
+                    onClick={clearValue}
+                    aria-label="Clear"
+                    className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {error ? (
+                <SheetMessage>{error}</SheetMessage>
+              ) : !trimmed ? (
+                <SheetMessage>Start typing to search for an address, postcode, or place.</SheetMessage>
+              ) : loadingSuggestions && suggestions.length === 0 ? (
+                <SheetMessage>
+                  <Loader2 className="mr-2 inline size-4 animate-spin align-[-3px]" />
+                  Searching&hellip;
+                </SheetMessage>
+              ) : suggestions.length === 0 ? (
+                <SheetMessage>No matches for &ldquo;{trimmed}&rdquo;. Try a postcode or a nearby landmark.</SheetMessage>
+              ) : (
+                <SuggestionList
+                  suggestions={suggestions}
+                  highlighted={highlighted}
+                  loading={false}
+                  onHighlight={setHighlighted}
+                  onPick={selectSuggestion}
+                  compact
+                />
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {error && !isCompact && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+function SheetMessage({ children }: { children: React.ReactNode }) {
+  return <p className="px-4 py-6 text-sm text-muted-foreground">{children}</p>
+}
+
+function SuggestionList({
+  suggestions,
+  highlighted,
+  loading,
+  onHighlight,
+  onPick,
+  className,
+  compact = false,
+}: {
+  suggestions: Suggestion[]
+  highlighted: number
+  loading: boolean
+  onHighlight: (index: number) => void
+  onPick: (suggestion: Suggestion) => void
+  className?: string
+  compact?: boolean
+}) {
+  if (suggestions.length === 0 && !loading) {
+    return <p className="px-3 py-2 text-sm text-muted-foreground">No results found.</p>
+  }
+
+  return (
+    <div className={className} role="listbox">
+      {suggestions.map((suggestion, index) => (
+        <button
+          key={suggestion.id}
+          type="button"
+          role="option"
+          aria-selected={index === highlighted}
+          // Keeps focus (and the keyboard) on the input while the press lands.
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onPick(suggestion)}
+          onMouseEnter={() => onHighlight(index)}
+          className={cn(
+            "flex w-full items-start gap-3 text-left transition-colors",
+            // Comfortable touch targets in the sheet; tighter rows for the pointer dropdown.
+            compact ? "border-b border-border/60 px-4 py-3.5" : "px-3 py-2",
+            index === highlighted ? "bg-accent/15" : "hover:bg-accent/15"
+          )}
+        >
+          <span
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground",
+              compact ? "mt-0.5 size-9" : "mt-0.5 size-6"
+            )}
+          >
+            <MapPin className={compact ? "size-4" : "size-3.5"} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={cn("block truncate font-medium", compact ? "text-[15px]" : "text-sm")}>
+              {suggestion.main}
+            </span>
+            {suggestion.secondary && (
+              <span className="mt-0.5 block truncate text-xs text-muted-foreground">{suggestion.secondary}</span>
+            )}
+          </span>
+        </button>
+      ))}
     </div>
   )
 }

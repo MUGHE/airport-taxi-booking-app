@@ -5,12 +5,13 @@ import { ArrowRight, ArrowRightLeft, Calendar as CalendarIcon, MapPinPlus, X } f
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
+import { RouteCard } from "@/components/route-search"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TimePicker } from "@/components/ui/time-picker"
 import { formatCurrency } from "@/lib/fleet"
-import { formatDate, formatTimeLabel, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
+import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import type { StopPricing } from "@/lib/types"
 import { toast } from "sonner"
 
@@ -75,7 +76,10 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
 
   return (
     <div className="@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6">
-      <div className="grid gap-4 @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end">
+      <div className="sm:hidden">
+        <RouteCard pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} />
+      </div>
+      <div className="hidden gap-4 sm:grid @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end">
         <LocationField label="Pickup" placeholder="Enter pickup address" value={pickup?.address} onSelect={setPickup} onClear={() => setPickup(null)} />
         <div className="hidden pb-2.5 items-center text-muted-foreground @min-[480px]:flex"><ArrowRightLeft className="size-4" /></div>
         <LocationField label="Drop-off" placeholder="Enter drop-off address" value={dropoff?.address} onSelect={setDropoff} onClear={() => setDropoff(null)} />
@@ -101,13 +105,10 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Pickup time</Label>
-          <Select value={pickupTime} onValueChange={(value) => { if (value) handleTimeChange(value) }}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Select time" /></SelectTrigger>
-            <SelectContent>{availableTimes.map((t) => <SelectItem key={t} value={t}>{formatTimeLabel(t)}</SelectItem>)}</SelectContent>
-          </Select>
+          <TimePicker value={pickupTime} onChange={handleTimeChange} times={availableTimes} />
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-4 hidden sm:block">
         <div className="flex items-center justify-between gap-3">
           <Label className="text-xs font-medium text-muted-foreground">Stops along the way (optional)</Label>
           {stopPricing.pricePerStop > 0 && <span className="text-xs text-muted-foreground">+{formatCurrency(stopPricing.pricePerStop)} per stop</span>}
