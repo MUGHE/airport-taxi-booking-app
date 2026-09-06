@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { ArrowLeft, ArrowRight, Banknote, Briefcase, Calendar as CalendarIcon, Check, CreditCard, Loader2, MapPin, MapPinPlus, Repeat, Sparkles, Users, X } from "lucide-react"
@@ -153,6 +153,12 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   // Return-leg fare estimate — computed as soon as the vehicle (and its fare) is known, not
   // gated on wantsReturn, so the Details step can show the savings before it's even checked.
   const returnFareEstimate = vehicleFare != null ? (returnDiscount.active ? applyPromotion(vehicleFare, returnDiscount.discountPercent) : vehicleFare) : null
+  // Mirrors Summary's own total/combinedTotal calc below — duplicated (not lifted) so the mobile
+  // action bar can show the same figure without changing Summary's props.
+  const mobileSubtotal = vehicleFare != null ? vehicleFare + addOnsTotal + stopsTotal : null
+  const mobileDiscount = mobileSubtotal != null && appliedPromo ? computeDiscount(mobileSubtotal, appliedPromo) : 0
+  const mobileTotal = mobileSubtotal != null ? mobileSubtotal - mobileDiscount : null
+  const mobileCombinedTotal = wantsReturn && mobileTotal != null && returnFareEstimate != null ? mobileTotal + returnFareEstimate : null
   function next() { if (!canAdvance) return toast.error("Please complete the required fields to continue."); setStep((value) => Math.min(value + 1, 3)) }
   function applyPromo() {
     if (vehicleFare == null) return toast.error("Select a vehicle before applying a promo code.")
@@ -185,17 +191,152 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
     })
   }
 
-  return <div className="grid gap-8 lg:grid-cols-[1fr_340px]"><div className="min-w-0">{promotion.active && <PromotionBanner percent={promotion.discountPercent} />}<Stepper step={step} /><div className="mt-8">
+  // Built once and reused in both places it can appear — the desktop sidebar and the mobile
+  // action bar's expandable panel — so there is exactly one place that lists Summary's props.
+  const summaryPanel = <Summary pickup={pickup} dropoff={dropoff} stops={stops} stopsTotal={stopsTotal} quote={quote} vehicleFare={vehicleFare} addOnsTotal={addOnsTotal} vehicle={vehicle} pickupDate={pickupDate} pickupTime={pickupTime} promotion={promotion} promoInput={promoInput} setPromoInput={setPromoInput} appliedPromo={appliedPromo} promoPending={promoPending} onApplyPromo={applyPromo} onRemovePromo={removePromo} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} paymentMethod={paymentMethod} />
+
+  return <><div className="grid gap-8 pb-24 lg:grid-cols-[1fr_340px] lg:pb-0"><div className="min-w-0">{promotion.active && <PromotionBanner percent={promotion.discountPercent} />}<MobileStepHeader step={step} onBack={() => setStep((value) => Math.max(value - 1, 0))} /><div className="hidden sm:block"><Stepper step={step} /></div><div className="mt-8">
     {step === 0 && <TripStep pickup={pickup} setPickup={setPickup} dropoff={dropoff} setDropoff={setDropoff} pickupDate={pickupDate} setPickupDate={setPickupDate} pickupTime={pickupTime} setPickupTime={setPickupTime} today={today} stops={stops} setStops={setStops} stopPricing={stopPricing} />}
     {step === 1 && <VehicleStep vehicleId={vehicleId} setVehicleId={setVehicleId} distanceMiles={distanceMiles} durationMinutes={durationMinutes} vehicles={vehicles} loading={distanceLoading} promotion={promotion} />}
     {step === 2 && <DetailsStep {...{ customerName, setCustomerName, email, setEmail, phone, setPhone, passengers, setPassengers, bags, setBags, notes, setNotes, flightNumber, setFlightNumber, addOns, selectedAddOnIds, setSelectedAddOnIds, pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare: returnFareEstimate }} maxCapacity={vehicle?.capacity ?? 6} maxLuggage={vehicle?.luggage ?? 0} />}
     {step === 3 && <ReviewStep pickup={pickup?.address || ""} dropoff={dropoff?.address || ""} stops={stops} stopsTotal={stopsTotal} vehicle={vehicle?.name || ""} pickupDate={pickupDate} pickupTime={pickupTime} flightNumber={flightNumber} passengers={passengers} bags={bags} customerName={customerName} email={email} phone={phone} notes={notes} addOns={addOns.filter((addOn) => selectedAddOnIds.includes(addOn.id))} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} returnPickupAddress={effectiveReturnPickup?.address || ""} returnDropoffAddress={effectiveReturnDropoff?.address || ""} />}
-  </div><div className="mt-8 flex justify-between gap-3"><Button variant="ghost" onClick={() => setStep((value) => Math.max(value - 1, 0))} disabled={step === 0 || isPending}><ArrowLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ArrowRight className="size-4" /></Button> : <Button onClick={submit} disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm booking</Button>}</div></div>
-    <Summary pickup={pickup} dropoff={dropoff} stops={stops} stopsTotal={stopsTotal} quote={quote} vehicleFare={vehicleFare} addOnsTotal={addOnsTotal} vehicle={vehicle} pickupDate={pickupDate} pickupTime={pickupTime} promotion={promotion} promoInput={promoInput} setPromoInput={setPromoInput} appliedPromo={appliedPromo} promoPending={promoPending} onApplyPromo={applyPromo} onRemovePromo={removePromo} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} paymentMethod={paymentMethod} /></div>
+  </div><div className="mt-8 hidden justify-between gap-3 sm:flex"><Button variant="ghost" onClick={() => setStep((value) => Math.max(value - 1, 0))} disabled={step === 0 || isPending}><ArrowLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ArrowRight className="size-4" /></Button> : <Button onClick={submit} disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm booking</Button>}</div></div>
+    <div className="hidden sm:block">{summaryPanel}</div></div>
+    <MobileActionBar step={step} total={mobileTotal} combinedTotal={mobileCombinedTotal} wantsReturn={wantsReturn} isPending={isPending} onNext={next} onSubmit={submit} summary={summaryPanel} />
+  </>
 }
 function PromotionBanner({ percent }: { percent: number }) { return <div className="mb-6 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"><Sparkles className="size-4 shrink-0" />Limited-time offer: {percent}% off every fare — the discount is already applied below.</div> }
 
 function Stepper({ step }: { step: number }) { return <ol className="flex items-center gap-2">{STEPS.map((label, index) => <li key={label} className="flex flex-1 items-center gap-2"><span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-medium", index < step && "border-primary bg-primary text-primary-foreground", index === step && "border-primary text-primary")}>{index < step ? <Check className="size-4" /> : index + 1}</span><span className="hidden text-sm font-medium sm:block">{label}</span>{index < 3 && <span className="mx-1 hidden h-px flex-1 bg-border sm:block" />}</li>)}</ol> }
+
+// Mobile-only step header: back arrow (step 0 keeps its place with an invisible spacer, so the
+// title never jumps sideways) + step name + count, and a 4-segment progress bar underneath.
+// Replaces the desktop <Stepper> below sm, where its labels and connecting line are hidden and it
+// reads as four unlabeled circles.
+function MobileStepHeader({ step, onBack }: { step: number; onBack: () => void }) {
+  return <div className="sm:hidden">
+    <div className="mb-2.5 flex items-center gap-2">
+      {step > 0
+        ? <button type="button" onClick={onBack} aria-label="Back" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground"><ArrowLeft className="size-4" /></button>
+        : <span className="size-8 shrink-0" aria-hidden="true" />}
+      <span className="flex-1 text-[15px] font-semibold">{STEPS[step]}</span>
+      <span className="text-xs font-medium text-muted-foreground">{step + 1} of {STEPS.length}</span>
+    </div>
+    <div className="flex h-1 gap-1">
+      {STEPS.map((label, index) => <span key={label} className={cn("h-full flex-1 rounded-full", index <= step ? "bg-primary" : "bg-border")} />)}
+    </div>
+  </div>
+}
+
+// Mobile-only action bar: fixed to the viewport bottom so Continue/Confirm booking is always in
+// reach, regardless of how long the current step's content scrolls — no change to any step's own
+// content. Shows the running total once a vehicle (and so a fare) exists; step 0 has none yet.
+// z-index sits above the site-wide help bubble (help-button.tsx, z-50) so that floating button can
+// never sit on top of the primary action.
+function MobileActionBar({ step, total, combinedTotal, wantsReturn, isPending, onNext, onSubmit, summary }: { step: number; total: number | null; combinedTotal: number | null; wantsReturn: boolean; isPending: boolean; onNext: () => void; onSubmit: () => void; summary: React.ReactNode }) {
+  const barRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  // Tracked in a ref, not state — a drag reads/writes this on every pointermove and a re-render
+  // per pixel of finger movement isn't needed for anything (the gesture is only resolved once, on
+  // release), just wasted work.
+  const dragRef = useRef<{ startY: number; moved: boolean } | null>(null)
+
+  // Publishes the real gap between this card's top edge and the bottom of the viewport (not just
+  // the card's own height — it floats with a gap below it too) as a CSS variable on <body>, so the
+  // site-wide help bubble — a sibling of this page's content up in the root layout, unreachable by
+  // props — can lift itself clear of it instead of sitting underneath. Measured rather than
+  // hard-coded so it stays correct as the card grows, shrinks, or its floating inset ever changes.
+  useEffect(() => {
+    const el = barRef.current
+    if (!el) return
+    const publish = () => document.body.style.setProperty("--mobile-action-bar-h", `${window.innerHeight - el.getBoundingClientRect().top}px`)
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(el)
+    window.addEventListener("resize", publish)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", publish)
+      document.body.style.removeProperty("--mobile-action-bar-h")
+    }
+  }, [])
+
+  // A summary from a step ago shouldn't stay pinned open once the user has moved on.
+  useEffect(() => setOpen(false), [step])
+
+  const showReview = step === 3
+  const price = showReview && wantsReturn ? combinedTotal : total
+  const priceLabel = showReview && wantsReturn ? "Combined total" : wantsReturn ? "Outbound fare" : "Total"
+  // Nothing worth expanding for until a vehicle (and so a fare) is chosen on Trip.
+  const canExpand = price != null
+
+  // Drag the handle up to open, down to close — a plain tap (no meaningful movement) toggles too,
+  // so the gesture stays discoverable for anyone who doesn't try dragging it first. Resolved once
+  // on release rather than followed live: a direction + distance past a small threshold is enough
+  // to decide open/closed without tracking (and mounting the panel to measure) every pixel in between.
+  const DRAG_THRESHOLD = 24
+  function handleHandlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    dragRef.current = { startY: e.clientY, moved: false }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  function handleHandlePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current
+    if (!drag) return
+    if (Math.abs(e.clientY - drag.startY) > 6) drag.moved = true
+  }
+  function handleHandlePointerUp(e: React.PointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current
+    dragRef.current = null
+    if (!drag) return
+    if (!drag.moved) { setOpen((value) => !value); return }
+    const draggedUp = drag.startY - e.clientY
+    if (draggedUp > DRAG_THRESHOLD) setOpen(true)
+    else if (draggedUp < -DRAG_THRESHOLD) setOpen(false)
+  }
+
+  // A floating card (inset from the screen edges, fully rounded, its own shadow) — not full-bleed
+  // chrome — with the handle as its topmost element. The row is the last flex child and never
+  // moves; the handle is the first and always sits at the card's top edge, so as the panel between
+  // them grows the card's top edge (and the handle riding on it) rises while the row stays put —
+  // like pulling a car boot's parcel-shelf divider up by its strap.
+  return <div
+    ref={barRef}
+    className="fixed inset-x-3 z-[60] overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:hidden"
+    style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+  >
+    {canExpand && (
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={open ? "Drag down to hide trip summary" : "Drag up to show trip summary"}
+        onPointerDown={handleHandlePointerDown}
+        onPointerMove={handleHandlePointerMove}
+        onPointerUp={handleHandlePointerUp}
+        onPointerCancel={() => { dragRef.current = null }}
+        className="flex w-full touch-none items-center justify-center py-2"
+      >
+        <span className="h-1 w-9 rounded-full bg-border" />
+      </button>
+    )}
+    {/* Height-animated, not mount/unmount-animated: this is what makes the handle read as rising
+        with the card's own top edge, rather than the panel popping in at full size behind a
+        handle that never moved. Kept mounted (once a fare exists) so the max-height transition has
+        something to measure and animate. */}
+    {canExpand && (
+      <div className="overflow-y-auto transition-[max-height] duration-300 ease-in-out" style={{ maxHeight: open ? "65vh" : "0px" }}>
+        <div className="border-t border-border p-4">{summary}</div>
+      </div>
+    )}
+    <div className={cn("flex items-center justify-between gap-3 px-4 py-3", canExpand && "border-t border-border")}>
+      {price != null
+        ? <span className="min-w-0"><span className="block text-[11px] font-medium text-muted-foreground">{priceLabel}</span><span className="text-lg font-semibold">{formatCurrency(price)}</span></span>
+        : <span className="text-xs text-muted-foreground">Price shown once<br />a vehicle's picked</span>}
+      {showReview
+        ? <Button onClick={onSubmit} disabled={isPending} className="shrink-0">{isPending && <Loader2 className="size-4 animate-spin" />}Confirm booking</Button>
+        : <Button onClick={onNext} className="shrink-0">Continue<ArrowRight className="size-4" /></Button>}
+    </div>
+  </div>
+}
 function Heading({ title, desc }: { title: string; desc: string }) { return <div className="mb-5"><h2 className="text-xl font-semibold tracking-tight">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{desc}</p></div> }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-1.5"><Label className="text-sm">{label}</Label>{children}</div> }
 function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPickupDate, pickupTime, setPickupTime, today, stops, setStops, stopPricing }: { pickup: PlaceSelection | null; setPickup: (value: PlaceSelection | null) => void; dropoff: PlaceSelection | null; setDropoff: (value: PlaceSelection | null) => void; pickupDate: string; setPickupDate: (value: string) => void; pickupTime: string; setPickupTime: (value: string) => void; today: string; stops: PlaceSelection[]; setStops: (value: PlaceSelection[]) => void; stopPricing: StopPricing }) {
@@ -216,7 +357,7 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
   function addStop() { if (stops.length < MAX_STOPS) setStops([...stops, { placeId: "", address: "", lat: NaN, lng: NaN }]) }
   function updateStop(index: number, value: PlaceSelection) { setStops(stops.map((s, i) => (i === index ? value : s))) }
   function removeStop(index: number) { setStops(stops.filter((_, i) => i !== index)) }
-  return <div><Heading title="Plan your trip" desc="Set where we collect you and where you are heading." /><div className="sm:hidden"><RouteCard pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} /></div><div className="grid gap-4 sm:grid-cols-2"><div className="hidden sm:contents"><Field label="Pickup location"><DestinationPicker defaultValue={pickup?.address} placeholder="Start typing a pickup address" onSelect={setPickup} onClear={() => setPickup(null)} /></Field><Field label="Drop-off location"><DestinationPicker defaultValue={dropoff?.address} placeholder="Start typing a drop-off address" onSelect={setDropoff} onClear={() => setDropoff(null)} /></Field></div><Field label="Pickup date">
+  return <div><Heading title="Plan your trip" desc="Set where we collect you and where you are heading." /><div className="sm:hidden"><RouteCard pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} /></div><div className="mt-4 grid gap-4 sm:mt-0 sm:grid-cols-2"><div className="hidden sm:contents"><Field label="Pickup location"><DestinationPicker defaultValue={pickup?.address} placeholder="Start typing a pickup address" onSelect={setPickup} onClear={() => setPickup(null)} /></Field><Field label="Drop-off location"><DestinationPicker defaultValue={dropoff?.address} placeholder="Start typing a drop-off address" onSelect={setDropoff} onClear={() => setDropoff(null)} /></Field></div><div className="grid grid-cols-2 gap-4 sm:contents"><Field label="Pickup date">
     <Popover open={dateOpen} onOpenChange={setDateOpen}>
       <PopoverTrigger render={<Button variant="outline" className="w-full justify-start gap-2 font-normal" />}>
         <CalendarIcon className="size-4 text-muted-foreground" />
@@ -234,7 +375,7 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
     </Popover>
   </Field><Field label="Pickup time">
     <TimePicker value={pickupTime} onChange={handleTimeChange} times={availableTimes} />
-  </Field></div>
+  </Field></div></div>
   <div className="mt-6 hidden sm:block">
     <div className="flex items-center justify-between gap-3">
       <p className="text-sm font-medium">Stops along the way (optional)</p>
@@ -314,7 +455,7 @@ function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, 
     </div>
   </div>
 }
-function DetailsStep(props: any) { return <div><Heading title="Passenger details" desc="We'll send your confirmation and driver details to your email." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name"><Input value={props.customerName} onChange={(e) => props.setCustomerName(e.target.value)} /></Field><Field label="Email"><Input type="email" value={props.email} onChange={(e) => props.setEmail(e.target.value)} /></Field><Field label="Phone"><Input type="tel" value={props.phone} onChange={(e) => props.setPhone(e.target.value)} /></Field><Field label="Flight number (optional)"><Input value={props.flightNumber} onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())} /></Field><Field label="Passengers"><Select value={String(props.passengers)} onValueChange={(value) => props.setPassengers(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxCapacity }, (_, index) => index + 1).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><Field label="Bags"><Select value={String(Math.min(props.bags, props.maxLuggage))} onValueChange={(value) => props.setBags(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxLuggage + 1 }, (_, index) => index).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><div className="sm:col-span-2"><p className="mb-2 text-sm font-medium">Trip add-ons</p><div className="grid gap-2 sm:grid-cols-2">{props.addOns.map((addOn: BookingAddOn) => {
+function DetailsStep(props: any) { return <div><Heading title="Passenger details" desc="We'll send your confirmation and driver details to your email." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name"><Input value={props.customerName} onChange={(e) => props.setCustomerName(e.target.value)} /></Field><Field label="Email"><Input type="email" value={props.email} onChange={(e) => props.setEmail(e.target.value)} /></Field><Field label="Phone"><Input type="tel" value={props.phone} onChange={(e) => props.setPhone(e.target.value)} /></Field><Field label="Flight number (optional)"><Input value={props.flightNumber} onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())} /></Field><div className="grid grid-cols-2 gap-4 sm:contents"><Field label="Passengers"><Select value={String(props.passengers)} onValueChange={(value) => props.setPassengers(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxCapacity }, (_, index) => index + 1).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><Field label="Bags"><Select value={String(Math.min(props.bags, props.maxLuggage))} onValueChange={(value) => props.setBags(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxLuggage + 1 }, (_, index) => index).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field></div><div className="sm:col-span-2"><p className="mb-2 text-sm font-medium">Trip add-ons</p><div className="grid gap-2 sm:grid-cols-2">{props.addOns.map((addOn: BookingAddOn) => {
               const checked = props.selectedAddOnIds.includes(addOn.id)
               // Same selectable-card language as the payment method picker below (border-primary +
               // ring + tint when picked) instead of a bare, unstyled native checkbox.
@@ -387,7 +528,7 @@ function ReturnTripOption(props: any) {
         <Field label="Return pickup location"><DestinationPicker defaultValue={returnPickup?.address} placeholder="Start typing a pickup address" onSelect={setReturnPickup} onClear={() => setReturnPickup(null)} /></Field>
         <Field label="Return drop-off location"><DestinationPicker defaultValue={returnDropoff?.address} placeholder="Start typing a drop-off address" onSelect={setReturnDropoff} onClear={() => setReturnDropoff(null)} /></Field>
       </div>}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-2 gap-4">
         <Field label="Return date">
           <Popover open={returnDateOpen} onOpenChange={setReturnDateOpen}>
             <PopoverTrigger render={<Button variant="outline" className="w-full justify-start gap-2 font-normal" />}>
