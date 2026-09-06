@@ -7,7 +7,11 @@ import { CALL_LINK, WHATSAPP_LINK } from "@/lib/contact"
 
 export function HelpButton() {
   const [open, setOpen] = useState(false)
+  const [shake, setShake] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  // Stops the nudge for good once the button's been opened at least once — someone who's already
+  // found it doesn't need it wiggling at them again.
+  const discoveredRef = useRef(false)
 
   useEffect(() => {
     if (!open) return
@@ -28,6 +32,28 @@ export function HelpButton() {
       document.removeEventListener("keydown", handleKeyDown)
     }
   }, [open])
+
+  useEffect(() => { if (open) discoveredRef.current = true }, [open])
+
+  // A quick shake a few seconds after landing on the page, then again every so often, so a first-
+  // time visitor's eye is drawn to it without it nagging forever once they've actually found it.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    let clearShakeTimer: ReturnType<typeof setTimeout>
+    function scheduleNudge(delay: number) {
+      timer = setTimeout(() => {
+        if (discoveredRef.current) return
+        setShake(true)
+        clearShakeTimer = setTimeout(() => setShake(false), 600) // matches the animation's duration, so re-adding the class later can replay it
+        scheduleNudge(8000)
+      }, delay)
+    }
+    scheduleNudge(4000)
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(clearShakeTimer)
+    }
+  }, [])
 
   return (
     <div
@@ -76,7 +102,10 @@ export function HelpButton() {
         aria-label={open ? "Close help menu" : "Get help"}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:bg-primary/80 active:scale-95"
+        className={cn(
+          "flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:bg-primary/80 active:scale-95",
+          shake && "animate-help-shake",
+        )}
       >
         {open ? <X className="size-6" /> : <LifeBuoy className="size-6" />}
       </button>

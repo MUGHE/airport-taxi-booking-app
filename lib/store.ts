@@ -73,6 +73,12 @@ function isMissingRelationError(error: DatabaseError): boolean {
   return error.code === "PGRST205" || /could not find (?:the )?(?:table|relation)/i.test(error.message)
 }
 
+function isMissingColumnError(error: DatabaseError): boolean {
+  // PostgREST surfaces an unknown column as PostgreSQL's 42703, or as PGRST204 when its
+  // schema cache is the one that hasn't caught up yet.
+  return error.code === "42703" || error.code === "PGRST204" || /column .* does not exist/i.test(error.message)
+}
+
 function throwDatabaseError(error: DatabaseError): never { throw new Error(`Database request failed: ${error.message}`) }
 
 export function generateReference(): string {
@@ -128,17 +134,36 @@ export async function linkReturnTrip(outboundReference: string, returnReference:
   if (error) throwDatabaseError(error)
 }
 export async function listVehiclesWithPricing(): Promise<VehicleClass[]> {
-  const { data, error } = await getSupabase().from("vehicle_pricing").select("vehicle_id, min_fare, per_mile_after, per_minute_rate")
+  // Existing projects apply migrations one at a time, so the deadhead columns may not be
+  // there yet. Retry without them rather than taking every page down: the code defaults
+  // carry a deadhead rate of 0, which prices exactly as this engine did before.
+  const base = "vehicle_id, min_fare, per_mile_after, per_minute_rate"
+  let { data, error } = await getSupabase().from("vehicle_pricing").select(`${base}, long_distance_threshold_miles, deadhead_per_mile`)
+  if (error && isMissingColumnError(error)) {
+    ({ data, error } = await getSupabase().from("vehicle_pricing").select(base))
+  }
   if (error) throwDatabaseError(error)
-  const prices = new Map((data as Array<{ vehicle_id: string; min_fare: number; per_mile_after: number; per_minute_rate: number }>).map((row) => [row.vehicle_id, { minFare: Number(row.min_fare), perMileAfter: Number(row.per_mile_after), perMinuteRate: Number(row.per_minute_rate) }]))
+  type PricingRow = { vehicle_id: string; min_fare: number; per_mile_after: number; per_minute_rate: number; long_distance_threshold_miles?: number; deadhead_per_mile?: number }
+  const prices = new Map((data as PricingRow[]).map((row) => [row.vehicle_id, {
+    minFare: Number(row.min_fare),
+    perMileAfter: Number(row.per_mile_after),
+    perMinuteRate: Number(row.per_minute_rate),
+    ...(row.long_distance_threshold_miles != null ? { longDistanceThresholdMiles: Number(row.long_distance_threshold_miles) } : {}),
+    ...(row.deadhead_per_mile != null ? { deadheadPerMile: Number(row.deadhead_per_mile) } : {}),
+  }]))
   return VEHICLE_CLASSES.map((vehicle) => ({ ...vehicle, ...prices.get(vehicle.id) }))
 }
-export async function updateVehiclePricing(vehicleId: string, minFare: number, perMileAfter: number, perMinuteRate: number): Promise<VehicleClass | null> {
+export async function updateVehiclePricing(vehicleId: string, minFare: number, perMileAfter: number, perMinuteRate: number, longDistanceThresholdMiles: number, deadheadPerMile: number): Promise<VehicleClass | null> {
   const base = VEHICLE_CLASSES.find((vehicle) => vehicle.id === vehicleId)
   if (!base) return null
-  const { error } = await getSupabase().from("vehicle_pricing").upsert({ vehicle_id: vehicleId, min_fare: minFare, per_mile_after: perMileAfter, per_minute_rate: perMinuteRate }, { onConflict: "vehicle_id" })
+  const { error } = await getSupabase().from("vehicle_pricing").upsert({ vehicle_id: vehicleId, min_fare: minFare, per_mile_after: perMileAfter, per_minute_rate: perMinuteRate, long_distance_threshold_miles: longDistanceThresholdMiles, deadhead_per_mile: deadheadPerMile }, { onConflict: "vehicle_id" })
+  // Reads fall back to the code defaults when the deadhead columns are missing, but a write
+  // must not: silently dropping the rate the admin just typed would look like it saved.
+  if (error && isMissingColumnError(error)) {
+    throw new Error("Deadhead pricing needs a database migration. Run supabase/migrations/20260906000000_add_deadhead_pricing.sql, then try again.")
+  }
   if (error) throwDatabaseError(error)
-  return { ...base, minFare, perMileAfter, perMinuteRate }
+  return { ...base, minFare, perMileAfter, perMinuteRate, longDistanceThresholdMiles, deadheadPerMile }
 }
 
 export type AddOnRow = BookingAddOn & { active: boolean }
