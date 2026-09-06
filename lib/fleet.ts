@@ -57,9 +57,9 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
   {
     id: "estate",
     name: "Estate Car",
-    description: "Comfortably accommodates up to 4 passengers with space for 4 standard suitcases (up to 23kg each).",
+    description: "Comfortably accommodates up to 4 passengers with space for 3 standard suitcases (up to 23kg each).",
     capacity: 4,
-    luggage: 4,
+    luggage: 3,
     image: "/vehicles/estate-car.png",
     minFare: 60,
     perMileAfter: 2.5,
