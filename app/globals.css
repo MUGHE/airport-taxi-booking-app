@@ -214,6 +214,20 @@
   border-color: oklch(0.48 0.16 256 / 25%);
 }
 
+/* A quick, decaying wiggle to catch the eye — used to nudge the floating help button after it's
+   sat unopened for a few seconds. Short and one-shot; re-add the class to replay it. */
+@keyframes help-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15% { transform: translateX(-4px) rotate(-8deg); }
+  30% { transform: translateX(3px) rotate(6deg); }
+  45% { transform: translateX(-3px) rotate(-5deg); }
+  60% { transform: translateX(2px) rotate(3deg); }
+  75% { transform: translateX(-1px) rotate(-2deg); }
+}
+.animate-help-shake {
+  animation: help-shake 0.6s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .site-backdrop::before,
   .site-backdrop::after,
@@ -221,6 +235,9 @@
     animation: none;
   }
   .animate-card-in {
+    animation: none;
+  }
+  .animate-help-shake {
     animation: none;
   }
   .hover-lift {
