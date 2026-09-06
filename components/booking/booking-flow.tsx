@@ -11,13 +11,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { TimePicker } from "@/components/ui/time-picker"
 import { applyPromotion, computeDiscount, computeFare, formatCurrency } from "@/lib/fleet"
 import { createBooking, createReturnBooking, getDistanceQuote, previewPromoCode } from "@/lib/actions"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
+import { RouteCard } from "@/components/route-search"
 import { TripMap } from "@/components/trip-map"
 import type { BookingAddOn, PaymentMethod, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate, formatTimeLabel, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
+import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import { toast } from "sonner"
 
 const STEPS = ["Trip", "Vehicle", "Details", "Review"] as const
@@ -207,7 +209,7 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
   function addStop() { if (stops.length < MAX_STOPS) setStops([...stops, { placeId: "", address: "", lat: NaN, lng: NaN }]) }
   function updateStop(index: number, value: PlaceSelection) { setStops(stops.map((s, i) => (i === index ? value : s))) }
   function removeStop(index: number) { setStops(stops.filter((_, i) => i !== index)) }
-  return <div><Heading title="Plan your trip" desc="Choose your pickup and drop-off locations from Google Maps." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Pickup location"><DestinationPicker defaultValue={pickup?.address} placeholder="Start typing a pickup address" onSelect={setPickup} onClear={() => setPickup(null)} /></Field><Field label="Drop-off location"><DestinationPicker defaultValue={dropoff?.address} placeholder="Start typing a drop-off address" onSelect={setDropoff} onClear={() => setDropoff(null)} /></Field><Field label="Pickup date">
+  return <div><Heading title="Plan your trip" desc="Set where we collect you and where you are heading." /><div className="sm:hidden"><RouteCard pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} /></div><div className="grid gap-4 sm:grid-cols-2"><div className="hidden sm:contents"><Field label="Pickup location"><DestinationPicker defaultValue={pickup?.address} placeholder="Start typing a pickup address" onSelect={setPickup} onClear={() => setPickup(null)} /></Field><Field label="Drop-off location"><DestinationPicker defaultValue={dropoff?.address} placeholder="Start typing a drop-off address" onSelect={setDropoff} onClear={() => setDropoff(null)} /></Field></div><Field label="Pickup date">
     <Popover open={dateOpen} onOpenChange={setDateOpen}>
       <PopoverTrigger render={<Button variant="outline" className="w-full justify-start gap-2 font-normal" />}>
         <CalendarIcon className="size-4 text-muted-foreground" />
@@ -224,12 +226,9 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
       </PopoverContent>
     </Popover>
   </Field><Field label="Pickup time">
-    <Select value={pickupTime} onValueChange={(value) => { if (value) handleTimeChange(value) }}>
-      <SelectTrigger className="w-full"><SelectValue placeholder="Select time" /></SelectTrigger>
-      <SelectContent>{availableTimes.map((t) => <SelectItem key={t} value={t}>{formatTimeLabel(t)}</SelectItem>)}</SelectContent>
-    </Select>
+    <TimePicker value={pickupTime} onChange={handleTimeChange} times={availableTimes} />
   </Field></div>
-  <div className="mt-6">
+  <div className="mt-6 hidden sm:block">
     <div className="flex items-center justify-between gap-3">
       <p className="text-sm font-medium">Stops along the way (optional)</p>
       {stopPricing.pricePerStop > 0 && <span className="text-xs text-muted-foreground">+{formatCurrency(stopPricing.pricePerStop)} per stop</span>}
@@ -247,17 +246,67 @@ function TripStep({ pickup, setPickup, dropoff, setDropoff, pickupDate, setPicku
   </div>
   </div>
 }
-function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, vehicles, loading, promotion }: { vehicleId: string; setVehicleId: (value: string) => void; distanceMiles: number | null; durationMinutes: number | null; vehicles: VehicleClass[]; loading: boolean; promotion: SitePromotion }) { return <div><Heading title="Pick your vehicle" desc={loading ? "Calculating your route…" : "Fares are fixed and include all taxes, tolls, and gratuity."} /><div className="grid gap-4 sm:grid-cols-2">{vehicles.map((item, index) => { const quote = distanceMiles != null && durationMinutes != null ? computeFare(item, distanceMiles, durationMinutes) : null; const originalPrice = quote ? quote.fare : item.minFare; const price = promotion.active ? applyPromotion(originalPrice, promotion.discountPercent) : originalPrice; const selected = item.id === vehicleId;
+function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, vehicles, loading, promotion }: { vehicleId: string; setVehicleId: (value: string) => void; distanceMiles: number | null; durationMinutes: number | null; vehicles: VehicleClass[]; loading: boolean; promotion: SitePromotion }) {
+  // One priced row per vehicle, so the whole fleet and its prices sit in a single scannable
+  // column on a phone; the roomier picture cards stay for wider screens.
+  const priceOf = (item: VehicleClass) => {
+    const quote = distanceMiles != null && durationMinutes != null ? computeFare(item, distanceMiles, durationMinutes) : null
+    const original = quote ? quote.fare : item.minFare
+    return { quoted: quote !== null, original, price: promotion.active ? applyPromotion(original, promotion.discountPercent) : original }
+  }
+
+  return <div>
+    <Heading title="Pick your vehicle" desc={loading ? "Calculating your route…" : "Fares are fixed and include all taxes, tolls, and gratuity."} />
+
+    {/* Phones: comparison list. */}
+    <div className="flex flex-col gap-2.5 sm:hidden">
+      {vehicles.map((item, index) => {
+        const { quoted, original, price } = priceOf(item)
+        const selected = item.id === vehicleId
+        return <button key={item.id} type="button" onClick={() => setVehicleId(item.id)}
+          aria-pressed={selected}
+          className={cn("animate-card-in flex w-full items-center gap-3 rounded-xl border bg-card p-2.5 text-left", selected ? "border-primary" : "border-border")}
+          style={{ borderWidth: selected ? "1.5px" : "1px", boxShadow: selected ? "0 0 0 3px oklch(0.48 0.16 256 / 0.12)" : undefined, animationDelay: `${index * 60}ms` }}>
+          <span className="relative flex size-[58px] w-21 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary">
+            <Image src={item.image || "/placeholder.svg"} alt={item.name} width={76} height={52} className="h-[52px] w-[76px] object-contain" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-[15px] font-semibold tracking-[-0.005em]">{item.name}</span>
+            <span className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
+              <span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span>
+              <span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span>
+            </span>
+          </span>
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            {promotion.active && <span className="text-xs text-muted-foreground line-through">{formatCurrency(original)}</span>}
+            <span className={cn("text-[17px] font-semibold tracking-[-0.01em]", promotion.active && "text-primary")}>{quoted ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span>
+            {selected && <span className="flex size-5 items-center justify-center rounded-full bg-primary"><Check className="size-3 text-primary-foreground" strokeWidth={3.5} /></span>}
+          </span>
+        </button>
+      })}
+    </div>
+
+    {/* Wider screens keep the picture cards. */}
+    <div className="hidden gap-4 sm:grid sm:grid-cols-2">
+      {vehicles.map((item, index) => {
+        const { quoted, original, price } = priceOf(item)
+        const selected = item.id === vehicleId
         // Unselected cards stay the same white card + secondary image panel as the selected one —
         // selection is a soft primary halo + corner check mark, not a competing flat-color fill.
         return <button key={item.id} type="button" onClick={() => setVehicleId(item.id)}
+          aria-pressed={selected}
           className={cn("animate-card-in overflow-hidden rounded-2xl border bg-card text-left", selected ? "border-primary" : "border-border")}
           style={{ borderWidth: selected ? "1.5px" : "1px", boxShadow: selected ? "0 0 0 3px oklch(0.48 0.16 256 / 0.12), 0 6px 16px oklch(0.48 0.16 256 / 0.14)" : "0 1px 2px oklch(0.21 0.03 256 / 0.04)", animationDelay: `${index * 150}ms` }}>
           <div className="relative aspect-[4/3] bg-secondary">
             <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-contain p-1.5" sizes="(max-width: 640px) 100vw, 320px" />
             {selected && <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-primary shadow-sm"><Check className="size-3.5 text-primary-foreground" strokeWidth={3} /></span>}
           </div>
-          <div className="p-4"><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span></div><div className="my-3 border-t border-border" /><div className="flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(originalPrice)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quote ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div></button> })}</div></div> }
+          <div className="p-4"><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span></div><div className="my-3 border-t border-border" /><div className="flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(original)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quoted ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div>
+        </button>
+      })}
+    </div>
+  </div>
+}
 function DetailsStep(props: any) { return <div><Heading title="Passenger details" desc="We'll send your confirmation and driver details to your email." /><div className="grid gap-4 sm:grid-cols-2"><Field label="Full name"><Input value={props.customerName} onChange={(e) => props.setCustomerName(e.target.value)} /></Field><Field label="Email"><Input type="email" value={props.email} onChange={(e) => props.setEmail(e.target.value)} /></Field><Field label="Phone"><Input type="tel" value={props.phone} onChange={(e) => props.setPhone(e.target.value)} /></Field><Field label="Flight number (optional)"><Input value={props.flightNumber} onChange={(e) => props.setFlightNumber(e.target.value.toUpperCase())} /></Field><Field label="Passengers"><Select value={String(props.passengers)} onValueChange={(value) => props.setPassengers(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxCapacity }, (_, index) => index + 1).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><Field label="Bags"><Select value={String(Math.min(props.bags, props.maxLuggage))} onValueChange={(value) => props.setBags(Number(value))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{Array.from({ length: props.maxLuggage + 1 }, (_, index) => index).map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}</SelectContent></Select></Field><div className="sm:col-span-2"><p className="mb-2 text-sm font-medium">Trip add-ons</p><div className="grid gap-2 sm:grid-cols-2">{props.addOns.map((addOn: BookingAddOn) => {
               const checked = props.selectedAddOnIds.includes(addOn.id)
               // Same selectable-card language as the payment method picker below (border-primary +
@@ -350,10 +399,7 @@ function ReturnTripOption(props: any) {
           </Popover>
         </Field>
         <Field label="Return time">
-          <Select value={returnTime} onValueChange={(value) => { if (value) handleReturnTimeChange(value) }}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Select time" /></SelectTrigger>
-            <SelectContent>{returnAvailableTimes.map((t) => <SelectItem key={t} value={t}>{formatTimeLabel(t)}</SelectItem>)}</SelectContent>
-          </Select>
+          <TimePicker value={returnTime} onChange={handleReturnTimeChange} times={returnAvailableTimes} />
         </Field>
       </div>
       {returnFare != null && <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary/10 px-3.5 py-2.5">
