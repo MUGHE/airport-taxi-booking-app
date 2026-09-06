@@ -21,7 +21,7 @@ export default function HelpPage() {
         <div className="mx-auto w-full max-w-3xl px-4 py-12 lg:py-16">
           <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Help Center" }]} />
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold tracking-tight">Help Center</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Help center</h1>
             <p className="mt-2 text-muted-foreground">
               Answers to the questions we hear most, based on exactly how booking with
               us works.

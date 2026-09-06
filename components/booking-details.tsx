@@ -74,7 +74,7 @@ export function BookingDetails({ booking }: { booking: Booking }) {
           </Item>
         )}
         <Item icon={<Users className="size-4" />} label="Party">
-          {booking.passengers} passenger(s), {booking.bags} bag(s)
+          {booking.passengers} passenger{booking.passengers === 1 ? "" : "s"}, {booking.bags} bag{booking.bags === 1 ? "" : "s"}
         </Item>
         <Item icon={<Users className="size-4" />} label="Customer">
           {booking.customerName}

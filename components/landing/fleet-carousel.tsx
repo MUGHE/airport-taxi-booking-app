@@ -55,14 +55,14 @@ export function FleetCarousel({ vehicles }: { vehicles: VehicleClass[] }) {
     <div className="relative mt-12">
       <div
         ref={trackRef}
-        className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 pb-3 sm:mx-0 sm:px-0"
+        className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 pb-3 sm:mx-0 sm:px-0 xl:grid xl:grid-cols-3 xl:overflow-visible"
         style={{ maskImage, WebkitMaskImage: maskImage }}
       >
         {vehicles.map((v, index) => (
           <div
             key={v.id}
             data-card
-            className="animate-card-in hover-lift flex w-[calc(100vw-2rem)] max-w-sm shrink-0 snap-start snap-always flex-col overflow-hidden rounded-2xl border border-border/70 bg-background sm:w-72 sm:max-w-none"
+            className="animate-card-in hover-lift flex w-[calc(100vw-2rem)] max-w-sm shrink-0 snap-start snap-always flex-col overflow-hidden rounded-2xl border border-border/70 bg-background sm:w-72 sm:max-w-none xl:w-auto"
             style={{ animationDelay: `${index * 150}ms` }}
           >
             <div className="relative aspect-[4/3] bg-secondary">
