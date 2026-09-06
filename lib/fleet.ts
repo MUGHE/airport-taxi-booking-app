@@ -40,6 +40,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 40,
     perMileAfter: 1.7,
     perMinuteRate: 0.5,
+    longDistanceThresholdMiles: 50,
+    deadheadPerMile: 0,
     features: ["Meet & greet", "Free 60 min wait", "Bottled water"],
   },
   {
@@ -52,6 +54,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 55,
     perMileAfter: 2.2,
     perMinuteRate: 0.5,
+    longDistanceThresholdMiles: 50,
+    deadheadPerMile: 0,
     features: ["Meet & greet", "Free 60 min wait", "Pro chauffeur", "Phone charger"],
   },
   {
@@ -64,6 +68,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 60,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
+    longDistanceThresholdMiles: 50,
+    deadheadPerMile: 0,
     features: ["Meet & greet", "Free 60 min wait", "Child seat on request", "Extra luggage"],
   },
   {
@@ -76,6 +82,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 62,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
+    longDistanceThresholdMiles: 50,
+    deadheadPerMile: 0,
     features: ["Meet & greet", "Free 60 min wait", "Child seat on request", "Extra luggage"],
   },
   {
@@ -88,6 +96,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 65,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
+    longDistanceThresholdMiles: 50,
+    deadheadPerMile: 0,
     features: ["Meet & greet", "Free 60 min wait", "Child seat on request", "Extra luggage"],
   },
   {
@@ -100,6 +110,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     minFare: 95,
     perMileAfter: 2.8,
     perMinuteRate: 0.5,
+    longDistanceThresholdMiles: 50,
+    deadheadPerMile: 0,
     features: ["Meet & greet", "Free 60 min wait", "Extra luggage", "Group travel specialist"],
   },
 ]
@@ -119,14 +131,20 @@ export interface FareQuote {
 }
 
 export function computeFare(
-  vehicle: Pick<VehicleClass, "minFare" | "perMileAfter" | "perMinuteRate">,
+  vehicle: Pick<VehicleClass, "minFare" | "perMileAfter" | "perMinuteRate" | "longDistanceThresholdMiles" | "deadheadPerMile">,
   distanceMiles: number,
   durationMinutes: number,
 ): FareQuote {
   const extraMiles = Math.max(0, distanceMiles - MIN_DISTANCE_MILES)
+  // Linear deadhead compensation: past the long-distance threshold the driver is very
+  // likely returning empty, so those miles carry the deadhead rate *in addition to* the
+  // normal per-mile rate. Adding rather than replacing keeps the fare curve continuous —
+  // there's no jump at the threshold, the slope just increases.
+  const deadheadMiles = Math.max(0, distanceMiles - vehicle.longDistanceThresholdMiles)
   const fare = Math.round(
     vehicle.minFare +
       extraMiles * vehicle.perMileAfter +
+      deadheadMiles * vehicle.deadheadPerMile +
       Math.max(0, durationMinutes) * vehicle.perMinuteRate,
   )
   return {

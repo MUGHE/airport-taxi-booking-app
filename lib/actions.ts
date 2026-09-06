@@ -33,7 +33,7 @@ import { isAdminAuthenticated } from "./session"
 import type { Booking, BookingAddOn, BookingStatus, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
-import { applyPromotion, computeDiscount, computeFare } from "./fleet"
+import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from "./fleet"
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
 
 
@@ -731,6 +731,8 @@ export async function updateVehiclePricing(
   minFare: number,
   perMileAfter: number,
   perMinuteRate: number,
+  longDistanceThresholdMiles: number,
+  deadheadPerMile: number,
 ): Promise<UpdateVehiclePricingResult> {
   if (!(await isAdminAuthenticated())) {
     return { ok: false, error: "Not authorized." }
@@ -744,7 +746,15 @@ export async function updateVehiclePricing(
   if (!Number.isFinite(perMinuteRate) || perMinuteRate < 0) {
     return { ok: false, error: "Per-minute rate must be a positive number." }
   }
-  const updated = await setVehiclePricing(vehicleId, minFare, perMileAfter, perMinuteRate)
+  // A threshold below the minimum-fare distance would charge deadhead miles that the
+  // minimum fare already covers, so the rate would start biting on short trips too.
+  if (!Number.isFinite(longDistanceThresholdMiles) || longDistanceThresholdMiles < MIN_DISTANCE_MILES) {
+    return { ok: false, error: `Long-distance threshold must be at least ${MIN_DISTANCE_MILES} miles.` }
+  }
+  if (!Number.isFinite(deadheadPerMile) || deadheadPerMile < 0) {
+    return { ok: false, error: "Deadhead rate must be a positive number." }
+  }
+  const updated = await setVehiclePricing(vehicleId, minFare, perMileAfter, perMinuteRate, longDistanceThresholdMiles, deadheadPerMile)
   if (!updated) return { ok: false, error: "Vehicle not found." }
   revalidatePath("/admin")
   revalidatePath("/")

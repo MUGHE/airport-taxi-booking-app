@@ -24,6 +24,17 @@ export interface VehicleClass {
   perMileAfter: number
   /** Rate charged for each minute of driving time. */
   perMinuteRate: number
+  /**
+   * Distance past which a trip counts as long-haul and starts attracting the deadhead
+   * rate below. Set it at or above MIN_DISTANCE_MILES.
+   */
+  longDistanceThresholdMiles: number
+  /**
+   * Linear deadhead compensation: the driver's empty return leg. Charged *on top of*
+   * perMileAfter, for each mile beyond longDistanceThresholdMiles only — so the fare
+   * curve stays continuous and just gets steeper past the threshold.
+   */
+  deadheadPerMile: number
   features: string[]
 }
 export interface ServiceLocation {
