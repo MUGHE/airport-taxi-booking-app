@@ -85,6 +85,13 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const vehicle = vehicles.find((item) => item.id === vehicleId)
   const today = localDate(new Date())
 
+  // Continue/Back can be clicked from anywhere on a long step (the button sits at the bottom
+  // of the form) — land the next step at its own top instead of wherever the scroll happened
+  // to be, or it can open mid-way down a step the user hasn't seen yet.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [step])
+
   useEffect(() => {
     if (vehicle && bags > vehicle.luggage) setBags(vehicle.luggage)
   }, [bags, vehicle])
@@ -314,10 +321,10 @@ function DetailsStep(props: any) { return <div><Heading title="Passenger details
               return <label key={addOn.id} className={cn("flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3.5 text-sm", checked ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card")}>
                 <span className="flex items-center gap-3">
                   <input type="checkbox" className="sr-only" checked={checked} onChange={() => props.setSelectedAddOnIds(checked ? props.selectedAddOnIds.filter((id: string) => id !== addOn.id) : [...props.selectedAddOnIds, addOn.id])} />
-                  <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-md border", checked ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent")}><Check className="size-3.5" strokeWidth={3} /></span>
+                  <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-[4px] border", checked ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent")}><Check className="size-3.5" strokeWidth={3} /></span>
                   <span className="font-medium">{addOn.name}</span>
                 </span>
-                <span className={cn("font-medium", checked && "text-primary")}>{formatCurrency(addOn.price)}</span>
+                <span className={cn("font-medium", checked && "text-primary")}>{addOn.price === 0 ? "Free" : formatCurrency(addOn.price)}</span>
               </label>
             })}</div></div><div className="sm:col-span-2"><Field label="Notes for your driver (optional)"><Textarea value={props.notes} onChange={(e) => props.setNotes(e.target.value)} rows={3} /></Field></div></div><ReturnTripOption {...props} /></div> }
 function ReturnTripOption(props: any) {
@@ -363,7 +370,7 @@ function ReturnTripOption(props: any) {
       {/* Same custom rounded checkbox as the trip add-ons below, instead of the browser's square
           native one. */}
       <input type="checkbox" className="sr-only" checked={wantsReturn} onChange={(e) => setWantsReturn(e.target.checked)} />
-      <span className={cn("mt-1.5 flex size-5 shrink-0 items-center justify-center rounded-md border", wantsReturn ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-transparent")}><Check className="size-3.5" strokeWidth={3} /></span>
+      <span className={cn("mt-1.5 flex size-5 shrink-0 items-center justify-center rounded-[4px] border", wantsReturn ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-transparent")}><Check className="size-3.5" strokeWidth={3} /></span>
     </label>
     {wantsReturn && <div className="mt-4 border-t border-primary/20 pt-4">
       <p className="mb-2 text-sm font-medium">Return locations</p>
@@ -413,7 +420,7 @@ function ReturnTripOption(props: any) {
     </div>}
   </div>
 }
-function ReviewStep(props: any) { return <div><Heading title="Review your trip" desc="Double-check the details below, then confirm your booking." /><div className="divide-y rounded-2xl border bg-card">{[["Route", `${props.pickup} → ${props.dropoff}`], ...(props.stops.length ? [["Stops", `${props.stops.map((s: PlaceSelection, i: number) => `${i + 1}. ${s.address}`).join(", ")}${props.stopsTotal > 0 ? ` (+${formatCurrency(props.stopsTotal)})` : ""}`]] : []), ["Vehicle", props.vehicle], ["Pickup", `${formatDate(props.pickupDate)} at ${props.pickupTime}`], ["Party", `${props.passengers} passenger(s), ${props.bags} bag(s)`], ["Add-ons", props.addOns.length ? props.addOns.map((addOn: BookingAddOn) => `${addOn.name} (${formatCurrency(addOn.price)})`).join(", ") : "None"], ["Passenger", props.customerName], ["Contact", `${props.email} · ${props.phone}`]].map(([label, value]) => <div key={label} className="flex justify-between gap-3 px-5 py-3.5 text-sm"><span className="text-muted-foreground">{label}</span><span className="text-right font-medium">{value}</span></div>)}</div>
+function ReviewStep(props: any) { return <div><Heading title="Review your trip" desc="Double-check the details below, then confirm your booking." /><div className="divide-y rounded-2xl border bg-card">{[["Route", `${props.pickup} → ${props.dropoff}`], ...(props.stops.length ? [["Stops", `${props.stops.map((s: PlaceSelection, i: number) => `${i + 1}. ${s.address}`).join(", ")}${props.stopsTotal > 0 ? ` (+${formatCurrency(props.stopsTotal)})` : ""}`]] : []), ["Vehicle", props.vehicle], ["Pickup", `${formatDate(props.pickupDate)} at ${props.pickupTime}`], ["Party", `${props.passengers} passenger${props.passengers === 1 ? "" : "s"}, ${props.bags} bag${props.bags === 1 ? "" : "s"}`], ["Add-ons", props.addOns.length ? props.addOns.map((addOn: BookingAddOn) => `${addOn.name} (${addOn.price === 0 ? "Free" : formatCurrency(addOn.price)})`).join(", ") : "None"], ["Passenger", props.customerName], ["Contact", `${props.email} · ${props.phone}`]].map(([label, value]) => <div key={label} className="flex justify-between gap-3 px-5 py-3.5 text-sm"><span className="text-muted-foreground">{label}</span><span className="text-right font-medium">{value}</span></div>)}</div>
   {props.wantsReturn && <div className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4">
     <div className="flex items-center justify-between gap-3">
       <span className="flex items-center gap-1.5 text-sm font-semibold"><Repeat className="size-4 text-primary" />Return trip</span>
