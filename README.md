@@ -40,6 +40,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Tests
+
+The airport-page tests are deliberately split so each command has one clear job:
+
+- `pnpm run test:rules` checks deterministic business rules without opening a browser.
+- `pnpm run test:public` opens a browser and checks the public airport pages at desktop, tablet, and mobile sizes. It starts a local development server.
+- `pnpm run test:admin` is the separate category for authenticated admin journeys in `tests/admin/`. It is empty until the first admin journey is added.
+- `pnpm test` runs the rules and public checks together.
+
 ## Stripe Card Payments (Hosted Checkout)
 
 This app uses Stripe Checkout for card payments. Customers are redirected to Stripe's secure hosted page, then returned to the booking page.
