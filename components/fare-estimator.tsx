@@ -19,7 +19,13 @@ const NO_STOP_PRICING: StopPricing = { pricePerStop: 0, updatedAt: "" }
 // Mirrors the server-side cap in lib/actions.ts and the booking flow's Trip step — keep in sync.
 const MAX_STOPS = 3
 
-export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?: StopPricing }) {
+export function FareEstimator({
+  stopPricing = NO_STOP_PRICING,
+  layout = "card",
+}: {
+  stopPricing?: StopPricing
+  layout?: "card" | "hub"
+}) {
   const router = useRouter()
   const [pickup, setPickup] = useState<PlaceSelection | null>(null)
   const [dropoff, setDropoff] = useState<PlaceSelection | null>(null)
@@ -75,16 +81,28 @@ export function FareEstimator({ stopPricing = NO_STOP_PRICING }: { stopPricing?:
   }
 
   return (
-    <div className="@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6">
+    <div
+      className={`@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6 ${
+        layout === "hub" ? "lg:p-5" : ""
+      }`}
+    >
       <div className="sm:hidden">
         <RouteCard pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} />
       </div>
-      <div className="hidden gap-4 sm:grid @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end">
+      <div
+        className={`hidden gap-4 sm:grid @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end ${
+          layout === "hub" ? "lg:gap-3" : ""
+        }`}
+      >
         <LocationField label="Pickup" placeholder="Enter pickup address" value={pickup?.address} onSelect={setPickup} onClear={() => setPickup(null)} />
         <div className="hidden pb-2.5 items-center text-muted-foreground @min-[480px]:flex"><ArrowRightLeft className="size-4" /></div>
         <LocationField label="Drop-off" placeholder="Enter drop-off address" value={dropoff?.address} onSelect={setDropoff} onClear={() => setDropoff(null)} />
       </div>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div
+        className={`mt-4 grid gap-4 sm:grid-cols-2 ${
+          layout === "hub" ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-3" : ""
+        }`}
+      >
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Pickup date</Label>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>
