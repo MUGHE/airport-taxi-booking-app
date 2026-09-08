@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:admin": "playwright test --project=admin --pass-with-no-tests",
+    "test:public": "playwright test --config=playwright.public.config.ts",
+    "test:rules": "playwright test --project=rules",
+    "test": "pnpm run test:rules && pnpm run test:public",
     "packageManager": "pnpm@11.2.2"
   },
   "dependencies": {
