@@ -29,6 +29,13 @@ type DestinationTerminalRow = {
   is_primary: boolean
 }
 
+type DestinationRedirectRow = {
+  source_slug: string
+  target_slug: string
+}
+
+export type DestinationPageLifecycle = "draft" | "published" | "archived" | "missing"
+
 export type PublishedAirportPage = {
   presentation: AirportPagePresentation
   metadata: { title: string; description: string; canonical: string }
@@ -39,6 +46,61 @@ function getSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return null
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
+const LEGACY_AIRPORT_REDIRECTS = new Map([
+  ["heathrow", "heathrow-airport-taxi"],
+  ["gatwick", "gatwick-airport-taxi"],
+  ["stansted", "stansted-airport-taxi"],
+  ["luton", "luton-airport-taxi"],
+  ["london-city", "london-city-airport-taxi"],
+  ["southend", "southend-airport-taxi"],
+])
+
+export async function getPublishedAirportRedirect(slug: string): Promise<string | null> {
+  const legacyTarget = LEGACY_AIRPORT_REDIRECTS.get(slug)
+  const supabase = getSupabase()
+  if (!supabase) return legacyTarget ?? null
+
+  try {
+    const { data, error } = await supabase
+      .from("destination_page_redirects")
+      .select("source_slug, target_slug")
+      .eq("source_slug", slug)
+      .maybeSingle()
+    if (error || !data) return legacyTarget ?? null
+
+    const redirect = data as DestinationRedirectRow
+    if (redirect.source_slug === redirect.target_slug) return null
+
+    const [{ data: targetPage, error: targetError }, { data: chainedRedirect, error: chainError }] = await Promise.all([
+      supabase.from("destination_pages").select("id").eq("slug", redirect.target_slug).eq("page_type", "airport").eq("lifecycle_state", "published").maybeSingle(),
+      supabase.from("destination_page_redirects").select("source_slug").eq("source_slug", redirect.target_slug).maybeSingle(),
+    ])
+    if (targetError || chainError || !targetPage || chainedRedirect) return null
+    return redirect.target_slug
+  } catch {
+    return legacyTarget ?? null
+  }
+}
+
+export async function getDestinationPageLifecycle(slug: string): Promise<DestinationPageLifecycle | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+
+  try {
+    const { data, error } = await supabase
+      .from("destination_pages")
+      .select("lifecycle_state")
+      .eq("slug", slug)
+      .eq("page_type", "airport")
+      .maybeSingle()
+    if (error) return null
+    if (!data) return "missing"
+    return (data as { lifecycle_state: DestinationPageLifecycle }).lifecycle_state
+  } catch {
+    return null
+  }
 }
 
 function isPublishedContent(value: unknown): value is PublishedAirportPageContent {

@@ -4,21 +4,21 @@ import { ArrowRight, PlaneTakeoff } from "lucide-react"
 import { AIRPORT_PAGES } from "@/lib/airport-content"
 
 const AIRPORT_IMAGES: Record<string, string> = {
-  heathrow: "/hero-airport-transfer.png",
-  gatwick: "/airport-transfers/gatwick.webp",
-  stansted: "/airport-transfers/gatwick.webp",
-  luton: "/airport-transfers/luton.webp",
-  "london-city": "/airport-transfers/london-city.webp",
-  southend: "/airport-transfers/southend.webp",
+  "heathrow-airport-taxi": "/hero-airport-transfer.png",
+  "gatwick-airport-taxi": "/airport-transfers/gatwick.webp",
+  "stansted-airport-taxi": "/airport-transfers/gatwick.webp",
+  "luton-airport-taxi": "/airport-transfers/luton.webp",
+  "london-city-airport-taxi": "/airport-transfers/london-city.webp",
+  "southend-airport-taxi": "/airport-transfers/southend.webp",
 }
 
 const TERMINAL_LABEL: Record<string, string> = {
-  heathrow: "Terminals 2, 3, 4 & 5",
-  gatwick: "North & South Terminals",
-  stansted: "Main terminal",
-  luton: "Main terminal",
-  "london-city": "Main terminal",
-  southend: "Main terminal",
+  "heathrow-airport-taxi": "Terminals 2, 3, 4 & 5",
+  "gatwick-airport-taxi": "North & South Terminals",
+  "stansted-airport-taxi": "Main terminal",
+  "luton-airport-taxi": "Main terminal",
+  "london-city-airport-taxi": "Main terminal",
+  "southend-airport-taxi": "Main terminal",
 }
 
 export function AirportGrid() {

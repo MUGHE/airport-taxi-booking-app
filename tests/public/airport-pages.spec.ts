@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test"
 
 const airportPages = [
-  ["heathrow", "Heathrow Airport Taxi & Transfers", "Heathrow"],
-  ["gatwick", "Gatwick Airport Taxi & Transfers", "Gatwick"],
-  ["stansted", "Stansted Airport Taxi & Transfers", "Stansted"],
-  ["luton", "Luton Airport Taxi & Transfers", "Luton"],
-  ["london-city", "London City Airport Taxi & Transfers", "London City"],
-  ["southend", "Southend Airport Taxi & Transfers", "Southend"],
+  ["heathrow-airport-taxi", "Heathrow Airport Taxi & Transfers", "Heathrow"],
+  ["gatwick-airport-taxi", "Gatwick Airport Taxi & Transfers", "Gatwick"],
+  ["stansted-airport-taxi", "Stansted Airport Taxi & Transfers", "Stansted"],
+  ["luton-airport-taxi", "Luton Airport Taxi & Transfers", "Luton"],
+  ["london-city-airport-taxi", "London City Airport Taxi & Transfers", "London City"],
+  ["southend-airport-taxi", "Southend Airport Taxi & Transfers", "Southend"],
 ] as const
 
 for (const [slug, heading, shortName] of airportPages) {

@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import { AirportPageRenderer } from "@/components/airport-page/airport-page-renderer"
 import { AIRPORT_PAGES, getAirportPage } from "@/lib/airport-content"
 import { createAirportPagePresentation } from "@/lib/airport-page-data"
-import { getPublishedAirportPage } from "@/lib/destination-pages"
+import { getDestinationPageLifecycle, getPublishedAirportPage, getPublishedAirportRedirect } from "@/lib/destination-pages"
 import { AIRPORTS, VEHICLE_CLASSES } from "@/lib/fleet"
 
 export const dynamic = "force-dynamic"
@@ -19,6 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: publishedPage.metadata.title, description: publishedPage.metadata.description, alternates: { canonical: publishedPage.metadata.canonical } }
   }
 
+  const lifecycle = await getDestinationPageLifecycle(slug)
+  if (lifecycle === "draft" || lifecycle === "archived") return {}
   const airport = getAirportPage(slug)
   if (!airport) return {}
 
@@ -31,9 +33,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function AirportPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
+  const redirectSlug = await getPublishedAirportRedirect(slug)
+  if (redirectSlug) permanentRedirect(`/airport-transfers/${redirectSlug}`)
   const publishedPage = await getPublishedAirportPage(slug)
   if (publishedPage) return <AirportPageRenderer page={publishedPage.presentation} />
 
+  const lifecycle = await getDestinationPageLifecycle(slug)
+  if (lifecycle === "draft" || lifecycle === "archived") notFound()
   const airport = getAirportPage(slug)
   if (!airport) notFound()
 

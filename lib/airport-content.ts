@@ -4,6 +4,7 @@
 
 export type AirportPage = {
   slug: string
+  legacySlug: string
   code: string
   name: string
   shortName: string
@@ -19,7 +20,8 @@ export type AirportPage = {
 
 export const AIRPORT_PAGES: AirportPage[] = [
   {
-    slug: "heathrow",
+    slug: "heathrow-airport-taxi",
+    legacySlug: "heathrow",
     code: "LHR",
     name: "London Heathrow Airport",
     shortName: "Heathrow",
@@ -40,7 +42,8 @@ export const AIRPORT_PAGES: AirportPage[] = [
     ],
   },
   {
-    slug: "gatwick",
+    slug: "gatwick-airport-taxi",
+    legacySlug: "gatwick",
     code: "LGW",
     name: "London Gatwick Airport",
     shortName: "Gatwick",
@@ -61,7 +64,8 @@ export const AIRPORT_PAGES: AirportPage[] = [
     ],
   },
   {
-    slug: "stansted",
+    slug: "stansted-airport-taxi",
+    legacySlug: "stansted",
     code: "STN",
     name: "London Stansted Airport",
     shortName: "Stansted",
@@ -82,7 +86,8 @@ export const AIRPORT_PAGES: AirportPage[] = [
     ],
   },
   {
-    slug: "luton",
+    slug: "luton-airport-taxi",
+    legacySlug: "luton",
     code: "LTN",
     name: "London Luton Airport",
     shortName: "Luton",
@@ -103,7 +108,8 @@ export const AIRPORT_PAGES: AirportPage[] = [
     ],
   },
   {
-    slug: "london-city",
+    slug: "london-city-airport-taxi",
+    legacySlug: "london-city",
     code: "LCY",
     name: "London City Airport",
     shortName: "London City",
@@ -124,7 +130,8 @@ export const AIRPORT_PAGES: AirportPage[] = [
     ],
   },
   {
-    slug: "southend",
+    slug: "southend-airport-taxi",
+    legacySlug: "southend",
     code: "SEN",
     name: "London Southend Airport",
     shortName: "Southend",

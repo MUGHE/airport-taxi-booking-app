@@ -6,21 +6,21 @@ import { AIRPORT_PAGES } from "@/lib/airport-content"
 // Placeholder photography (see components/landing-new plan) — one distinct stock photo per
 // airport card, keyed by AIRPORT_PAGES slug. Swap for real/generated terminal photos later.
 const AIRPORT_IMAGES: Record<string, string> = {
-  heathrow: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=70&auto=format&fit=crop",
-  gatwick: "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?w=800&q=70&auto=format&fit=crop",
-  stansted: "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=70&auto=format&fit=crop",
-  luton: "https://images.unsplash.com/photo-1508444845599-5c89863b1c44?w=800&q=70&auto=format&fit=crop",
-  "london-city": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&q=70&auto=format&fit=crop",
-  southend: "https://images.unsplash.com/photo-1520437358207-323b43b50729?w=800&q=70&auto=format&fit=crop",
+  "heathrow-airport-taxi": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=70&auto=format&fit=crop",
+  "gatwick-airport-taxi": "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?w=800&q=70&auto=format&fit=crop",
+  "stansted-airport-taxi": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=70&auto=format&fit=crop",
+  "luton-airport-taxi": "https://images.unsplash.com/photo-1508444845599-5c89863b1c44?w=800&q=70&auto=format&fit=crop",
+  "london-city-airport-taxi": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&q=70&auto=format&fit=crop",
+  "southend-airport-taxi": "https://images.unsplash.com/photo-1520437358207-323b43b50729?w=800&q=70&auto=format&fit=crop",
 }
 
 const TERMINAL_LABEL: Record<string, string> = {
-  heathrow: "Terminals 2, 3, 4, 5",
-  gatwick: "North & South Terminals",
-  stansted: "All terminals",
-  luton: "All terminals",
-  "london-city": "All terminals",
-  southend: "All terminals",
+  "heathrow-airport-taxi": "Terminals 2, 3, 4, 5",
+  "gatwick-airport-taxi": "North & South Terminals",
+  "stansted-airport-taxi": "All terminals",
+  "luton-airport-taxi": "All terminals",
+  "london-city-airport-taxi": "All terminals",
+  "southend-airport-taxi": "All terminals",
 }
 
 export function AirportsCoverage() {

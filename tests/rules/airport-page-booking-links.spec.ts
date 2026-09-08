@@ -22,12 +22,12 @@ test("uses the standard booking page when published data has no terminal", () =>
 
 test("uses each published airport's first terminal in both booking links", () => {
   const expectedFirstTerminals = {
-    heathrow: ["London Heathrow (LHR) - Terminal 2", "51.4714", "-0.4494"],
-    gatwick: ["London Gatwick (LGW) - North Terminal", "51.1601", "-0.1771"],
-    stansted: ["London Stansted (STN)", "51.885", "0.235"],
-    luton: ["London Luton (LTN)", "51.8747", "-0.3683"],
-    "london-city": ["London City (LCY)", "51.5053", "0.0553"],
-    southend: ["London Southend (SEN)", "51.5714", "0.6956"],
+    "heathrow-airport-taxi": ["London Heathrow (LHR) - Terminal 2", "51.4714", "-0.4494"],
+    "gatwick-airport-taxi": ["London Gatwick (LGW) - North Terminal", "51.1601", "-0.1771"],
+    "stansted-airport-taxi": ["London Stansted (STN)", "51.885", "0.235"],
+    "luton-airport-taxi": ["London Luton (LTN)", "51.8747", "-0.3683"],
+    "london-city-airport-taxi": ["London City (LCY)", "51.5053", "0.0553"],
+    "southend-airport-taxi": ["London Southend (SEN)", "51.5714", "0.6956"],
   } as const
 
   for (const airport of AIRPORT_PAGES) {
