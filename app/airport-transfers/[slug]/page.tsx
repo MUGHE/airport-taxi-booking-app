@@ -3,7 +3,10 @@ import { notFound } from "next/navigation"
 import { AirportPageRenderer } from "@/components/airport-page/airport-page-renderer"
 import { AIRPORT_PAGES, getAirportPage } from "@/lib/airport-content"
 import { createAirportPagePresentation } from "@/lib/airport-page-data"
+import { getPublishedAirportPage } from "@/lib/destination-pages"
 import { AIRPORTS, VEHICLE_CLASSES } from "@/lib/fleet"
+
+export const dynamic = "force-dynamic"
 
 export function generateStaticParams() {
   return AIRPORT_PAGES.map((airport) => ({ slug: airport.slug }))
@@ -11,6 +14,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
+  const publishedPage = await getPublishedAirportPage(slug)
+  if (publishedPage) {
+    return { title: publishedPage.metadata.title, description: publishedPage.metadata.description, alternates: { canonical: publishedPage.metadata.canonical } }
+  }
+
   const airport = getAirportPage(slug)
   if (!airport) return {}
 
@@ -23,6 +31,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function AirportPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
+  const publishedPage = await getPublishedAirportPage(slug)
+  if (publishedPage) return <AirportPageRenderer page={publishedPage.presentation} />
+
   const airport = getAirportPage(slug)
   if (!airport) notFound()
 

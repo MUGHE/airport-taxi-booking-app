@@ -7,6 +7,7 @@ export type AirportPageTerminal = {
   area: string
   latitude: number
   longitude: number
+  isPrimary: boolean
 }
 
 export type AirportBookingLinks = {
@@ -24,6 +25,8 @@ export type AirportPagePresentation = {
   vehicles: Pick<VehicleClass, "id" | "name" | "description" | "image" | "minFare">[]
   faqs: { question: string; answer: string }[]
 }
+
+export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs">
 
 export function createAirportBookingLinks(
   terminal?: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
@@ -54,29 +57,53 @@ export function createAirportPagePresentation(
   const terminals = airport.locationIds.flatMap((id) => {
     const location = locationsById.get(id)
     return location
-      ? [{ id: location.id, name: location.name, area: location.area, latitude: location.lat, longitude: location.lng }]
+      ? [{ id: location.id, name: location.name, area: location.area, latitude: location.lat, longitude: location.lng, isPrimary: airport.locationIds.indexOf(id) === 0 }]
       : []
   })
 
-  return {
+  return createPublishedAirportPagePresentation({
     shortName: airport.shortName,
-    heading: airport.h1,
-    intro: airport.intro,
     terminals,
-    bookingLinks: createAirportBookingLinks(terminals[0]),
-    benefits: [
-      {
-        title: "Fixed, all-inclusive fare",
-        description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.",
-        icon: "fare",
-      },
-      {
-        title: "Flight tracking & meet & greet",
-        description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.",
-        icon: "flight",
-      },
-    ],
+    content: {
+      heading: airport.h1,
+      intro: airport.intro,
+      benefits: [
+        {
+          title: "Fixed, all-inclusive fare",
+          description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.",
+          icon: "fare",
+        },
+        {
+          title: "Flight tracking & meet & greet",
+          description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.",
+          icon: "flight",
+        },
+      ],
+      faqs: airport.faqs.map((faq) => ({ question: faq.q, answer: faq.a })),
+    },
     vehicles,
-    faqs: airport.faqs.map((faq) => ({ question: faq.q, answer: faq.a })),
+  })
+}
+
+export function createPublishedAirportPagePresentation({
+  shortName,
+  terminals,
+  content,
+  vehicles,
+}: {
+  shortName: string
+  terminals: AirportPageTerminal[]
+  content: PublishedAirportPageContent
+  vehicles: AirportPagePresentation["vehicles"]
+}): AirportPagePresentation {
+  return {
+    shortName,
+    heading: content.heading,
+    intro: content.intro,
+    terminals,
+    bookingLinks: createAirportBookingLinks(terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]),
+    benefits: content.benefits,
+    vehicles,
+    faqs: content.faqs,
   }
 }

@@ -49,6 +49,8 @@ The airport-page tests are deliberately split so each command has one clear job:
 - `pnpm run test:admin` is the separate category for authenticated admin journeys in `tests/admin/`. It is empty until the first admin journey is added.
 - `pnpm test` runs the rules and public checks together.
 
+To verify the Supabase-backed seed after applying the migrations, set `RUN_SUPABASE_E2E=1` before `pnpm run test:public`. The database test is skipped by default so local development remains safe when no destination-page migration has been applied.
+
 ## Stripe Card Payments (Hosted Checkout)
 
 This app uses Stripe Checkout for card payments. Customers are redirected to Stripe's secure hosted page, then returned to the booking page.

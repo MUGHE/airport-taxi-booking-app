@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { AIRPORT_PAGES } from "@/lib/airport-content"
-import { createAirportBookingLinks, createAirportPagePresentation } from "@/lib/airport-page-data"
+import { createAirportBookingLinks, createAirportPagePresentation, createPublishedAirportPagePresentation } from "@/lib/airport-page-data"
 import { AIRPORTS, VEHICLE_CLASSES } from "@/lib/fleet"
 
 test("creates prefilled booking links for the first published terminal", () => {
@@ -41,4 +41,19 @@ test("uses each published airport's first terminal in both booking links", () =>
       expect(query.get(href.includes("dropoffLng") ? "dropoffLng" : "pickupLng")).toBe(longitude)
     }
   }
+})
+
+test("prefills from the published primary terminal even when it is not first in display order", () => {
+  const page = createPublishedAirportPagePresentation({
+    shortName: "Example",
+    terminals: [
+      { id: "terminal-two", name: "Terminal 2", area: "Example", latitude: 2, longitude: 2, isPrimary: false },
+      { id: "terminal-one", name: "Terminal 1", area: "Example", latitude: 1, longitude: 1, isPrimary: true },
+    ],
+    content: { heading: "Example", intro: [], benefits: [], faqs: [] },
+    vehicles: [],
+  })
+
+  expect(page.bookingLinks.toAirport).toContain("dropoffAddress=Terminal+1")
+  expect(page.bookingLinks.toAirport).toContain("dropoffLat=1")
 })
