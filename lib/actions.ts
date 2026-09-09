@@ -37,7 +37,7 @@ import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
 import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
-import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
+import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
 import { setAirportFeatured } from "./airport-directory"
@@ -193,8 +193,18 @@ export async function setAdminBookingAvailabilityAction(pageId: string, availabl
 
 export async function getCloudinaryAssetsAction(kind?: CloudinaryImageKind) {
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
-  try { return { ok: true as const, assets: await listCloudinaryAssets(kind) } }
+  try {
+    const [assets, usage] = await Promise.all([listCloudinaryAssets(kind), listCloudinaryAssetUsage()])
+    return { ok: true as const, assets, usage: Object.fromEntries(usage) }
+  }
   catch { return { ok: false as const, error: "The image library could not be loaded." } }
+}
+
+export async function deleteCloudinaryAssetAction(assetId: string, confirmed: boolean) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await deleteCloudinaryAsset(assetId, confirmed)
+  if (result.ok) revalidatePath("/admin/media-library")
+  return result
 }
 
 export async function requestCloudinaryUploadSignatureAction(kind: CloudinaryImageKind) {

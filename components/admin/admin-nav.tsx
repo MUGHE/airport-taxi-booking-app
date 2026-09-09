@@ -8,6 +8,7 @@ const TABS = [
   { href: "/admin", label: "Bookings" },
   { href: "/admin/pricing", label: "Pricing engine" },
   { href: "/admin/destination-pages", label: "Destination Pages" },
+  { href: "/admin/media-library", label: "Media Library" },
 ] as const
 
 export function AdminNav() {

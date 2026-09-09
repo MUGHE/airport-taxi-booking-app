@@ -14,6 +14,20 @@ export function cloudinaryConfigError(): string {
   return "Image uploads are not configured. Ask the deployment owner to set the Cloudinary cloud name, API key, and server API secret."
 }
 
+export async function destroyCloudinaryImage(publicId: string, config: CloudinaryConfig): Promise<{ ok: true } | { ok: false; error: string }> {
+  const timestamp = Math.floor(Date.now() / 1000)
+  const signature = createCloudinarySignature({ invalidate: "true", public_id: publicId, timestamp }, config.apiSecret)
+  const body = new URLSearchParams({ api_key: config.apiKey, invalidate: "true", public_id: publicId, signature, timestamp: String(timestamp) })
+  try {
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/image/destroy`, { method: "POST", body })
+    const result = await response.json() as { result?: string; error?: { message?: string } }
+    if (!response.ok || result.result !== "ok") return { ok: false, error: result.error?.message || "Cloudinary did not delete the image." }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: "Cloudinary could not be reached. The library record was kept." }
+  }
+}
+
 export function createCloudinarySignature(params: Record<string, string | number>, apiSecret: string): string {
   const serialized = Object.entries(params)
     .filter(([, value]) => value !== "" && value !== undefined && value !== null)
