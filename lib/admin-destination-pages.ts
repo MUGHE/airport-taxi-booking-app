@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, validateDestinationContent, type DestinationContentDocument, type DestinationImageReference } from "@/lib/destination-content"
 import { DEFAULT_GLOBAL_FAQS, DEFAULT_SERVICE_FACTS, DEFAULT_VERIFIED_REVIEWS, type GlobalFaq, type ServiceFact, type VerifiedReview } from "@/lib/reusable-content"
+import { listRelatedDestinations } from "@/lib/related-destinations"
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
@@ -27,6 +28,20 @@ export type AdminDestinationPage = {
     content: DestinationContentDocument
   }
   terminals: AdminTerminal[]
+  relatedDestinations: AdminRelatedDestination[]
+}
+
+export type AdminRelatedDestination = {
+  id?: string
+  pageId: string
+  displayName: string
+  slug: string
+  heading: string
+  description: string
+  reverseHeading: string
+  reverseDescription: string
+  image?: DestinationImageReference
+  reverseImage?: DestinationImageReference
 }
 
 export type AdminTerminal = {
@@ -42,6 +57,7 @@ export type AdminTerminal = {
 export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "pageType" | "lifecycleState" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
   id?: string
   terminals: AdminTerminal[]
+  relatedDestinations: AdminRelatedDestination[]
   seoTitle?: string
   metaDescription?: string
   h1?: string
@@ -147,7 +163,7 @@ function toTerminal(row: TerminalRow): AdminTerminal {
   }
 }
 
-function toPage(row: PageRow, draft: SnapshotRow | undefined, published: SnapshotRow | undefined, terminals: TerminalRow[]): AdminDestinationPage {
+function toPage(row: PageRow, draft: SnapshotRow | undefined, published: SnapshotRow | undefined, terminals: TerminalRow[], relatedDestinations: AdminRelatedDestination[] = []): AdminDestinationPage {
   return {
     id: row.id,
     pageType: row.page_type,
@@ -171,6 +187,7 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     content: normalizeDestinationContent(draft?.content, draft?.h1 ?? `${row.display_name} Airport Taxi & Transfers`),
     },
     terminals: terminals.sort((a, b) => a.sort_order - b.sort_order).map(toTerminal),
+    relatedDestinations,
   }
 }
 
@@ -192,12 +209,17 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
 
   const snapshotRows = (snapshots ?? []) as SnapshotRow[]
   const terminalRows = (terminals ?? []) as TerminalRow[]
-  return (pages as PageRow[]).map((page) => toPage(
+  const result = (pages as PageRow[]).map((page) => toPage(
     page,
     snapshotRows.find((snapshot) => snapshot.id === page.current_draft_snapshot_id),
     snapshotRows.find((snapshot) => snapshot.id === page.current_published_snapshot_id),
     terminalRows.filter((terminal) => terminal.page_id === page.id),
   ))
+  for (const page of result) {
+    const related = await listRelatedDestinations(page.id)
+    page.relatedDestinations = related.map((item) => ({ ...item, reverseHeading: item.reverseHeading ?? "", reverseDescription: item.reverseDescription ?? "" }))
+  }
+  return result
 }
 
 export async function listAdminDestinationPages(): Promise<AdminDestinationPage[]> {
@@ -231,6 +253,8 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
       return "Every Airport Terminal needs valid latitude and longitude values."
     }
   }
+  if (input.relatedDestinations.some((item) => item.pageId === input.id)) return "An Airport Page cannot relate to itself."
+  if (input.relatedDestinations.some((item) => !item.pageId || !item.heading.trim() || !item.description.trim() || !item.reverseHeading.trim() || !item.reverseDescription.trim())) return "Every related destination needs both directional headings and descriptions."
   const contentError = validateDestinationContent(input.content, input.h1?.trim() || `${input.displayName.trim()} Airport Taxi & Transfers`)
   if (contentError) return contentError
   return null
@@ -248,8 +272,8 @@ function imageReferences(content: DestinationContentDocument): DestinationImageR
   return [content.hero.image, ...content.sections.map((section) => section.image)].filter((image): image is DestinationImageReference => Boolean(image))
 }
 
-async function validateSavedImages(supabase: SupabaseClient, content: DestinationContentDocument): Promise<string | null> {
-  const references = imageReferences(content)
+async function validateSavedImages(supabase: SupabaseClient, content: DestinationContentDocument, extraImages: DestinationImageReference[] = []): Promise<string | null> {
+  const references = [...imageReferences(content), ...extraImages]
   if (!references.length) return null
   const ids = [...new Set(references.map((image) => image.assetId))]
   const { data, error } = await supabase.from("cloudinary_media_assets").select("id, public_id, secure_url, width, height, format, alt_text, rights_confirmed").in("id", ids)
@@ -261,6 +285,15 @@ async function validateSavedImages(supabase: SupabaseClient, content: Destinatio
       return "Select a verified image from the media library before saving this draft."
     }
   }
+  return null
+}
+
+async function validateRelatedDestinations(supabase: SupabaseClient, input: SaveAdminDestinationPageInput): Promise<string | null> {
+  if (!input.relatedDestinations.length) return null
+  const ids = input.relatedDestinations.map((item) => item.pageId)
+  if (new Set(ids).size !== ids.length) return "Each related destination can be selected only once."
+  const { data, error } = await supabase.from("destination_pages").select("id").in("id", ids).eq("page_type", "airport").eq("lifecycle_state", "published")
+  if (error || (data ?? []).length !== ids.length) return "Related destinations must be Published Airport Pages."
   return null
 }
 
@@ -284,8 +317,10 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   const content = normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`)
   const reusableContentError = await validateReusableContent(content)
   if (reusableContentError) return { ok: false, error: reusableContentError }
-  const imageError = await validateSavedImages(supabase, content)
+  const imageError = await validateSavedImages(supabase, content, normalized.relatedDestinations.flatMap((item) => [item.image, item.reverseImage].filter((image): image is DestinationImageReference => Boolean(image))))
   if (imageError) return { ok: false, error: imageError }
+  const relatedError = await validateRelatedDestinations(supabase, normalized)
+  if (relatedError) return { ok: false, error: relatedError }
 
   let pageId = normalized.id
   try {
@@ -357,6 +392,24 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       })),
     })
     if (terminalError) throw terminalError
+
+    const { error: deleteRelationshipsError } = await supabase.from("destination_page_relationships").delete().or(`page_a_id.eq.${pageId},page_b_id.eq.${pageId}`)
+    if (deleteRelationshipsError) throw deleteRelationshipsError
+    for (const related of normalized.relatedDestinations) {
+      const [pageA, pageB] = [pageId, related.pageId].sort()
+      const currentIsA = pageA === pageId
+      const { error: relationshipError } = await supabase.from("destination_page_relationships").insert({
+        page_a_id: pageA,
+        page_b_id: pageB,
+        a_heading: currentIsA ? related.heading : related.reverseHeading,
+        a_description: currentIsA ? related.description : related.reverseDescription,
+        a_image: currentIsA ? related.image ?? null : related.reverseImage ?? null,
+        b_heading: currentIsA ? related.reverseHeading : related.heading,
+        b_description: currentIsA ? related.reverseDescription : related.description,
+        b_image: currentIsA ? related.reverseImage ?? null : related.image ?? null,
+      })
+      if (relationshipError) throw relationshipError
+    }
 
     const saved = await loadPageRows(supabase, pageId)
     if (!saved[0]) return { ok: false, error: "The Airport Page was saved but could not be reloaded." }

@@ -39,6 +39,7 @@ import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestina
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
 import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
+import { listPublishedDestinationCandidates } from "./related-destinations"
 
 
 export interface LoginResult {
@@ -99,6 +100,11 @@ export async function getAdminDestinationPageById(id: string) {
 export async function getReusableDestinationContentAction() {
   if (!(await isAdminAuthenticated())) return { serviceFacts: [], globalFaqs: [], reviews: [] }
   return listReusableDestinationContent()
+}
+
+export async function getRelatedDestinationCandidatesAction(pageId?: string) {
+  if (!(await isAdminAuthenticated())) return []
+  return listPublishedDestinationCandidates(pageId)
 }
 
 export async function saveAdminDestinationPageAction(input: SaveAdminDestinationPageInput) {

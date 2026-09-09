@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Banknote, PlaneLanding, ShieldCheck } from "lucide-react"
+import { Banknote, PlaneLanding, ShieldCheck } from "lucide-react"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { CallToAction } from "@/components/landing/cta"
 import { SiteFooter } from "@/components/site-footer"
@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import type { AirportPagePresentation } from "@/lib/airport-page-data"
 import { formatCurrency } from "@/lib/fleet"
+import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
 
 export function AirportPageRenderer({ page }: { page: AirportPagePresentation }) {
   return (
@@ -31,15 +32,7 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
               {paragraph}
             </p>
           ))}
-          <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button size="lg" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>
-              Get a fixed price to {page.shortName}
-              <ArrowRight className="size-4" />
-            </Button>
-            <Button size="lg" variant="outline" nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>
-              {page.shortName} to your destination
-            </Button>
-          </div>
+          <AirportQuoteActions page={page} />
         </div>
 
         {page.terminals.length > 0 && (
@@ -58,6 +51,8 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
             </div>
           </div>
         )}
+
+        {page.relatedDestinations.length > 0 && <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16"><h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Related destinations</h2><div className="mt-8 grid gap-5 sm:grid-cols-2">{page.relatedDestinations.map((related) => <article key={related.id} className="rounded-2xl border border-border/70 bg-card p-5"><h3 className="text-xl font-semibold"><Link className="hover:underline" href={related.href}>{related.heading}</Link></h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{related.description}</p><div className="mt-5 flex flex-wrap gap-2"><Button size="sm" nativeButton={false} render={<Link href={related.bookingLinks.toAirport} />}>Get fixed price to {related.displayName}</Button><Button size="sm" variant="outline" nativeButton={false} render={<Link href={related.bookingLinks.fromAirport} />}>From {related.displayName}</Button></div></article>)}</div></div>}
 
         {page.serviceFacts.length > 0 && <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
           <div className="mx-auto max-w-2xl text-center"><h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Our service facts</h2></div>

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { AIRPORT_PAGES } from "@/lib/airport-content"
-import { createAirportBookingLinks, createAirportPagePresentation, createPublishedAirportPagePresentation } from "@/lib/airport-page-data"
+import { createAirportBookingLinks, createAirportPagePresentation, createPublishedAirportPagePresentation, createRouteBookingLinks } from "@/lib/airport-page-data"
 import { AIRPORTS, VEHICLE_CLASSES } from "@/lib/fleet"
 
 test("creates prefilled booking links for the first published terminal", () => {
@@ -56,4 +56,21 @@ test("prefills from the published primary terminal even when it is not first in 
 
   expect(page.bookingLinks.toAirport).toContain("dropoffAddress=Terminal+1")
   expect(page.bookingLinks.toAirport).toContain("dropoffLat=1")
+})
+
+test("prefills both airport locations for a related route in each direction", () => {
+  const links = createRouteBookingLinks(
+    { name: "Heathrow Terminal 2", latitude: 1, longitude: 2 },
+    { name: "Gatwick South Terminal", latitude: 3, longitude: 4 },
+  )
+
+  const toRelated = new URL(links.toAirport, "https://oneairporttaxi.com").searchParams
+  expect(toRelated.get("pickupAddress")).toBe("Heathrow Terminal 2")
+  expect(toRelated.get("dropoffAddress")).toBe("Gatwick South Terminal")
+  expect(toRelated.get("pickupLat")).toBe("1")
+  expect(toRelated.get("dropoffLng")).toBe("4")
+
+  const fromRelated = new URL(links.fromAirport, "https://oneairporttaxi.com").searchParams
+  expect(fromRelated.get("pickupAddress")).toBe("Gatwick South Terminal")
+  expect(fromRelated.get("dropoffAddress")).toBe("Heathrow Terminal 2")
 })

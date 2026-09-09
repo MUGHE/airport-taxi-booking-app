@@ -29,6 +29,7 @@ export type AirportPagePresentation = {
   globalFaqs: GlobalFaq[]
   airportFaqs: GlobalFaq[]
   reviews: VerifiedReview[]
+  relatedDestinations: { id: string; displayName: string; href: string; heading: string; description: string; image?: string; bookingLinks: AirportBookingLinks }[]
 }
 
 export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews">>
@@ -38,18 +39,32 @@ export function createAirportBookingLinks(
 ): AirportBookingLinks {
   if (!terminal) return { toAirport: "/book", fromAirport: "/book" }
 
-  return { toAirport: createAirportBookingLink(terminal, "dropoff"), fromAirport: createAirportBookingLink(terminal, "pickup") }
+  return { toAirport: createBookingLinkWithAirport(terminal, "dropoff"), fromAirport: createBookingLinkWithAirport(terminal, "pickup") }
 }
 
-function createAirportBookingLink(
-  terminal: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
-  direction: "pickup" | "dropoff",
-) {
+function createBookingLinkWithAirport(terminal: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">, direction: "pickup" | "dropoff") {
   const suffix = direction === "pickup" ? "pickup" : "dropoff"
+  return `/book?${new URLSearchParams({ [`${suffix}Address`]: terminal.name, [`${suffix}Lat`]: String(terminal.latitude), [`${suffix}Lng`]: String(terminal.longitude) }).toString()}`
+}
+
+export function createRouteBookingLinks(
+  pickup: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
+  dropoff: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
+): AirportBookingLinks {
+  return { toAirport: createBookingRouteLink(pickup, dropoff), fromAirport: createBookingRouteLink(dropoff, pickup) }
+}
+
+function createBookingRouteLink(
+  terminal: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
+  destination: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
+) {
   return `/book?${new URLSearchParams({
-    [`${suffix}Address`]: terminal.name,
-    [`${suffix}Lat`]: String(terminal.latitude),
-    [`${suffix}Lng`]: String(terminal.longitude),
+    pickupAddress: terminal.name,
+    pickupLat: String(terminal.latitude),
+    pickupLng: String(terminal.longitude),
+    dropoffAddress: destination.name,
+    dropoffLat: String(destination.latitude),
+    dropoffLng: String(destination.longitude),
   }).toString()}`
 }
 
@@ -95,11 +110,13 @@ export function createPublishedAirportPagePresentation({
   terminals,
   content,
   vehicles,
+  relatedDestinations,
 }: {
   shortName: string
   terminals: AirportPageTerminal[]
   content: PublishedAirportPageContent
   vehicles: AirportPagePresentation["vehicles"]
+  relatedDestinations?: AirportPagePresentation["relatedDestinations"]
 }): AirportPagePresentation {
   return {
     shortName,
@@ -114,5 +131,6 @@ export function createPublishedAirportPagePresentation({
     globalFaqs: content.globalFaqs ?? [],
     airportFaqs: content.airportFaqs ?? [],
     reviews: content.reviews ?? [],
+    relatedDestinations: relatedDestinations ?? [],
   }
 }

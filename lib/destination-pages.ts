@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
-import { createPublishedAirportPagePresentation, type AirportPagePresentation, type AirportPageTerminal, type PublishedAirportPageContent } from "@/lib/airport-page-data"
+import { createPublishedAirportPagePresentation, createRouteBookingLinks, type AirportPagePresentation, type AirportPageTerminal, type PublishedAirportPageContent } from "@/lib/airport-page-data"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
+import { getPublishedPrimaryTerminals, listRelatedDestinations } from "@/lib/related-destinations"
 
 type DestinationPageRow = {
   id: string
@@ -162,12 +163,22 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
       airportFaqs: ((snapshotRow.content as Record<string, unknown>).airportFaqs ?? (snapshotRow.content as PublishedAirportPageContent).faqs) as PublishedAirportPageContent["airportFaqs"],
     }
 
+    const related = await listRelatedDestinations(pageRow.id)
+    const relatedTerminals = await getPublishedPrimaryTerminals(related.map((item) => item.pageId))
+    const primary = terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]
+    const relatedDestinations = related.flatMap((item) => {
+      const relatedTerminal = relatedTerminals.get(item.pageId)
+      if (!primary || !relatedTerminal) return []
+      return [{ id: item.id, displayName: item.displayName, href: `/airport-transfers/${item.slug}`, heading: item.heading, description: item.description, image: item.image?.secureUrl, bookingLinks: createRouteBookingLinks(primary, { name: relatedTerminal.display_name, latitude: Number(relatedTerminal.latitude), longitude: Number(relatedTerminal.longitude) }) }]
+    })
+
     return {
       presentation: createPublishedAirportPagePresentation({
         shortName: pageRow.display_name,
         terminals,
         content,
         vehicles: VEHICLE_CLASSES,
+        relatedDestinations,
       }),
       metadata: {
         title: snapshotRow.seo_title,
