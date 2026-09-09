@@ -5,6 +5,7 @@ import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { getPublishedPrimaryTerminals, listRelatedDestinations } from "@/lib/related-destinations"
 import { LEGACY_AIRPORT_REDIRECTS } from "@/lib/legacy-airport-redirects.mjs"
 import { readPublishedAirportFacts, type PublishedAirportFacts } from "@/lib/published-airport-facts"
+import { cacheSafePublishedAirportPage, getSafePublishedAirportPage } from "@/lib/public-airport-page-cache"
 
 type DestinationPageRow = {
   id: string
@@ -56,6 +57,10 @@ export type PublishedAirportPage = {
   metadata: AirportPageSeo
   bookingAvailable: boolean
 }
+
+export type PublicAirportPageRead =
+  | { status: "published" | "fallback"; page: PublishedAirportPage }
+  | { status: "missing" | "unavailable" }
 
 export type AirportPageSeo = {
   title: string
@@ -184,9 +189,9 @@ function isPublishedContent(value: unknown): value is PublishedAirportPageConten
     && (!content.reviews || Array.isArray(content.reviews))
 }
 
-export async function getPublishedAirportPage(slug: string): Promise<PublishedAirportPage | null> {
+async function loadPublishedAirportPage(slug: string): Promise<{ status: "published" | "missing" | "unavailable"; page?: PublishedAirportPage }> {
   const supabase = getSupabase()
-  if (!supabase) return null
+  if (!supabase) return { status: "unavailable" }
 
   try {
     const { data: page, error: pageError } = await supabase
@@ -196,22 +201,23 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
       .eq("page_type", "airport")
       .eq("lifecycle_state", "published")
       .maybeSingle()
-    if (pageError || !page) return null
+    if (pageError) return { status: "unavailable" }
+    if (!page) return { status: "missing" }
 
     const pageRow = page as DestinationPageRow
-    if (!pageRow.current_published_snapshot_id) return null
+    if (!pageRow.current_published_snapshot_id) return { status: "unavailable" }
 
     const [{ data: snapshot, error: snapshotError }, { data: terminalRows, error: terminalError }, { data: legacyHero }] = await Promise.all([
       supabase.from("destination_page_snapshots").select("id, snapshot_kind, seo_title, meta_description, h1, content").eq("id", pageRow.current_published_snapshot_id).eq("page_id", pageRow.id).eq("snapshot_kind", "published").maybeSingle(),
       supabase.from("destination_page_terminals").select("id, display_name, address, latitude, longitude, sort_order, is_primary").eq("page_id", pageRow.id).order("sort_order"),
       supabase.from("destination_snapshot_media").select("destination_media_assets(id, public_id, delivery_url, width, height, format, alt_text)").eq("snapshot_id", pageRow.current_published_snapshot_id).eq("purpose", "hero").limit(1).maybeSingle(),
     ])
-    if (snapshotError || terminalError || !snapshot || !isPublishedContent((snapshot as DestinationSnapshotRow).content)) return null
+    if (snapshotError || terminalError || !snapshot || !isPublishedContent((snapshot as DestinationSnapshotRow).content)) return { status: "unavailable" }
 
     const snapshotRow = snapshot as DestinationSnapshotRow
     const rawContent = snapshotRow.content as Record<string, unknown>
     const airport = readPublishedAirportFacts(rawContent)
-    if (!airport) return null
+    if (!airport) return { status: "unavailable" }
 
     const terminals: AirportPageTerminal[] = (terminalRows as DestinationTerminalRow[]).map((terminal) => ({
       id: terminal.id,
@@ -250,7 +256,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
       return [{ id: item.id, displayName: item.displayName, href: `/airport-transfers/${item.slug}`, heading: item.heading, description: item.description, image: item.image?.secureUrl, bookingLinks: createRouteBookingLinks(primary, { name: relatedTerminal.display_name, latitude: Number(relatedTerminal.latitude), longitude: Number(relatedTerminal.longitude) }) }]
     })
 
-    return {
+    return { status: "published", page: {
       presentation: createPublishedAirportPagePresentation({
         shortName: airport.displayName,
         terminals,
@@ -270,8 +276,27 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
         airport,
       },
       bookingAvailable: pageRow.booking_available,
-    }
+    } }
   } catch {
-    return null
+    return { status: "unavailable" }
   }
+}
+
+export async function readPublicAirportPage(slug: string): Promise<PublicAirportPageRead> {
+  const loaded = await loadPublishedAirportPage(slug)
+  if (loaded.status === "published" && loaded.page) {
+    cacheSafePublishedAirportPage(slug, loaded.page)
+    return { status: "published", page: loaded.page }
+  }
+  if (loaded.status === "unavailable") {
+    const cached = getSafePublishedAirportPage(slug)
+    if (cached) return { status: "fallback", page: cached }
+  }
+  if (loaded.status === "missing") return { status: "missing" }
+  return { status: "unavailable" }
+}
+
+export async function getPublishedAirportPage(slug: string): Promise<PublishedAirportPage | null> {
+  const result = await readPublicAirportPage(slug)
+  return result.status === "published" || result.status === "fallback" ? result.page : null
 }

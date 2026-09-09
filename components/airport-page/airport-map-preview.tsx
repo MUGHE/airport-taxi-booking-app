@@ -7,10 +7,11 @@ import { createGoogleMapsEmbedUrl, createGoogleMapsUrl, type AirportMapLocation 
 
 export function AirportMapPreview({ location }: { location: AirportMapLocation }) {
   const [showInteractiveMap, setShowInteractiveMap] = useState(false)
+  const [mapFailed, setMapFailed] = useState(false)
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const mapsUrl = createGoogleMapsUrl(location)
 
-  if (showInteractiveMap && apiKey) {
+  if (showInteractiveMap && apiKey && !mapFailed) {
     return (
       <div className="mt-6 overflow-hidden rounded-xl border border-border/70 bg-secondary">
         <iframe
@@ -20,6 +21,7 @@ export function AirportMapPreview({ location }: { location: AirportMapLocation }
           referrerPolicy="strict-origin-when-cross-origin"
           src={createGoogleMapsEmbedUrl(location, apiKey)}
           title={`Google map of ${location.address}`}
+          onError={() => setMapFailed(true)}
         />
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">{location.address}</p>
@@ -42,7 +44,7 @@ export function AirportMapPreview({ location }: { location: AirportMapLocation }
           <Button variant="outline" nativeButton={false} render={<a href={mapsUrl} rel="noreferrer" target="_blank" />}>Open in Google Maps</Button>
         </div>
       </div>
-      {showInteractiveMap && !apiKey && <p className="relative mt-4 text-sm text-muted-foreground">The map preview could not load. Use “Open in Google Maps” instead.</p>}
+      {showInteractiveMap && (mapFailed || !apiKey) && <p className="relative mt-4 text-sm text-muted-foreground">The map preview could not load. Use “Open in Google Maps” instead.</p>}
     </div>
   )
 }

@@ -4,9 +4,10 @@ import { AirportPageRenderer } from "@/components/airport-page/airport-page-rend
 import { AirportPageStructuredData } from "@/components/airport-page/airport-page-structured-data"
 import { AIRPORT_PAGES, getAirportPage } from "@/lib/airport-content"
 import { createAirportPagePresentation, createLegacyAirportHeroImage } from "@/lib/airport-page-data"
-import { getDestinationPageLifecycle, getPublishedAirportPage, getPublishedAirportRedirect, type AirportPageSeo } from "@/lib/destination-pages"
+import { getDestinationPageLifecycle, getPublishedAirportRedirect, readPublicAirportPage, type AirportPageSeo } from "@/lib/destination-pages"
 import { AIRPORTS, VEHICLE_CLASSES } from "@/lib/fleet"
 import { allowLegacyAirportFallback } from "@/lib/legacy-airport-fallback"
+import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
 
 export const dynamic = "force-dynamic"
 
@@ -66,8 +67,8 @@ function legacyPageSeo(airport: NonNullable<ReturnType<typeof getAirportPage>>):
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const publishedPage = await getPublishedAirportPage(slug)
-  if (publishedPage) return pageMetadata(publishedPage.metadata)
+  const publishedRead = await readPublicAirportPage(slug)
+  if (publishedRead.status === "published" || publishedRead.status === "fallback") return pageMetadata(publishedRead.page.metadata)
 
   const lifecycle = await getDestinationPageLifecycle(slug)
   if (lifecycle === "draft" || lifecycle === "archived" || lifecycle === "missing") return nonPublicMetadata
@@ -82,8 +83,10 @@ export default async function AirportPage({ params }: { params: Promise<{ slug: 
   const redirectSlug = await getPublishedAirportRedirect(slug)
   if (redirectSlug === "airport-transfers") permanentRedirect("/airport-transfers")
   if (redirectSlug) permanentRedirect(`/airport-transfers/${redirectSlug}`)
-  const publishedPage = await getPublishedAirportPage(slug)
-  if (publishedPage) return <><AirportPageStructuredData seo={publishedPage.metadata} /><AirportPageRenderer page={publishedPage.presentation} canonicalPath={publishedPage.metadata.canonical} /></>
+  const publishedRead = await readPublicAirportPage(slug)
+  if (publishedRead.status === "published" || publishedRead.status === "fallback") return <><AirportPageStructuredData seo={publishedRead.page.metadata} /><AirportPageRenderer page={publishedRead.page.presentation} canonicalPath={publishedRead.page.metadata.canonical} /></>
+
+  if (publishedRead.status === "unavailable") return <PublicPageServiceError retryHref={`/airport-transfers/${slug}`} />
 
   const lifecycle = await getDestinationPageLifecycle(slug)
   if (lifecycle === "draft" || lifecycle === "archived" || lifecycle === "missing") notFound()

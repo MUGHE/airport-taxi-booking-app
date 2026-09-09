@@ -42,6 +42,7 @@ import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
 import { setAirportFeatured } from "./airport-directory"
 import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability } from "./admin-destination-pages"
+import { invalidateSafePublishedAirportPageCache } from "./public-airport-page-cache"
 
 
 export interface LoginResult {
@@ -113,6 +114,7 @@ export async function setAirportFeaturedAction(pageId: string, featured: boolean
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await setAirportFeatured(pageId, featured)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath("/admin/destination-pages")
@@ -125,6 +127,7 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await saveAdminDestinationPage(input)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/admin/destination-pages")
     revalidatePath("/admin/destination-pages/new")
     revalidatePath(`/admin/destination-pages/${result.page.id}`)
@@ -136,6 +139,7 @@ export async function publishAdminDestinationPageAction(pageId: string, override
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await publishAdminDestinationPage(pageId, override)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${result.slug}`)
@@ -150,6 +154,7 @@ export async function restoreAdminDestinationPageAction(pageId: string) {
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await restoreAdminDestinationPage(pageId)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }
@@ -160,6 +165,7 @@ export async function deleteAdminDestinationDraftAction(pageId: string) {
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await deleteAdminDestinationDraft(pageId)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }
@@ -170,6 +176,7 @@ export async function archiveAdminDestinationPageAction(pageId: string, replacem
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await archiveAdminDestinationPage(pageId, replacementSlug)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath("/sitemap.xml")
@@ -183,6 +190,7 @@ export async function setAdminBookingAvailabilityAction(pageId: string, availabl
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await setAdminBookingAvailability(pageId, available)
   if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${pageId}`)
     revalidatePath("/admin/destination-pages")
