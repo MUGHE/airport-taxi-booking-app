@@ -6,6 +6,8 @@
 2. Copy `.env.example` to `.env.local`, and set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from the project's API settings.
 3. Restart the development server.
 
+The release migration and verification checklist is in [docs/airport-destination-pages-release.md](docs/airport-destination-pages-release.md). It covers the database cutover, Cloudinary configuration, cache refresh, failure simulations, test commands, and rollback.
+
 Bookings and vehicle pricing are now stored in Supabase. The service-role key is used only in server-side code; never expose it to the browser or commit it to git.
 
 ## Google Maps route pricing

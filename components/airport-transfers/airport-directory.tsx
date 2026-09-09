@@ -39,7 +39,7 @@ export function AirportDirectory({ airports }: { airports: AirportDirectoryEntry
             id="airport-search"
             type="search"
             value={query}
-            onInput={(event) => setQuery(event.currentTarget.value)}
+            onChange={(event) => setQuery(event.currentTarget.value)}
             placeholder="Name, code, or area"
             className="mt-1.5 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />

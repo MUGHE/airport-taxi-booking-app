@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { currentPublishedCanonicalSlug } from "@/lib/airport-directory"
 import { readPublishedAirportFacts } from "@/lib/published-airport-facts"
-import { allowLegacyAirportFallback } from "@/lib/legacy-airport-fallback"
 
 const publishedPage = {
   lifecycle_state: "published" as const,
@@ -40,9 +39,4 @@ test("public discovery reads airport identity from Published Snapshot facts", ()
 
   expect(readPublishedAirportFacts({ publishedFacts, draftFacts: { displayName: "Unpublished edit" } })).toEqual(publishedFacts)
   expect(readPublishedAirportFacts({ displayName: "Mutable page-row edit" })).toBeNull()
-})
-
-test("production never publishes legacy airport fallback URLs", () => {
-  expect(allowLegacyAirportFallback("production")).toBe(false)
-  expect(allowLegacyAirportFallback("development")).toBe(true)
 })

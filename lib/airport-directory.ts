@@ -1,7 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
-import { AIRPORT_PAGES } from "@/lib/airport-content"
 import { readPublishedAirportFacts } from "@/lib/published-airport-facts"
-import { allowLegacyAirportFallback } from "@/lib/legacy-airport-fallback"
 
 export const MAX_FEATURED_AIRPORTS = 6
 
@@ -40,17 +38,6 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-function fallbackDirectory(): AirportDirectoryEntry[] {
-  return AIRPORT_PAGES.map((airport, index) => ({
-    id: `legacy-${airport.slug}`,
-    displayName: airport.shortName,
-    iataCode: airport.code,
-    serviceArea: airport.area,
-    slug: airport.slug,
-    featured: index < MAX_FEATURED_AIRPORTS,
-  })).sort((left, right) => left.displayName.localeCompare(right.displayName))
-}
-
 function toEntry(row: DirectoryRow, snapshot: PublishedSnapshotRow): AirportDirectoryEntry | null {
   const facts = readPublishedAirportFacts(snapshot.content)
   if (!facts) return null
@@ -64,22 +51,9 @@ function toEntry(row: DirectoryRow, snapshot: PublishedSnapshotRow): AirportDire
   }
 }
 
-function safeLegacyEntry(row: DirectoryRow): AirportDirectoryEntry | null {
-  const airport = AIRPORT_PAGES.find((item) => item.slug === row.published_slug)
-  if (!airport) return null
-  return {
-    id: row.id,
-    displayName: airport.shortName,
-    iataCode: airport.code,
-    serviceArea: airport.area,
-    slug: row.published_slug,
-    featured: row.featured,
-  }
-}
-
 export async function listPublishedAirportDirectory(): Promise<AirportDirectoryEntry[]> {
   const supabase = getSupabase()
-  if (!supabase) return allowLegacyAirportFallback() ? fallbackDirectory() : []
+  if (!supabase) return []
 
   const { data, error } = await supabase
     .from("destination_pages")
@@ -102,11 +76,8 @@ export async function listPublishedAirportDirectory(): Promise<AirportDirectoryE
   return pages
     .flatMap((page) => {
       const snapshot = snapshotsById.get(page.current_published_snapshot_id as string)
-      // Keep local development usable before migration 000010 is applied.
-      // Production excludes any page whose Published Snapshot lacks facts.
       const entry = snapshot ? toEntry(page, snapshot) : null
-      const safeEntry = entry ?? (allowLegacyAirportFallback() ? safeLegacyEntry(page) : null)
-      return safeEntry ? [safeEntry] : []
+      return entry ? [entry] : []
     })
     .sort((left, right) => left.displayName.localeCompare(right.displayName))
 }

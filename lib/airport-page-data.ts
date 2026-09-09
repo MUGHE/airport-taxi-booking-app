@@ -1,5 +1,4 @@
-import type { AirportPage } from "@/lib/airport-content"
-import type { ServiceLocation, VehicleClass } from "@/lib/types"
+import type { VehicleClass } from "@/lib/types"
 import type { GlobalFaq, ServiceFact, VerifiedReview } from "@/lib/reusable-content"
 import type { DestinationImageReference, DestinationSection, RichTextBlock } from "@/lib/destination-content"
 import type { AirportMapLocation } from "@/lib/google-maps-links"
@@ -43,18 +42,6 @@ export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" |
 
 export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews" | "heroImage" | "sections" | "finalCta">>
 
-export function createLegacyAirportHeroImage(airport: AirportPage): DestinationImageReference {
-  return {
-    assetId: `legacy-${airport.slug}`,
-    publicId: `airport-pages/${airport.slug}`,
-    secureUrl: `/airport-transfers/${airport.legacySlug}.webp`,
-    width: 1600,
-    height: 900,
-    format: "webp",
-    altText: `${airport.shortName} Airport transfer service`,
-  }
-}
-
 export function createAirportBookingLinks(
   terminal?: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
 ): AirportBookingLinks {
@@ -87,45 +74,6 @@ function createBookingRouteLink(
     dropoffLat: String(destination.latitude),
     dropoffLng: String(destination.longitude),
   }).toString()}`
-}
-
-export function createAirportPagePresentation(
-  airport: AirportPage,
-  locations: ServiceLocation[],
-  vehicles: AirportPagePresentation["vehicles"],
-): AirportPagePresentation {
-  const locationsById = new Map(locations.map((location) => [location.id, location]))
-  const terminals = airport.locationIds.flatMap((id) => {
-    const location = locationsById.get(id)
-    return location
-      ? [{ id: location.id, name: location.name, area: location.area, latitude: location.lat, longitude: location.lng, isPrimary: airport.locationIds.indexOf(id) === 0 }]
-      : []
-  })
-
-  return createPublishedAirportPagePresentation({
-    shortName: airport.shortName,
-    terminals,
-    mapLocation: terminals[0] ? { address: airport.name, latitude: terminals[0].latitude, longitude: terminals[0].longitude } : undefined,
-    content: {
-      heading: airport.h1,
-      intro: airport.intro,
-      benefits: [
-        {
-          title: "Fixed, all-inclusive fare",
-          description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.",
-          icon: "fare",
-        },
-        {
-          title: "Flight tracking & meet & greet",
-          description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.",
-          icon: "flight",
-        },
-      ],
-      faqs: airport.faqs.map((faq) => ({ question: faq.q, answer: faq.a })),
-      heroImage: createLegacyAirportHeroImage(airport),
-    },
-    vehicles,
-  })
 }
 
 export function createPublishedAirportPagePresentation({
