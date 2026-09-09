@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { createDefaultDestinationContent } from "@/lib/destination-content"
-import { getPublishBlockers, type PublishReadinessInput } from "@/lib/publish-readiness"
+import { getPublishBlockers, getPublishWarnings, type PublishReadinessInput } from "@/lib/publish-readiness"
 
 function validInput(): PublishReadinessInput {
   const content = createDefaultDestinationContent("Example Airport Taxi")
@@ -31,4 +31,30 @@ test("duplicate slug, IATA code, or SEO title is a publish blocker", () => {
   const input = validInput()
   input.existingPages = [{ id: "other", slug: input.slug, iataCode: input.iataCode, seoTitle: input.seoTitle }]
   expect(getPublishBlockers(input).map((item) => item.code)).toContain("duplicate-value")
+})
+
+test("warns when a meta description is materially similar to another Draft or Published Page", () => {
+  const input = validInput()
+  input.existingPages = [{ id: "other", slug: "other-airport-taxi", iataCode: "OTH", seoTitle: "Other Airport Taxi", metaDescription: "Fixed price airport taxi transfers from Other Airport to London with flight tracking and professional drivers." }]
+  input.metaDescription = "Fixed price airport taxi transfers from Example Airport to London with flight tracking and professional drivers."
+  expect(getPublishWarnings(input).map((item) => item.code)).toContain("similar-meta-description")
+})
+
+test("warns on substantial repeated prose but ignores short shared service wording", () => {
+  const input = validInput()
+  const repeated = "Example Airport passengers can book a fixed price transfer with flight tracking and a professional driver from every terminal."
+  input.content.sections[0].body = [{ type: "paragraph", text: repeated }]
+  const otherContent = createDefaultDestinationContent("Other Airport Taxi")
+  otherContent.sections[0].body = [{ type: "paragraph", text: repeated }]
+  input.existingPages = [{ id: "other", slug: "other-airport-taxi", iataCode: "OTH", seoTitle: "Other Airport Taxi", content: otherContent }]
+  expect(getPublishWarnings(input).map((item) => item.code)).toContain("repeated-prose")
+
+  input.content.sections[0].body = [{ type: "paragraph", text: "Book a fixed price transfer today." }]
+  expect(getPublishWarnings(input).map((item) => item.code)).not.toContain("repeated-prose")
+})
+
+test("warns when another Page already uses the selected hero image", () => {
+  const input = validInput()
+  input.existingPages = [{ id: "other", slug: "other-airport-taxi", iataCode: "OTH", seoTitle: "Other Airport Taxi", heroImageAssetId: "asset" }]
+  expect(getPublishWarnings(input).map((item) => item.code)).toContain("duplicate-hero-image")
 })

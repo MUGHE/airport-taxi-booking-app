@@ -3,6 +3,9 @@
 import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
 import { ArrowDown, ArrowLeft, ArrowUp, Loader2, Plus, Trash2 } from "lucide-react"
+import { toast } from "react-toastify"
+import { Controller, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +15,8 @@ import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picke
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, normalizeDestinationContent, type DestinationContentDocument, type DestinationSectionType, type RichTextBlock } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
 import type { ReusableDestinationContent } from "@/lib/admin-destination-pages"
+import type { PublishWarning } from "@/lib/publish-readiness"
+import { destinationPageEditorSchema, type DestinationPageEditorValues } from "@/lib/destination-page-form-schema"
 import { DraftPreviewPanel } from "@/components/admin/draft-preview-panel"
 
 const emptyTerminal = (): AdminTerminal => ({ displayName: "Main Terminal", address: "", latitude: 0, longitude: 0, sortOrder: 0, isPrimary: true })
@@ -28,12 +33,31 @@ function initialForm(initialPage?: AdminDestinationPage): SaveAdminDestinationPa
 
 function bodyText(section: { body: { text: string }[] }): string { return section.body.map((block) => block.text).join("\n") }
 
+function editorValues(form: SaveAdminDestinationPageInput): DestinationPageEditorValues {
+  return {
+    officialName: form.officialName,
+    displayName: form.displayName,
+    iataCode: form.iataCode,
+    serviceArea: form.serviceArea,
+    slug: form.slug,
+    googlePlaceId: form.googlePlaceId,
+    address: form.address,
+    latitude: form.latitude,
+    longitude: form.longitude,
+  }
+}
+
 export function DestinationPageEditor({ initialPage, relatedCandidates, reusableContent }: { initialPage?: AdminDestinationPage; relatedCandidates: { id: string; displayName: string; slug: string }[]; reusableContent: ReusableDestinationContent }) {
   const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(initialPage))
-  const [error, setError] = useState("")
-  const [saved, setSaved] = useState("")
   const [dirty, setDirty] = useState(false)
+  const [pendingWarnings, setPendingWarnings] = useState<PublishWarning[]>([])
+  const [pendingWarningSetHash, setPendingWarningSetHash] = useState("")
   const [isPending, startTransition] = useTransition()
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<DestinationPageEditorValues>({
+    defaultValues: editorValues(initialForm(initialPage)),
+    resolver: zodResolver(destinationPageEditorSchema),
+    mode: "onBlur",
+  })
   const content = form.content ?? normalizeDestinationContent(undefined, form.h1 || `${form.displayName || "Airport"} Airport Taxi & Transfers`)
 
   useEffect(() => {
@@ -43,7 +67,7 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
   }, [dirty])
 
   function update<K extends keyof SaveAdminDestinationPageInput>(key: K, value: SaveAdminDestinationPageInput[K]) {
-    setForm((current) => ({ ...current, [key]: value })); setDirty(true); setSaved("")
+    setForm((current) => ({ ...current, [key]: value })); setDirty(true)
   }
   function updateContent(next: DestinationContentDocument) { update("content", next) }
   function toggleReusable(kind: "serviceFacts" | "globalFaqs" | "reviews", item: unknown) {
@@ -56,7 +80,7 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
     updateContent({ ...content, airportFaqs })
   }
   const completedAirportFaqCount = content.airportFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length
-  function selectPlace(place: PlaceSelection) { update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
+  function selectPlace(place: PlaceSelection) { setValue("googlePlaceId", place.placeId, { shouldValidate: true }); setValue("address", place.address, { shouldValidate: true }); setValue("latitude", place.lat, { shouldValidate: true }); setValue("longitude", place.lng, { shouldValidate: true }); update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
   function updateTerminal(index: number, key: keyof AdminTerminal, value: string | boolean) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, [key]: key === "latitude" || key === "longitude" ? Number(value) : value } : terminal)) }
   function moveTerminal(index: number, direction: -1 | 1) { const next = index + direction; if (next < 0 || next >= form.terminals.length) return; const terminals = [...form.terminals]; [terminals[index], terminals[next]] = [terminals[next], terminals[index]]; update("terminals", terminals) }
   function updateSection(index: number, changes: Record<string, unknown>) { updateContent({ ...content, sections: content.sections.map((section, i) => i === index ? { ...section, ...changes } : section) }) }
@@ -68,31 +92,67 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
   }
   function updateRelated(index: number, changes: Partial<AdminRelatedDestination>) { update("relatedDestinations", form.relatedDestinations.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)) }
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault(); setError(""); setSaved("")
+  function submit(values: DestinationPageEditorValues) {
     startTransition(async () => {
-      const result = await saveAdminDestinationPageAction({ ...form, content })
-      if (!result.ok) { setError(result.error); return }
-      setForm((current) => ({ ...current, id: result.page.id, content: result.page.draft.content })); setDirty(false); setSaved("Draft saved.")
+      const result = await saveAdminDestinationPageAction({ ...form, ...values, content })
+      if (!result.ok) { toast.error(result.error); return }
+      setForm((current) => ({ ...current, id: result.page.id, ...editorValues(result.page), content: result.page.draft.content })); reset(editorValues(result.page)); setDirty(false); toast.success("Draft saved.")
     })
   }
 
   function publish() {
-    if (!form.id) { setError("Save the Draft before publishing."); return }
-    setError(""); setSaved("")
+    if (!form.id) { toast.error("Save the Draft before publishing."); return }
     startTransition(async () => {
       const result = await publishAdminDestinationPageAction(form.id!)
-      if (!result.ok) { setError(result.error); return }
-      setDirty(false); setSaved("Published successfully.")
+      if (!result.ok) {
+        if (result.warnings?.length && result.warningSetHash) {
+          setPendingWarnings(result.warnings)
+          setPendingWarningSetHash(result.warningSetHash)
+          return
+        }
+        toast.error(result.error); return
+      }
+      setDirty(false); toast.success("Published successfully.")
     })
   }
+
+  function cancelWarningOverride() {
+    setPendingWarnings([])
+    setPendingWarningSetHash("")
+  }
+
+  function confirmWarningOverride() {
+    if (!form.id || !pendingWarnings.length) return
+    startTransition(async () => {
+      const result = await publishAdminDestinationPageAction(form.id!, { warningSetHash: pendingWarningSetHash, warnings: pendingWarnings })
+      if (!result.ok) {
+        if (result.warnings?.length && result.warningSetHash) {
+          setPendingWarnings(result.warnings)
+          setPendingWarningSetHash(result.warningSetHash)
+        } else toast.error(result.error)
+        return
+      }
+      cancelWarningOverride()
+      setDirty(false); toast.success("Published successfully.")
+    })
+  }
+
+  useEffect(() => {
+    if (!pendingWarnings.length) return
+    toast.warning(<div className="space-y-3">
+      <div><p className="font-semibold">Review quality warnings</p><p>These warnings do not block publication, but publishing will record your deliberate override.</p></div>
+      <ul className="space-y-2">{pendingWarnings.map((warning) => <li key={warning.code}><p className="font-medium">{warning.message}</p><p>{warning.reason}</p></li>)}</ul>
+      <div className="flex justify-end gap-2"><Button type="button" variant="outline" size="sm" disabled={isPending} onClick={cancelWarningOverride}>Cancel</Button><Button type="button" size="sm" disabled={isPending} onClick={confirmWarningOverride}>{isPending && <Loader2 className="size-4 animate-spin" />} Proceed and publish</Button></div>
+    </div>, { toastId: "publish-quality-warning", autoClose: false, closeOnClick: false })
+    return () => { toast.dismiss("publish-quality-warning") }
+  }, [pendingWarnings, isPending])
 
   return (
     <div className="mx-auto max-w-5xl">
       <Link href="/admin/destination-pages" className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Destination Pages</Link>
       <div className="mb-6"><h2 className="text-xl font-semibold tracking-tight">{initialPage ? "Edit Airport Page" : "Create Airport Page"}</h2><p className="mt-1 text-sm text-muted-foreground">Build the identity and structured content for this Airport Page draft.</p></div>
       <DraftPreviewPanel pageId={form.id} dirty={dirty} />
-      <form onSubmit={submit} className="space-y-6">
+      <form onSubmit={handleSubmit(submit)} className="space-y-6">
         <section className="space-y-4 rounded-xl border border-border bg-card p-5">
           <div><h3 className="font-semibold">Related destinations</h3><p className="text-sm text-muted-foreground">Only Published Airport Pages can be selected. One relationship supplies both page directions.</p></div>
           {!initialPage && <p className="rounded-lg bg-secondary px-3 py-2 text-sm">Save this page as a draft first, then add related destinations.</p>}
@@ -100,9 +160,9 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
             <div className="space-y-4">{form.relatedDestinations.map((related, index) => <div key={related.pageId} className="rounded-lg border border-border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{related.displayName}</p><p className="text-xs text-muted-foreground">{related.slug}</p></div><Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove related destination ${related.displayName}`} onClick={() => update("relatedDestinations", form.relatedDestinations.filter((_, itemIndex) => itemIndex !== index))}><Trash2 /></Button></div><div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label>Heading on this page</Label><Input value={related.heading} onChange={(event) => updateRelated(index, { heading: event.target.value })} /></div><div className="space-y-1.5"><Label>Description on this page</Label><textarea className="min-h-20 w-full rounded-lg border border-input px-2.5 py-2 text-sm" value={related.description} onChange={(event) => updateRelated(index, { description: event.target.value })} /></div><div className="space-y-1.5"><Label>Heading on related page</Label><Input value={related.reverseHeading} onChange={(event) => updateRelated(index, { reverseHeading: event.target.value })} /></div><div className="space-y-1.5"><Label>Description on related page</Label><textarea className="min-h-20 w-full rounded-lg border border-input px-2.5 py-2 text-sm" value={related.reverseDescription} onChange={(event) => updateRelated(index, { reverseDescription: event.target.value })} /></div></div></div>)}</div></>}
         </section>
         {initialPage && form.relatedDestinations.length > 0 && <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div><h3 className="font-semibold">Related destination images</h3><p className="text-sm text-muted-foreground">Images are optional. Choose only approved media from the library.</p></div>{form.relatedDestinations.map((related, index) => <div key={related.pageId} className="space-y-4 rounded-lg border border-border p-4"><div><p className="mb-3 font-medium">{related.displayName} — image on this page</p><CloudinaryImagePicker kind="content" value={related.image} onChange={(image) => updateRelated(index, { image })} /></div><div><p className="mb-3 font-medium">{related.displayName} — image on the related page</p><CloudinaryImagePicker kind="content" value={related.reverseImage} onChange={(image) => updateRelated(index, { reverseImage: image })} /></div></div>)}</section>}
-        <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div><h3 className="font-semibold">Page identity</h3><p className="text-sm text-muted-foreground">Airport Page is the only usable page type in this release.</p></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-1.5"><Label>Page type</Label><Input value="Airport Page" readOnly /></div><div className="space-y-1.5"><Label htmlFor="official-name">Official name</Label><Input id="official-name" value={form.officialName} onChange={(e) => update("officialName", e.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="display-name">Display name</Label><Input id="display-name" value={form.displayName} onChange={(e) => update("displayName", e.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="iata">IATA code</Label><Input id="iata" maxLength={3} value={form.iataCode} onChange={(e) => update("iataCode", e.target.value.toUpperCase())} placeholder="LHR" /></div><div className="space-y-1.5 sm:col-span-2"><Label htmlFor="service-area">Service area</Label><Input id="service-area" value={form.serviceArea} onChange={(e) => update("serviceArea", e.target.value)} /></div><div className="space-y-1.5 sm:col-span-2"><Label htmlFor="slug">Airport Slug</Label><Input id="slug" value={form.slug} onChange={(e) => update("slug", e.target.value.toLowerCase())} placeholder="heathrow-airport-taxi" /><p className="text-xs text-muted-foreground">Lowercase, hyphen-separated, and ending in -airport-taxi.</p></div></div></section>
+        <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div><h3 className="font-semibold">Page identity</h3><p className="text-sm text-muted-foreground">Airport Page is the only usable page type in this release.</p></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-1.5"><Label>Page type</Label><Input value="Airport Page" readOnly /></div><Controller control={control} name="officialName" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="official-name">Official name</Label><Input id="official-name" {...field} value={form.officialName} onChange={(e) => { field.onChange(e); update("officialName", e.target.value) }} />{errors.officialName?.message && <p role="alert" className="text-sm text-destructive">{errors.officialName.message}</p>}</div>} /><Controller control={control} name="displayName" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="display-name">Display name</Label><Input id="display-name" {...field} value={form.displayName} onChange={(e) => { field.onChange(e); update("displayName", e.target.value) }} />{errors.displayName?.message && <p role="alert" className="text-sm text-destructive">{errors.displayName.message}</p>}</div>} /><Controller control={control} name="iataCode" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="iata">IATA code</Label><Input id="iata" maxLength={3} {...field} value={form.iataCode} onChange={(e) => { const value = e.target.value.toUpperCase(); field.onChange(value); update("iataCode", value) }} placeholder="LHR" />{errors.iataCode?.message && <p role="alert" className="text-sm text-destructive">{errors.iataCode.message}</p>}</div>} /><Controller control={control} name="serviceArea" render={({ field }) => <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="service-area">Service area</Label><Input id="service-area" {...field} value={form.serviceArea} onChange={(e) => { field.onChange(e); update("serviceArea", e.target.value) }} />{errors.serviceArea?.message && <p role="alert" className="text-sm text-destructive">{errors.serviceArea.message}</p>}</div>} /><Controller control={control} name="slug" render={({ field }) => <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="slug">Airport Slug</Label><Input id="slug" {...field} value={form.slug} onChange={(e) => { const value = e.target.value.toLowerCase(); field.onChange(value); update("slug", value) }} placeholder="heathrow-airport-taxi" />{errors.slug?.message ? <p role="alert" className="text-sm text-destructive">{errors.slug.message}</p> : <p className="text-xs text-muted-foreground">Lowercase, hyphen-separated, and ending in -airport-taxi.</p>}</div>} /></div></section>
 
-        <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div><h3 className="font-semibold">Google airport location</h3><p className="text-sm text-muted-foreground">Select the airport to store its stable Google identity and exact coordinates.</p></div><DestinationPicker defaultValue={form.address} onSelect={selectPlace} placeholder="Search for the airport in Google Places" />{form.googlePlaceId && <div className="rounded-lg bg-secondary/60 p-3 text-sm"><p className="font-medium">Selected location</p><p>{form.address}</p><p className="mt-1 text-xs text-muted-foreground">Google Place ID: {form.googlePlaceId} · Latitude {form.latitude} · Longitude {form.longitude}</p></div>}</section>
+        <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div><h3 className="font-semibold">Google airport location</h3><p className="text-sm text-muted-foreground">Select the airport to store its stable Google identity and exact coordinates.</p></div><DestinationPicker defaultValue={form.address} onSelect={selectPlace} placeholder="Search for the airport in Google Places" />{errors.googlePlaceId?.message && <p role="alert" className="text-sm text-destructive">{errors.googlePlaceId.message}</p>}{errors.address?.message && <p role="alert" className="text-sm text-destructive">{errors.address.message}</p>}{form.googlePlaceId && <div className="rounded-lg bg-secondary/60 p-3 text-sm"><p className="font-medium">Selected location</p><p>{form.address}</p><p className="mt-1 text-xs text-muted-foreground">Google Place ID: {form.googlePlaceId} · Latitude {form.latitude} · Longitude {form.longitude}</p></div>}</section>
 
         <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div><h3 className="font-semibold">Structured page content</h3><p className="text-sm text-muted-foreground">The branded hero stays first and the final booking CTA stays last. Middle sections use approved types only.</p></div>
           <div className="rounded-lg border border-dashed border-border p-4"><p className="font-medium">Hero and quote form</p><Input className="mt-3" aria-label="Hero heading" value={content.hero.heading} onChange={(e) => updateContent({ ...content, hero: { ...content.hero, heading: e.target.value } })} /><p className="mt-2 text-xs text-muted-foreground">Safe formatting supports headings, paragraphs, bold, lists, and HTTPS or known internal links. Custom HTML, scripts, colours, and fonts are not stored.</p><div className="mt-4"><CloudinaryImagePicker kind="hero" value={content.hero.image} onChange={(image) => updateContent({ ...content, hero: { ...content.hero, image } })} /></div></div>
@@ -142,7 +202,7 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
 
         <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold">Airport Terminals</h3><p className="text-sm text-muted-foreground">Add each pickup location. Select exactly one primary entry for booking links.</p></div><Button type="button" variant="outline" size="sm" onClick={() => update("terminals", [...form.terminals, { ...emptyTerminal(), isPrimary: false, sortOrder: form.terminals.length }])}><Plus className="size-4" /> Add terminal</Button></div><div className="space-y-3">{form.terminals.map((terminal, index) => <div key={terminal.id ?? index} className="rounded-lg border border-border p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="font-medium">Terminal {index + 1}</p><div className="flex items-center gap-1"><Button type="button" variant="ghost" size="icon-xs" aria-label="Move terminal up" disabled={index === 0} onClick={() => moveTerminal(index, -1)}><ArrowUp /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label="Move terminal down" disabled={index === form.terminals.length - 1} onClick={() => moveTerminal(index, 1)}><ArrowDown /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label="Remove terminal" disabled={form.terminals.length === 1} onClick={() => update("terminals", form.terminals.filter((_, i) => i !== index))}><Trash2 /></Button></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label>Name</Label><Input value={terminal.displayName} onChange={(e) => updateTerminal(index, "displayName", e.target.value)} /></div><div className="space-y-1.5"><Label>Address</Label><Input value={terminal.address} onChange={(e) => updateTerminal(index, "address", e.target.value)} /></div><div className="space-y-1.5"><Label>Latitude</Label><Input type="number" step="any" value={terminal.latitude} onChange={(e) => updateTerminal(index, "latitude", e.target.value)} /></div><div className="space-y-1.5"><Label>Longitude</Label><Input type="number" step="any" value={terminal.longitude} onChange={(e) => updateTerminal(index, "longitude", e.target.value)} /></div></div><label className="mt-3 flex items-center gap-2 text-sm"><input type="radio" name="primary-terminal" checked={terminal.isPrimary} onChange={() => update("terminals", form.terminals.map((item, i) => ({ ...item, isPrimary: i === index })))} /> Primary Airport Terminal</label></div>)}</div></section>
 
-        {error && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}{saved && <p role="status" className="rounded-lg bg-secondary px-3 py-2 text-sm">{saved}</p>}<div className="sticky bottom-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur"><span className="text-sm text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><div className="flex gap-2"><Button type="submit" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save Draft</Button>{form.id && <Button type="button" variant="default" disabled={isPending || dirty} onClick={publish}>Publish</Button>}</div></div>
+        <div className="sticky bottom-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur"><span className="text-sm text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><div className="flex gap-2"><Button type="submit" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save Draft</Button>{form.id && <Button type="button" variant="default" disabled={isPending || dirty} onClick={publish}>Publish</Button>}</div></div>
       </form>
     </div>
   )

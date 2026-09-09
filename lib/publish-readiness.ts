@@ -18,10 +18,20 @@ export type PublishReadinessInput = {
   metaDescription: string
   h1: string
   content: DestinationContentDocument
-  existingPages?: { id: string; slug: string; iataCode: string; seoTitle?: string }[]
+  existingPages?: ExistingQualityPage[]
 }
 
 export type PublishBlocker = { code: string; message: string }
+export type PublishWarning = { code: string; message: string; reason: string }
+export type ExistingQualityPage = {
+  id: string
+  slug: string
+  iataCode: string
+  seoTitle?: string
+  metaDescription?: string
+  content?: DestinationContentDocument
+  heroImageAssetId?: string
+}
 
 const REQUIRED_SECTIONS = ["introduction", "benefits", "fleet_pricing", "airport_guide", "map"] as const
 const SAFE_INTERNAL_PATHS = new Set(["/", "/book", "/airport-transfers", "/contact", "/help", "/about", "/privacy", "/terms"])
@@ -73,4 +83,76 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
     }
   }
   return blockers
+}
+
+const QUALITY_STOP_WORDS = new Set(["a", "an", "and", "for", "from", "in", "of", "the", "to", "with"])
+
+function words(value: string): string[] {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter((word) => word && !QUALITY_STOP_WORDS.has(word))
+}
+
+function similarity(left: string, right: string): number {
+  const leftWords = new Set(words(left))
+  const rightWords = new Set(words(right))
+  if (leftWords.size < 4 || rightWords.size < 4) return 0
+  const shared = [...leftWords].filter((word) => rightWords.has(word)).length
+  return shared / new Set([...leftWords, ...rightWords]).size
+}
+
+function prose(content: DestinationContentDocument): string {
+  const blocks = [
+    ...content.hero.body,
+    ...content.sections.flatMap((section) => section.body),
+    ...content.finalCta.body,
+  ]
+  return blocks.map((block) => block.text).filter((text) => words(text).length >= 4).join(" ")
+}
+
+function repeatedWordCount(left: string, right: string): number {
+  const leftWords = words(left)
+  const rightWords = words(right)
+  let longest = 0
+  for (let start = 0; start < leftWords.length; start++) {
+    for (let otherStart = 0; otherStart < rightWords.length; otherStart++) {
+      let length = 0
+      while (leftWords[start + length] === rightWords[otherStart + length]) length++
+      longest = Math.max(longest, length)
+    }
+  }
+  return longest
+}
+
+export function getPublishWarnings(input: PublishReadinessInput): PublishWarning[] {
+  const warnings: PublishWarning[] = []
+  const otherPages = (input.existingPages ?? []).filter((page) => page.id !== input.id)
+  const similarMeta = otherPages.find((page) => page.metaDescription && similarity(input.metaDescription, page.metaDescription) >= 0.65)
+  if (similarMeta) warnings.push({
+    code: "similar-meta-description",
+    message: `The meta description is materially similar to ${similarMeta.slug}.`,
+    reason: "Materially similar meta descriptions can make pages look duplicated to visitors and search engines.",
+  })
+
+  const currentProse = prose(input.content)
+  const repeatedWith = otherPages.find((page) => page.content && repeatedWordCount(currentProse, prose(page.content)) >= 12)
+  if (repeatedWith) warnings.push({
+    code: "repeated-prose",
+    message: `This page repeats substantial prose used by ${repeatedWith.slug}.`,
+    reason: "Long repeated prose may mean the page is not sufficiently differentiated.",
+  })
+
+  const currentHeroId = input.content.hero.image?.assetId
+  const duplicateHero = currentHeroId && otherPages.find((page) => page.heroImageAssetId === currentHeroId)
+  if (duplicateHero) warnings.push({
+    code: "duplicate-hero-image",
+    message: `The selected hero image is already used by ${duplicateHero.slug}.`,
+    reason: "Reusing a hero image can make destination pages look less distinctive.",
+  })
+  return warnings
+}
+
+export function getWarningSetHash(warnings: PublishWarning[]): string {
+  const value = warnings.map((warning) => `${warning.code}:${warning.message}:${warning.reason}`).join("|")
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index++) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619)
+  return (hash >>> 0).toString(16)
 }

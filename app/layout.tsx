@@ -2,10 +2,12 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import { ReactToastContainer } from '@/components/ui/react-toastify'
 import { HelpButton } from '@/components/help-button'
 import { SiteBackdrop } from '@/components/site-backdrop'
 import { SITE_URL } from '@/lib/site'
 import './globals.css'
+import 'react-toastify/dist/ReactToastify.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({
@@ -76,6 +78,7 @@ export default function RootLayout({
         {children}
         <HelpButton />
         <Toaster position="top-center" />
+        <ReactToastContainer />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

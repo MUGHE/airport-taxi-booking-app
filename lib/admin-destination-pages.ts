@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, validateDestinationContent, type DestinationContentDocument, type DestinationImageReference } from "@/lib/destination-content"
 import { DEFAULT_GLOBAL_FAQS, DEFAULT_SERVICE_FACTS, DEFAULT_VERIFIED_REVIEWS, type GlobalFaq, type ServiceFact, type VerifiedReview } from "@/lib/reusable-content"
 import { listRelatedDestinations } from "@/lib/related-destinations"
-import { getPublishBlockers } from "@/lib/publish-readiness"
+import { getPublishBlockers, getPublishWarnings, getWarningSetHash, type ExistingQualityPage, type PublishWarning } from "@/lib/publish-readiness"
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
@@ -425,20 +425,44 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   }
 }
 
-export async function publishAdminDestinationPage(pageId: string): Promise<{ ok: true; slug: string } | { ok: false; error: string; blockers?: { code: string; message: string }[] }> {
+export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[] }
+export type PublishResult = { ok: true; slug: string } | { ok: false; error: string; blockers?: { code: string; message: string }[]; warnings?: PublishWarning[]; warningSetHash?: string }
+
+async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
+  const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }] = await Promise.all([
+    supabase.from("destination_pages").select("id, slug, iata_code, lifecycle_state").eq("page_type", "airport").neq("lifecycle_state", "archived"),
+    supabase.from("destination_page_snapshots").select("page_id, snapshot_kind, meta_description, content").in("snapshot_kind", ["draft", "published"]),
+  ])
+  if (pageError || snapshotError) throw pageError ?? snapshotError
+  const pageRows = (pages ?? []) as { id: string; slug: string; iata_code: string }[]
+  const snapshotRows = (snapshots ?? []) as { page_id: string; snapshot_kind: "draft" | "published"; meta_description: string; content: unknown }[]
+  return pageRows.flatMap((page) => snapshotRows.filter((snapshot) => snapshot.page_id === page.id).map((snapshot) => {
+    const content = normalizeDestinationContent(snapshot.content, `${page.slug} Airport Taxi`)
+    return { id: page.id, slug: page.slug, iataCode: page.iata_code, metaDescription: snapshot.meta_description, content, heroImageAssetId: content.hero.image?.assetId }
+  }))
+}
+
+export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride): Promise<PublishResult> {
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
   const page = await getAdminDestinationPage(pageId)
   if (!page) return { ok: false, error: "Airport Page not found." }
-  const blockers = getPublishBlockers({ ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content })
+  const existingPages = await listQualityPages(supabase)
+  const readiness = { ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages }
+  const blockers = getPublishBlockers(readiness)
   if (blockers.length) return { ok: false, error: blockers.map((item) => item.message).join(" "), blockers }
+  const warnings = getPublishWarnings(readiness)
+  const warningSetHash = getWarningSetHash(warnings)
+  if (warnings.length && (!override || override.warningSetHash !== warningSetHash || JSON.stringify(override.warnings) !== JSON.stringify(warnings))) {
+    return { ok: false, error: override ? "The quality warnings changed. Review them before publishing." : "Review the quality warnings before publishing.", warnings, warningSetHash }
+  }
   const reusableContentError = await validateReusableContent(page.draft.content)
   if (reusableContentError) return { ok: false, error: reusableContentError, blockers: [{ code: "invalid-reusable-content", message: reusableContentError }] }
   const imageError = await validateSavedImages(supabase, page.draft.content, page.relatedDestinations.flatMap((item) => [item.image, item.reverseImage].filter((image): image is DestinationImageReference => Boolean(image))))
   if (imageError) return { ok: false, error: imageError, blockers: [{ code: "invalid-media", message: imageError }] }
   const relatedError = await validateRelatedDestinations(supabase, { ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content })
   if (relatedError) return { ok: false, error: relatedError, blockers: [{ code: "invalid-relationships", message: relatedError }] }
-  const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin" })
+  const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin", p_override: override ? { warningCodes: warnings.map((warning) => warning.code), warningReasons: warnings.map((warning) => warning.reason) } : {} })
   if (error) {
     const message = error.message.toLowerCase().includes("duplicate") ? "That SEO title, Airport Slug, or IATA code conflicts with another Published Page." : "Publish failed. The previous public Published Snapshot is unchanged."
     return { ok: false, error: message }

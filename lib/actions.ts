@@ -119,9 +119,9 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
   return result
 }
 
-export async function publishAdminDestinationPageAction(pageId: string) {
+export async function publishAdminDestinationPageAction(pageId: string, override?: import("./admin-destination-pages").PublishOverride) {
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
-  const result = await publishAdminDestinationPage(pageId)
+  const result = await publishAdminDestinationPage(pageId, override)
   if (result.ok) {
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${result.slug}`)
