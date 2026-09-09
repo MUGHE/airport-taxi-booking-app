@@ -35,6 +35,7 @@ import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from "./fleet"
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
+import { getAdminDestinationPage, listAdminDestinationPages, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 
 
 export interface LoginResult {
@@ -80,6 +81,27 @@ export async function logoutAdmin(): Promise<void> {
  */
 export async function pingAdminSession(): Promise<boolean> {
   return isAdminAuthenticated()
+}
+
+export async function getAdminDestinationPages() {
+  if (!(await isAdminAuthenticated())) return []
+  return listAdminDestinationPages()
+}
+
+export async function getAdminDestinationPageById(id: string) {
+  if (!(await isAdminAuthenticated())) return null
+  return getAdminDestinationPage(id)
+}
+
+export async function saveAdminDestinationPageAction(input: SaveAdminDestinationPageInput) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await saveAdminDestinationPage(input)
+  if (result.ok) {
+    revalidatePath("/admin/destination-pages")
+    revalidatePath("/admin/destination-pages/new")
+    revalidatePath(`/admin/destination-pages/${result.page.id}`)
+  }
+  return result
 }
 
 export interface CreateBookingResult {
