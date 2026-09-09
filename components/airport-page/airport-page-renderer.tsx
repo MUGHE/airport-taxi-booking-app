@@ -26,7 +26,27 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="flex-1">
-        <div className="mx-auto max-w-3xl px-4 pt-14 pb-4 text-center lg:pt-20">
+        {page.heroImage ? <section className="relative overflow-hidden bg-foreground">
+          <div className="absolute inset-0">
+            <img className="size-full object-cover object-center" src={page.heroImage.secureUrl} alt={page.heroImage.altText} />
+            <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/30" />
+          </div>
+          <div className="relative mx-auto max-w-6xl px-4 py-12 text-background sm:py-16 lg:py-20">
+            <div className="max-w-3xl">
+              <Breadcrumbs
+                items={[
+                  { label: "Home", href: "/" },
+                  { label: "Airport Transfers", href: "/airport-transfers" },
+                  { label: page.shortName },
+                ]}
+                className="[&_span]:text-background/90 [&_svg]:text-background/40 [&_a]:text-background/70"
+              />
+              <h1 className="mt-4 max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">{page.heading}</h1>
+              {page.intro.map((paragraph) => <p key={paragraph} className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-background/80">{paragraph}</p>)}
+              <AirportQuoteActions page={page} onDarkBackground />
+            </div>
+          </div>
+        </section> : <div className="mx-auto max-w-3xl px-4 pt-14 pb-4 text-center lg:pt-20">
           <Breadcrumbs
             items={[
               { label: "Home", href: "/" },
@@ -43,9 +63,8 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
               {paragraph}
             </p>
           ))}
-          {page.heroImage && <img className="mx-auto mt-8 max-h-80 w-full rounded-2xl object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} />}
           <AirportQuoteActions page={page} />
-        </div>
+        </div>}
 
         {page.sections.filter((section) => section.visible).map((section) => <section key={section.id} className="mx-auto max-w-5xl px-4 py-10 lg:py-16" data-preview-section={section.type}>
           <div className="rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
