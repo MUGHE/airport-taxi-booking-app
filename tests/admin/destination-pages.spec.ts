@@ -21,6 +21,13 @@ test("admin can create an Airport Page draft and reload its identity and termina
   await page.getByRole("button", { name: "Sign in" }).click()
   await page.goto("/admin/destination-pages/new")
 
+  const identitySectionToggle = page.getByRole("button", { name: /Page identity/ })
+  await expect(identitySectionToggle).toHaveAttribute("aria-expanded", "true")
+  await identitySectionToggle.click()
+  await expect(page.getByLabel("Official name")).not.toBeVisible()
+  await identitySectionToggle.click()
+  await expect(page.getByLabel("Official name")).toBeVisible()
+
   await page.getByLabel("Official name").fill(`${displayName} Official`)
   await page.getByLabel("Display name").fill(displayName)
   await page.getByLabel("IATA code").fill("ZZZ")
