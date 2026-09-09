@@ -71,3 +71,23 @@ test("admin can compose controlled sections and explicitly save them as a draft"
   await expect(page.getByText("Verified reviews").last().locator("..").locator("..")).toContainText("hidden")
   await expect(page.getByText("Verified Heathrow passenger feedback")).toBeVisible()
 })
+
+test("admin sees reusable content selectors and local FAQ minimum feedback", async ({ page }) => {
+  test.skip(
+    process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
+    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+  )
+
+  await page.goto("/admin/login")
+  await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await page.goto("/admin/destination-pages/new")
+
+  await expect(page.getByText("Reusable facts, FAQs and reviews")).toBeVisible()
+  await expect(page.getByText("Flight tracking")).toBeVisible()
+  await expect(page.getByText("Global FAQs")).toBeVisible()
+  await expect(page.getByText("0/3 minimum")).toBeVisible()
+  const flightTrackingFact = page.locator("label").filter({ hasText: "Flight tracking" }).first().getByRole("checkbox")
+  await flightTrackingFact.check()
+  await expect(flightTrackingFact).toBeChecked()
+})

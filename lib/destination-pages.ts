@@ -118,6 +118,10 @@ function isPublishedContent(value: unknown): value is PublishedAirportPageConten
       const faq = item as Record<string, unknown>
       return typeof faq.question === "string" && typeof faq.answer === "string"
     })
+    && (!content.serviceFacts || Array.isArray(content.serviceFacts))
+    && (!content.globalFaqs || Array.isArray(content.globalFaqs))
+    && (!content.airportFaqs || Array.isArray(content.airportFaqs))
+    && (!content.reviews || Array.isArray(content.reviews))
 }
 
 export async function getPublishedAirportPage(slug: string): Promise<PublishedAirportPage | null> {
@@ -155,6 +159,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
     const content: PublishedAirportPageContent = {
       ...(snapshotRow.content as PublishedAirportPageContent),
       heading: snapshotRow.h1,
+      airportFaqs: ((snapshotRow.content as Record<string, unknown>).airportFaqs ?? (snapshotRow.content as PublishedAirportPageContent).faqs) as PublishedAirportPageContent["airportFaqs"],
     }
 
     return {

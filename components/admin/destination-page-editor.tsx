@@ -11,6 +11,7 @@ import { saveAdminDestinationPageAction } from "@/lib/actions"
 import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picker"
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, normalizeDestinationContent, type DestinationContentDocument, type DestinationSectionType, type RichTextBlock } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
+import type { ReusableDestinationContent } from "@/lib/admin-destination-pages"
 
 const emptyTerminal = (): AdminTerminal => ({ displayName: "Main Terminal", address: "", latitude: 0, longitude: 0, sortOrder: 0, isPrimary: true })
 
@@ -26,7 +27,7 @@ function initialForm(initialPage?: AdminDestinationPage): SaveAdminDestinationPa
 
 function bodyText(section: { body: { text: string }[] }): string { return section.body.map((block) => block.text).join("\n") }
 
-export function DestinationPageEditor({ initialPage }: { initialPage?: AdminDestinationPage }) {
+export function DestinationPageEditor({ initialPage, reusableContent }: { initialPage?: AdminDestinationPage; reusableContent: ReusableDestinationContent }) {
   const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(initialPage))
   const [error, setError] = useState("")
   const [saved, setSaved] = useState("")
@@ -44,6 +45,16 @@ export function DestinationPageEditor({ initialPage }: { initialPage?: AdminDest
     setForm((current) => ({ ...current, [key]: value })); setDirty(true); setSaved("")
   }
   function updateContent(next: DestinationContentDocument) { update("content", next) }
+  function toggleReusable(kind: "serviceFacts" | "globalFaqs" | "reviews", item: unknown) {
+    const items = content[kind] as unknown[]
+    const itemId = (item as { id: string }).id
+    updateContent({ ...content, [kind]: items.some((current) => (current as { id: string }).id === itemId) ? items.filter((current) => (current as { id: string }).id !== itemId) : [...items, item] })
+  }
+  function updateAirportFaq(index: number, field: "question" | "answer", value: string) {
+    const airportFaqs = content.airportFaqs.map((faq, faqIndex) => faqIndex === index ? { ...faq, [field]: value } : faq)
+    updateContent({ ...content, airportFaqs })
+  }
+  const completedAirportFaqCount = content.airportFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length
   function selectPlace(place: PlaceSelection) { update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
   function updateTerminal(index: number, key: keyof AdminTerminal, value: string | boolean) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, [key]: key === "latitude" || key === "longitude" ? Number(value) : value } : terminal)) }
   function moveTerminal(index: number, direction: -1 | 1) { const next = index + direction; if (next < 0 || next >= form.terminals.length) return; const terminals = [...form.terminals]; [terminals[index], terminals[next]] = [terminals[next], terminals[index]]; update("terminals", terminals) }
@@ -78,6 +89,30 @@ export function DestinationPageEditor({ initialPage }: { initialPage?: AdminDest
           </div>)}</div>
           <div className="flex flex-wrap items-center gap-2"><select aria-label="New section type" className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm" defaultValue=""><option value="">Choose a section</option>{DESTINATION_SECTION_TYPES.filter((type) => !content.sections.some((section) => section.type === type)).map((type) => <option key={type} value={type}>{SECTION_LABELS[type]}</option>)}</select><Button type="button" variant="outline" onClick={(event) => { const select = event.currentTarget.previousElementSibling as HTMLSelectElement; if (!select.value) return; updateContent({ ...content, sections: [...content.sections, createDestinationSection(select.value as DestinationSectionType)] }); select.value = "" }}><Plus className="size-4" /> Add section</Button><span className="text-xs text-muted-foreground">Word count is guidance, not a hard limit.</span></div>
           <div className="rounded-lg border border-dashed border-border p-4"><p className="font-medium">Final booking CTA</p><Input className="mt-3" aria-label="Final CTA heading" value={content.finalCta.heading} onChange={(e) => updateContent({ ...content, finalCta: { ...content.finalCta, heading: e.target.value } })} /></div>
+        </section>
+
+        <section className="space-y-5 rounded-xl border border-border bg-card p-5">
+          <div><h3 className="font-semibold">Reusable facts, FAQs and reviews</h3><p className="text-sm text-muted-foreground">Shared content is approved centrally. Selecting it copies the approved wording into this Draft; it cannot be rewritten here.</p></div>
+          <div>
+            <h4 className="font-medium">Service Facts</h4>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {reusableContent.serviceFacts.map((fact) => <label key={fact.id} className="flex gap-3 rounded-lg border border-border p-3"><input type="checkbox" checked={content.serviceFacts.some((selected) => selected.id === fact.id)} onChange={() => toggleReusable("serviceFacts", fact)} /><span><span className="block font-medium">{fact.title}</span><span className="block text-sm text-muted-foreground">{fact.description}</span></span></label>)}
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium">Global FAQs</h4>
+            <div className="mt-3 space-y-2">{reusableContent.globalFaqs.map((faq) => <label key={faq.id} className="flex gap-3 rounded-lg border border-border p-3"><input type="checkbox" checked={content.globalFaqs.some((selected) => selected.id === faq.id)} onChange={() => toggleReusable("globalFaqs", faq)} /><span><span className="block font-medium">{faq.question}</span><span className="block text-sm text-muted-foreground">{faq.answer}</span></span></label>)}</div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between gap-3"><h4 className="font-medium">Airport-specific FAQs</h4><span className={completedAirportFaqCount < 3 ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{completedAirportFaqCount}/3 minimum</span></div>
+            <p className="mt-1 text-sm text-muted-foreground">Add at least three local questions. These are separate from shared FAQs. Publishing will require this minimum.</p>
+            <div className="mt-3 space-y-3">{content.airportFaqs.map((faq, index) => <div key={faq.id} className="rounded-lg border border-border p-3"><div className="grid gap-3"><Input aria-label={`Airport FAQ ${index + 1} question`} value={faq.question} onChange={(event) => updateAirportFaq(index, "question", event.target.value)} placeholder="Airport-specific question" /><textarea aria-label={`Airport FAQ ${index + 1} answer`} className="min-h-20 w-full rounded-lg border border-input px-2.5 py-2 text-sm" value={faq.answer} onChange={(event) => updateAirportFaq(index, "answer", event.target.value)} placeholder="Airport-specific answer" /></div></div>)}</div>
+            <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => updateContent({ ...content, airportFaqs: [...content.airportFaqs, { id: `airport-faq-${Date.now()}`, question: "", answer: "" }] })}><Plus className="size-4" /> Add airport FAQ</Button>
+          </div>
+          <div>
+            <h4 className="font-medium">Verified reviews</h4><p className="mt-1 text-sm text-muted-foreground">Reviews use central attribution only. No airport-specific customer claim or rating is created.</p>
+            <div className="mt-3 space-y-2">{reusableContent.reviews.map((review) => <label key={review.id} className="flex gap-3 rounded-lg border border-border p-3"><input type="checkbox" checked={content.reviews.some((selected) => selected.id === review.id)} onChange={() => toggleReusable("reviews", review)} /><span><span className="block">“{review.quote}”</span><span className="block text-sm text-muted-foreground">{review.author} · {review.source}</span></span></label>)}</div>
+          </div>
         </section>
 
         <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold">Airport Terminals</h3><p className="text-sm text-muted-foreground">Add each pickup location. Select exactly one primary entry for booking links.</p></div><Button type="button" variant="outline" size="sm" onClick={() => update("terminals", [...form.terminals, { ...emptyTerminal(), isPrimary: false, sortOrder: form.terminals.length }])}><Plus className="size-4" /> Add terminal</Button></div><div className="space-y-3">{form.terminals.map((terminal, index) => <div key={terminal.id ?? index} className="rounded-lg border border-border p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="font-medium">Terminal {index + 1}</p><div className="flex items-center gap-1"><Button type="button" variant="ghost" size="icon-xs" aria-label="Move terminal up" disabled={index === 0} onClick={() => moveTerminal(index, -1)}><ArrowUp /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label="Move terminal down" disabled={index === form.terminals.length - 1} onClick={() => moveTerminal(index, 1)}><ArrowDown /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label="Remove terminal" disabled={form.terminals.length === 1} onClick={() => update("terminals", form.terminals.filter((_, i) => i !== index))}><Trash2 /></Button></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label>Name</Label><Input value={terminal.displayName} onChange={(e) => updateTerminal(index, "displayName", e.target.value)} /></div><div className="space-y-1.5"><Label>Address</Label><Input value={terminal.address} onChange={(e) => updateTerminal(index, "address", e.target.value)} /></div><div className="space-y-1.5"><Label>Latitude</Label><Input type="number" step="any" value={terminal.latitude} onChange={(e) => updateTerminal(index, "latitude", e.target.value)} /></div><div className="space-y-1.5"><Label>Longitude</Label><Input type="number" step="any" value={terminal.longitude} onChange={(e) => updateTerminal(index, "longitude", e.target.value)} /></div></div><label className="mt-3 flex items-center gap-2 text-sm"><input type="radio" name="primary-terminal" checked={terminal.isPrimary} onChange={() => update("terminals", form.terminals.map((item, i) => ({ ...item, isPrimary: i === index })))} /> Primary Airport Terminal</label></div>)}</div></section>

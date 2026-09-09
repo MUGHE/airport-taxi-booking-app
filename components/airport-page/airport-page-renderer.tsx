@@ -59,6 +59,11 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
           </div>
         )}
 
+        {page.serviceFacts.length > 0 && <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
+          <div className="mx-auto max-w-2xl text-center"><h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Our service facts</h2></div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{page.serviceFacts.map((fact) => <div key={fact.id} className="rounded-2xl border border-border/70 bg-card p-5"><h3 className="font-semibold">{fact.title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{fact.description}</p></div>)}</div>
+        </div>}
+
         <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Why book with us</h2>
@@ -95,15 +100,16 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
           </div>
         </div>
 
+        {page.reviews.length > 0 && <div className="mx-auto max-w-4xl px-4 py-10 lg:py-16">
+          <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Verified reviews</h2>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2">{page.reviews.map((review) => <blockquote key={review.id} className="rounded-2xl border border-border/70 bg-card p-5"><p className="leading-relaxed">“{review.quote}”</p><footer className="mt-3 text-sm text-muted-foreground">{review.author} · {review.source}</footer></blockquote>)}</div>
+        </div>}
+
         <div className="mx-auto max-w-3xl px-4 py-10 lg:py-16">
           <h2 className="text-balance text-center text-3xl font-semibold tracking-tight sm:text-4xl">Frequently asked questions</h2>
-          <div className="mt-8 space-y-6">
-            {page.faqs.map((faq) => (
-              <div key={faq.question}>
-                <h3 className="font-semibold">{faq.question}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p>
-              </div>
-            ))}
+          <div className="mt-8 space-y-8">
+            {page.globalFaqs.length > 0 && <div><p className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">Shared FAQs</p><div className="space-y-6">{page.globalFaqs.map((faq) => <div key={faq.id}><h3 className="font-semibold">{faq.question}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p></div>)}</div></div>}
+            {(page.airportFaqs.length > 0 || page.globalFaqs.length === 0) && <div><p className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">Airport-specific FAQs</p><div className="space-y-6">{(page.airportFaqs.length > 0 ? page.airportFaqs : page.faqs).map((faq) => <div key={faq.question}><h3 className="font-semibold">{faq.question}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p></div>)}</div></div>}
           </div>
         </div>
 

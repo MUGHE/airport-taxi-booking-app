@@ -51,6 +51,10 @@ export type DestinationContentDocument = {
   hero: { heading: string; body: RichTextBlock[]; image?: DestinationImageReference }
   sections: DestinationSection[]
   finalCta: { heading: string; body: RichTextBlock[] }
+  serviceFacts: import("@/lib/reusable-content").ServiceFact[]
+  globalFaqs: import("@/lib/reusable-content").GlobalFaq[]
+  airportFaqs: import("@/lib/reusable-content").GlobalFaq[]
+  reviews: import("@/lib/reusable-content").VerifiedReview[]
 }
 
 const REQUIRED_SECTION_TYPES = new Set<DestinationSectionType>([
@@ -100,6 +104,7 @@ export function createDefaultDestinationContent(heading: string): DestinationCon
     hero: { heading, body: [] },
     sections: (["introduction", "benefits", "fleet_pricing", "airport_guide", "faq", "map"] as DestinationSectionType[]).map((type) => createDestinationSection(type, `${type}-required`)),
     finalCta: { heading: "Ready to book your airport transfer?", body: makeBlock("Get a fixed price for your journey in minutes.") },
+    serviceFacts: [], globalFaqs: [], airportFaqs: [], reviews: [],
   }
 }
 
@@ -183,7 +188,23 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
     hero: { heading: safeText(hero.heading).trim() || fallback.hero.heading, body: normalizeBlocks(hero.body), image: hero.image && typeof hero.image === "object" ? normalizeImageReference(hero.image) : undefined },
     sections,
     finalCta: { heading: safeText(finalCta.heading).trim() || fallback.finalCta.heading, body: normalizeBlocks(finalCta.body) },
+    serviceFacts: normalizeReusableItems(input.serviceFacts, "fact"),
+    globalFaqs: normalizeReusableItems(input.globalFaqs, "faq"),
+    airportFaqs: normalizeReusableItems(input.airportFaqs, "faq"),
+    reviews: normalizeReusableItems(input.reviews, "review"),
   }
+}
+
+function normalizeReusableItems<T extends Record<string, unknown>>(value: unknown, kind: "fact" | "faq" | "review"): T[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is T => {
+    if (!item || typeof item !== "object") return false
+    const record = item as Record<string, unknown>
+    if (typeof record.id !== "string") return false
+    if (kind === "fact") return typeof record.key === "string" && typeof record.title === "string" && typeof record.description === "string"
+    if (kind === "faq") return typeof record.question === "string" && typeof record.answer === "string"
+    return typeof record.quote === "string" && typeof record.author === "string" && typeof record.source === "string"
+  })
 }
 
 function normalizeImageReference(value: object): DestinationImageReference | undefined {

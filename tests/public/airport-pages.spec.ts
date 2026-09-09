@@ -24,5 +24,6 @@ for (const [slug, heading, shortName] of airportPages) {
     await expect(page.getByText(`${shortName} to your destination`)).toBeVisible()
     await expect(page.locator('a[href*="dropoffAddress"]')).toHaveAttribute("href", /\/book\?dropoffAddress=/)
     await expect(page.locator('a[href*="pickupAddress"]')).toHaveAttribute("href", /\/book\?pickupAddress=/)
+    await expect(page.locator('script[type="application/ld+json"]')).not.toContainText(/aggregateRating|reviewRating|ratingValue/i)
   })
 }

@@ -1,5 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, validateDestinationContent, type DestinationContentDocument, type DestinationImageReference } from "@/lib/destination-content"
+import { DEFAULT_GLOBAL_FAQS, DEFAULT_SERVICE_FACTS, DEFAULT_VERIFIED_REVIEWS, type GlobalFaq, type ServiceFact, type VerifiedReview } from "@/lib/reusable-content"
+
+export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
 export type AdminDestinationPage = {
   id: string
@@ -91,6 +94,45 @@ function getSupabase(): SupabaseClient | null {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) return null
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
+export async function listReusableDestinationContent(): Promise<ReusableDestinationContent> {
+  const supabase = getSupabase()
+  if (!supabase) return { serviceFacts: DEFAULT_SERVICE_FACTS, globalFaqs: DEFAULT_GLOBAL_FAQS, reviews: DEFAULT_VERIFIED_REVIEWS }
+  const [{ data: facts, error: factsError }, { data: faqs, error: faqsError }, { data: reviews, error: reviewsError }] = await Promise.all([
+    supabase.from("destination_service_facts").select("id, fact_key, title, description").eq("approved", true).order("id"),
+    supabase.from("destination_global_faqs").select("id, question, answer").eq("approved", true).order("updated_at", { ascending: false }),
+    supabase.from("destination_verified_reviews").select("id, quote, author, source").eq("approved", true).order("verified_at", { ascending: false }),
+  ])
+  if (factsError || faqsError || reviewsError) return { serviceFacts: DEFAULT_SERVICE_FACTS, globalFaqs: DEFAULT_GLOBAL_FAQS, reviews: DEFAULT_VERIFIED_REVIEWS }
+  return {
+    serviceFacts: (facts ?? []).map((fact) => ({ id: fact.id, key: fact.fact_key, title: fact.title, description: fact.description })) as ServiceFact[],
+    globalFaqs: (faqs ?? []) as GlobalFaq[],
+    reviews: (reviews ?? []) as VerifiedReview[],
+  }
+}
+
+async function validateReusableContent(content: DestinationContentDocument): Promise<string | null> {
+  const library = await listReusableDestinationContent()
+  const selectedFactIds = new Set(library.serviceFacts.map((fact) => fact.id))
+  const selectedFaqIds = new Set(library.globalFaqs.map((faq) => faq.id))
+  const selectedReviewIds = new Set(library.reviews.map((review) => review.id))
+  if (content.serviceFacts.some((fact) => !selectedFactIds.has(fact.id))) return "Select Service Facts from the approved library."
+  if (content.globalFaqs.some((faq) => !selectedFaqIds.has(faq.id))) return "Select Global FAQs from the approved library."
+  if (content.reviews.some((review) => !selectedReviewIds.has(review.id))) return "Select verified reviews from the approved library."
+  for (const fact of content.serviceFacts) {
+    const approved = library.serviceFacts.find((item) => item.id === fact.id)
+    if (!approved || approved.title !== fact.title || approved.description !== fact.description) return "Approved Service Facts cannot be rewritten on an Airport Page."
+  }
+  for (const faq of content.globalFaqs) {
+    const approved = library.globalFaqs.find((item) => item.id === faq.id)
+    if (!approved || approved.question !== faq.question || approved.answer !== faq.answer) return "Approved Global FAQs cannot be rewritten on an Airport Page."
+  }
+  for (const review of content.reviews) {
+    const approved = library.reviews.find((item) => item.id === review.id)
+    if (!approved || approved.quote !== review.quote || approved.author !== review.author || approved.source !== review.source) return "Verified reviews must keep their approved attribution."
+  }
+  return null
 }
 
 function toTerminal(row: TerminalRow): AdminTerminal {
@@ -240,6 +282,8 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   const error = validationError(normalized)
   if (error) return { ok: false, error }
   const content = normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`)
+  const reusableContentError = await validateReusableContent(content)
+  if (reusableContentError) return { ok: false, error: reusableContentError }
   const imageError = await validateSavedImages(supabase, content)
   if (imageError) return { ok: false, error: imageError }
 

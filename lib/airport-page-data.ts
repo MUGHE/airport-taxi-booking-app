@@ -1,5 +1,6 @@
 import type { AirportPage } from "@/lib/airport-content"
 import type { ServiceLocation, VehicleClass } from "@/lib/types"
+import type { GlobalFaq, ServiceFact, VerifiedReview } from "@/lib/reusable-content"
 
 export type AirportPageTerminal = {
   id: string
@@ -24,9 +25,13 @@ export type AirportPagePresentation = {
   benefits: { title: string; description: string; icon: "fare" | "flight" }[]
   vehicles: Pick<VehicleClass, "id" | "name" | "description" | "image" | "minFare">[]
   faqs: { question: string; answer: string }[]
+  serviceFacts: ServiceFact[]
+  globalFaqs: GlobalFaq[]
+  airportFaqs: GlobalFaq[]
+  reviews: VerifiedReview[]
 }
 
-export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs">
+export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews">>
 
 export function createAirportBookingLinks(
   terminal?: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
@@ -105,5 +110,9 @@ export function createPublishedAirportPagePresentation({
     benefits: content.benefits,
     vehicles,
     faqs: content.faqs,
+    serviceFacts: content.serviceFacts ?? [],
+    globalFaqs: content.globalFaqs ?? [],
+    airportFaqs: content.airportFaqs ?? [],
+    reviews: content.reviews ?? [],
   }
 }

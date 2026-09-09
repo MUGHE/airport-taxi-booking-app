@@ -35,7 +35,7 @@ import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from "./fleet"
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
-import { getAdminDestinationPage, listAdminDestinationPages, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
+import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
 import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
@@ -94,6 +94,11 @@ export async function getAdminDestinationPages() {
 export async function getAdminDestinationPageById(id: string) {
   if (!(await isAdminAuthenticated())) return null
   return getAdminDestinationPage(id)
+}
+
+export async function getReusableDestinationContentAction() {
+  if (!(await isAdminAuthenticated())) return { serviceFacts: [], globalFaqs: [], reviews: [] }
+  return listReusableDestinationContent()
 }
 
 export async function saveAdminDestinationPageAction(input: SaveAdminDestinationPageInput) {
