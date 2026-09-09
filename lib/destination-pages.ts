@@ -3,12 +3,11 @@ import { createPublishedAirportPagePresentation, createRouteBookingLinks, type A
 import type { AdminDestinationPage } from "@/lib/admin-destination-pages"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { getPublishedPrimaryTerminals, listRelatedDestinations } from "@/lib/related-destinations"
+import { LEGACY_AIRPORT_REDIRECTS } from "@/lib/legacy-airport-redirects.mjs"
+import { readPublishedAirportFacts, type PublishedAirportFacts } from "@/lib/published-airport-facts"
 
 type DestinationPageRow = {
   id: string
-  display_name: string
-  service_area: string
-  lifecycle_state: "draft" | "published" | "archived"
   current_published_snapshot_id: string | null
   published_slug: string
 }
@@ -37,11 +36,31 @@ type DestinationRedirectRow = {
   target_slug: string
 }
 
+type LegacySnapshotMediaRow = {
+  destination_media_assets: {
+    id: string
+    public_id: string
+    delivery_url: string
+    width: number
+    height: number
+    format: string
+    alt_text: string
+  } | null
+}
+
 export type DestinationPageLifecycle = "draft" | "published" | "archived" | "missing"
 
 export type PublishedAirportPage = {
   presentation: AirportPagePresentation
-  metadata: { title: string; description: string; canonical: string }
+  metadata: AirportPageSeo
+}
+
+export type AirportPageSeo = {
+  title: string
+  description: string
+  canonical: string
+  socialImage: { url: string; alt: string }
+  airport: PublishedAirportFacts
 }
 
 export async function createDraftAirportPagePresentation(page: AdminDestinationPage): Promise<AirportPagePresentation> {
@@ -92,17 +111,10 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-const LEGACY_AIRPORT_REDIRECTS = new Map([
-  ["heathrow", "heathrow-airport-taxi"],
-  ["gatwick", "gatwick-airport-taxi"],
-  ["stansted", "stansted-airport-taxi"],
-  ["luton", "luton-airport-taxi"],
-  ["london-city", "london-city-airport-taxi"],
-  ["southend", "southend-airport-taxi"],
-])
+const legacyAirportRedirects = new Map(LEGACY_AIRPORT_REDIRECTS)
 
 export async function getPublishedAirportRedirect(slug: string): Promise<string | null> {
-  const legacyTarget = LEGACY_AIRPORT_REDIRECTS.get(slug)
+  const legacyTarget = legacyAirportRedirects.get(slug)
   const supabase = getSupabase()
   if (!supabase) return legacyTarget ?? null
 
@@ -175,7 +187,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
   try {
     const { data: page, error: pageError } = await supabase
       .from("destination_pages")
-      .select("id, display_name, service_area, lifecycle_state, current_published_snapshot_id, published_slug")
+      .select("id, current_published_snapshot_id, published_slug")
       .eq("published_slug", slug)
       .eq("page_type", "airport")
       .eq("lifecycle_state", "published")
@@ -185,32 +197,46 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
     const pageRow = page as DestinationPageRow
     if (!pageRow.current_published_snapshot_id) return null
 
-    const [{ data: snapshot, error: snapshotError }, { data: terminalRows, error: terminalError }] = await Promise.all([
+    const [{ data: snapshot, error: snapshotError }, { data: terminalRows, error: terminalError }, { data: legacyHero }] = await Promise.all([
       supabase.from("destination_page_snapshots").select("id, snapshot_kind, seo_title, meta_description, h1, content").eq("id", pageRow.current_published_snapshot_id).eq("page_id", pageRow.id).eq("snapshot_kind", "published").maybeSingle(),
       supabase.from("destination_page_terminals").select("id, display_name, address, latitude, longitude, sort_order, is_primary").eq("page_id", pageRow.id).order("sort_order"),
+      supabase.from("destination_snapshot_media").select("destination_media_assets(id, public_id, delivery_url, width, height, format, alt_text)").eq("snapshot_id", pageRow.current_published_snapshot_id).eq("purpose", "hero").limit(1).maybeSingle(),
     ])
     if (snapshotError || terminalError || !snapshot || !isPublishedContent((snapshot as DestinationSnapshotRow).content)) return null
+
+    const snapshotRow = snapshot as DestinationSnapshotRow
+    const rawContent = snapshotRow.content as Record<string, unknown>
+    const airport = readPublishedAirportFacts(rawContent)
+    if (!airport) return null
 
     const terminals: AirportPageTerminal[] = (terminalRows as DestinationTerminalRow[]).map((terminal) => ({
       id: terminal.id,
       name: terminal.display_name,
-      area: pageRow.service_area,
+      area: airport.serviceArea,
       latitude: Number(terminal.latitude),
       longitude: Number(terminal.longitude),
       isPrimary: terminal.is_primary,
     }))
-    const snapshotRow = snapshot as DestinationSnapshotRow
     const content: PublishedAirportPageContent = {
       ...(snapshotRow.content as PublishedAirportPageContent),
       heading: snapshotRow.h1,
       airportFaqs: ((snapshotRow.content as Record<string, unknown>).airportFaqs ?? (snapshotRow.content as PublishedAirportPageContent).faqs) as PublishedAirportPageContent["airportFaqs"],
     }
-    const rawContent = snapshotRow.content as Record<string, unknown>
-    const hero = rawContent.hero as { image?: unknown } | undefined
-    content.heroImage = hero?.image as PublishedAirportPageContent["heroImage"]
+    const hero = rawContent.hero as { image?: PublishedAirportPageContent["heroImage"] } | undefined
+    const legacyHeroAsset = (legacyHero as LegacySnapshotMediaRow | null)?.destination_media_assets
+    content.heroImage = hero?.image ?? (legacyHeroAsset ? {
+      assetId: legacyHeroAsset.id,
+      publicId: legacyHeroAsset.public_id,
+      secureUrl: legacyHeroAsset.delivery_url,
+      width: legacyHeroAsset.width,
+      height: legacyHeroAsset.height,
+      format: legacyHeroAsset.format,
+      altText: legacyHeroAsset.alt_text,
+    } : undefined)
     content.sections = (rawContent.sections ?? []) as PublishedAirportPageContent["sections"]
     content.finalCta = (rawContent.finalCta ?? { heading: "Ready to book your airport transfer?", body: [] }) as PublishedAirportPageContent["finalCta"]
 
+    const heroImage = content.heroImage
     const related = await listRelatedDestinations(pageRow.id)
     const relatedTerminals = await getPublishedPrimaryTerminals(related.map((item) => item.pageId))
     const primary = terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]
@@ -222,7 +248,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
 
     return {
       presentation: createPublishedAirportPagePresentation({
-        shortName: pageRow.display_name,
+        shortName: airport.displayName,
         terminals,
         content,
         vehicles: VEHICLE_CLASSES,
@@ -232,6 +258,10 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
         title: snapshotRow.seo_title,
         description: snapshotRow.meta_description,
         canonical: `/airport-transfers/${pageRow.published_slug}`,
+        socialImage: heroImage
+          ? { url: heroImage.secureUrl, alt: heroImage.altText }
+          : { url: `/airport-transfers/${pageRow.published_slug.replace(/-airport-taxi$/, "")}.webp`, alt: `${airport.displayName} Airport transfer service` },
+        airport,
       },
     }
   } catch {

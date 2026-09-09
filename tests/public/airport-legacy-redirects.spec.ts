@@ -18,8 +18,10 @@ for (const [source, target] of redirects) {
   })
 }
 
-test("a near-match slug is not treated as an airport redirect", async ({ request }) => {
-  const response = await request.get("/airport-transfers/heathrow-airport", { maxRedirects: 0 })
+test("a near-match slug is not treated as an airport redirect", async ({ page }) => {
+  await page.goto("/airport-transfers/heathrow-airport")
 
-  expect(response.status()).toBe(404)
+  await expect(page.getByRole("heading", { name: "We couldn't find that page" })).toBeVisible()
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/i)
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0)
 })

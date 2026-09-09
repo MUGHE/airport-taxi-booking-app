@@ -22,8 +22,8 @@ for (const [slug, heading, shortName] of airportPages) {
     await expect(page.getByRole("heading", { name: "Ready when your flight lands" })).toBeVisible()
     await expect(page.getByText(`Get a fixed price to ${shortName}`)).toBeVisible()
     await expect(page.getByText(`${shortName} to your destination`)).toBeVisible()
-    await expect(page.locator('a[href*="dropoffAddress"]')).toHaveAttribute("href", /\/book\?dropoffAddress=/)
-    await expect(page.locator('a[href*="pickupAddress"]')).toHaveAttribute("href", /\/book\?pickupAddress=/)
-    await expect(page.locator('script[type="application/ld+json"]')).not.toContainText(/aggregateRating|reviewRating|ratingValue/i)
+    await expect(page.getByRole("button", { name: `Get a fixed price to ${shortName}` })).toHaveAttribute("href", /\/book\?dropoffAddress=/)
+    await expect(page.getByRole("button", { name: `${shortName} to your destination` })).toHaveAttribute("href", /\/book\?pickupAddress=/)
+    expect((await page.locator('script[type="application/ld+json"]').allTextContents()).join(" ")).not.toMatch(/aggregateRating|reviewRating|ratingValue/i)
   })
 }

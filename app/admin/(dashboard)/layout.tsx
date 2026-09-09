@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     template: "%s | ONE Airport Taxi Admin",
   },
   robots: { index: false, follow: false },
+  alternates: { canonical: null },
 }
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {

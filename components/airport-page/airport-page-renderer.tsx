@@ -21,7 +21,7 @@ function RichText({ blocks }: { blocks: RichTextBlock[] }) {
   })}</div>
 }
 
-export function AirportPageRenderer({ page }: { page: AirportPagePresentation }) {
+export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPagePresentation; canonicalPath?: string }) {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -37,7 +37,7 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
                 items={[
                   { label: "Home", href: "/" },
                   { label: "Airport Transfers", href: "/airport-transfers" },
-                  { label: page.shortName },
+                  { label: page.shortName, href: canonicalPath },
                 ]}
                 className="[&_span]:text-background/90 [&_svg]:text-background/40 [&_a]:text-background/70"
               />
@@ -51,7 +51,7 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
             items={[
               { label: "Home", href: "/" },
               { label: "Airport Transfers", href: "/airport-transfers" },
-              { label: page.shortName },
+              { label: page.shortName, href: canonicalPath },
             ]}
             className="justify-center"
           />

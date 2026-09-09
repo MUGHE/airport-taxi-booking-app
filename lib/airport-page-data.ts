@@ -40,6 +40,18 @@ export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" |
 
 export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews" | "heroImage" | "sections" | "finalCta">>
 
+export function createLegacyAirportHeroImage(airport: AirportPage): DestinationImageReference {
+  return {
+    assetId: `legacy-${airport.slug}`,
+    publicId: `airport-pages/${airport.slug}`,
+    secureUrl: `/airport-transfers/${airport.legacySlug}.webp`,
+    width: 1600,
+    height: 900,
+    format: "webp",
+    altText: `${airport.shortName} Airport transfer service`,
+  }
+}
+
 export function createAirportBookingLinks(
   terminal?: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
 ): AirportBookingLinks {
@@ -106,6 +118,7 @@ export function createAirportPagePresentation(
         },
       ],
       faqs: airport.faqs.map((faq) => ({ question: faq.q, answer: faq.a })),
+      heroImage: createLegacyAirportHeroImage(airport),
     },
     vehicles,
   })

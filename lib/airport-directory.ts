@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { AIRPORT_PAGES } from "@/lib/airport-content"
+import { readPublishedAirportFacts } from "@/lib/published-airport-facts"
+import { allowLegacyAirportFallback } from "@/lib/legacy-airport-fallback"
 
 export const MAX_FEATURED_AIRPORTS = 6
 
@@ -14,12 +16,21 @@ export type AirportDirectoryEntry = {
 
 type DirectoryRow = {
   id: string
-  display_name: string
-  iata_code: string
-  service_area: string
-  slug: string
-  published_slug: string | null
+  published_slug: string
+  lifecycle_state: "draft" | "published" | "archived"
+  current_published_snapshot_id: string | null
   featured: boolean
+}
+
+type PublishedSnapshotRow = {
+  id: string
+  content: unknown
+}
+
+export function currentPublishedCanonicalSlug(page: Pick<DirectoryRow, "lifecycle_state" | "published_slug" | "current_published_snapshot_id">): string | null {
+  return page.lifecycle_state === "published" && page.current_published_snapshot_id && page.published_slug
+    ? page.published_slug
+    : null
 }
 
 function getSupabase() {
@@ -40,30 +51,64 @@ function fallbackDirectory(): AirportDirectoryEntry[] {
   })).sort((left, right) => left.displayName.localeCompare(right.displayName))
 }
 
-function toEntry(row: DirectoryRow): AirportDirectoryEntry {
+function toEntry(row: DirectoryRow, snapshot: PublishedSnapshotRow): AirportDirectoryEntry | null {
+  const facts = readPublishedAirportFacts(snapshot.content)
+  if (!facts) return null
   return {
     id: row.id,
-    displayName: row.display_name,
-    iataCode: row.iata_code,
-    serviceArea: row.service_area,
-    slug: row.published_slug ?? row.slug,
+    displayName: facts.displayName,
+    iataCode: facts.iataCode,
+    serviceArea: facts.serviceArea,
+    slug: row.published_slug,
+    featured: row.featured,
+  }
+}
+
+function safeLegacyEntry(row: DirectoryRow): AirportDirectoryEntry | null {
+  const airport = AIRPORT_PAGES.find((item) => item.slug === row.published_slug)
+  if (!airport) return null
+  return {
+    id: row.id,
+    displayName: airport.shortName,
+    iataCode: airport.code,
+    serviceArea: airport.area,
+    slug: row.published_slug,
     featured: row.featured,
   }
 }
 
 export async function listPublishedAirportDirectory(): Promise<AirportDirectoryEntry[]> {
   const supabase = getSupabase()
-  if (!supabase) return fallbackDirectory()
+  if (!supabase) return allowLegacyAirportFallback() ? fallbackDirectory() : []
 
   const { data, error } = await supabase
     .from("destination_pages")
-    .select("id, display_name, iata_code, service_area, slug, published_slug, featured")
+    .select("id, published_slug, lifecycle_state, current_published_snapshot_id, featured")
     .eq("page_type", "airport")
     .eq("lifecycle_state", "published")
-    .order("display_name", { ascending: true })
+    .not("published_slug", "is", null)
+    .not("current_published_snapshot_id", "is", null)
 
   if (error) return []
-  return ((data ?? []) as DirectoryRow[]).map(toEntry)
+  const pages = ((data ?? []) as DirectoryRow[]).filter((row) => currentPublishedCanonicalSlug(row))
+  if (pages.length === 0) return []
+  const { data: snapshots, error: snapshotError } = await supabase
+    .from("destination_page_snapshots")
+    .select("id, content")
+    .eq("snapshot_kind", "published")
+    .in("id", pages.map((page) => page.current_published_snapshot_id as string))
+  if (snapshotError) return []
+  const snapshotsById = new Map(((snapshots ?? []) as PublishedSnapshotRow[]).map((snapshot) => [snapshot.id, snapshot]))
+  return pages
+    .flatMap((page) => {
+      const snapshot = snapshotsById.get(page.current_published_snapshot_id as string)
+      // Keep local development usable before migration 000010 is applied.
+      // Production excludes any page whose Published Snapshot lacks facts.
+      const entry = snapshot ? toEntry(page, snapshot) : null
+      const safeEntry = entry ?? (allowLegacyAirportFallback() ? safeLegacyEntry(page) : null)
+      return safeEntry ? [safeEntry] : []
+    })
+    .sort((left, right) => left.displayName.localeCompare(right.displayName))
 }
 
 export async function listFeaturedAirports(): Promise<AirportDirectoryEntry[]> {

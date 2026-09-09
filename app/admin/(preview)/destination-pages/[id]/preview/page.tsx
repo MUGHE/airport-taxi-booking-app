@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic"
 export const metadata: Metadata = {
   title: "Draft preview",
   robots: { index: false, follow: false, nocache: true },
+  alternates: { canonical: null },
 }
 
 export default async function DraftPreviewPage({ params }: { params: Promise<{ id: string }> }) {

@@ -6,13 +6,15 @@ import {
   COMPANY_POSTCODE,
   COMPANY_STREET_ADDRESS,
 } from "@/lib/company"
-import { SITE_URL } from "@/lib/site"
+import { ORGANIZATION_ID, SITE_URL } from "@/lib/site"
+import { serializeJsonLd } from "@/lib/json-ld"
 
 // Renders LocalBusiness JSON-LD so Google can show rich results (address, phone, hours).
 export function LocalBusinessSchema() {
   const schema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
+    "@id": ORGANIZATION_ID,
     name: COMPANY_NAME,
     url: SITE_URL,
     logo: `${SITE_URL}/icon-96x96.png`,
@@ -46,7 +48,7 @@ export function LocalBusinessSchema() {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
     />
   )
 }
