@@ -271,17 +271,16 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       if (pointerError) throw pointerError
     }
 
-    const { error: deleteTerminalsError } = await supabase.from("destination_page_terminals").delete().eq("page_id", pageId)
-    if (deleteTerminalsError) throw deleteTerminalsError
-    const { error: terminalError } = await supabase.from("destination_page_terminals").insert(normalized.terminals.map((terminal) => ({
-      page_id: pageId,
-      display_name: terminal.displayName,
-      address: terminal.address,
-      latitude: terminal.latitude,
-      longitude: terminal.longitude,
-      sort_order: terminal.sortOrder,
-      is_primary: terminal.isPrimary,
-    })))
+    const { error: terminalError } = await supabase.rpc("replace_destination_page_terminals", {
+      p_page_id: pageId,
+      p_terminals: normalized.terminals.map((terminal) => ({
+        displayName: terminal.displayName,
+        address: terminal.address,
+        latitude: terminal.latitude,
+        longitude: terminal.longitude,
+        isPrimary: terminal.isPrimary,
+      })),
+    })
     if (terminalError) throw terminalError
 
     const saved = await loadPageRows(supabase, pageId)
