@@ -80,6 +80,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function AirportPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const redirectSlug = await getPublishedAirportRedirect(slug)
+  if (redirectSlug === "airport-transfers") permanentRedirect("/airport-transfers")
   if (redirectSlug) permanentRedirect(`/airport-transfers/${redirectSlug}`)
   const publishedPage = await getPublishedAirportPage(slug)
   if (publishedPage) return <><AirportPageStructuredData seo={publishedPage.metadata} /><AirportPageRenderer page={publishedPage.presentation} canonicalPath={publishedPage.metadata.canonical} /></>

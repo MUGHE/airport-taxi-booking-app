@@ -10,6 +10,7 @@ export type AdminDestinationPage = {
   id: string
   pageType: "airport" | "city_town"
   lifecycleState: "draft" | "published" | "archived"
+  bookingAvailable: boolean
   featured: boolean
   hasUnpublishedChanges: boolean
   slug: string
@@ -55,7 +56,7 @@ export type AdminTerminal = {
   isPrimary: boolean
 }
 
-export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "pageType" | "lifecycleState" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
+export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "pageType" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
   id?: string
   terminals: AdminTerminal[]
   relatedDestinations: AdminRelatedDestination[]
@@ -69,6 +70,7 @@ type PageRow = {
   id: string
   page_type: "airport" | "city_town"
   lifecycle_state: "draft" | "published" | "archived"
+  booking_available: boolean
   featured: boolean
   slug: string
   official_name: string
@@ -169,6 +171,7 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     id: row.id,
     pageType: row.page_type,
     lifecycleState: row.lifecycle_state,
+    bookingAvailable: row.booking_available,
     featured: row.featured,
     hasUnpublishedChanges: Boolean(draft && (!published || draft.created_at > published.created_at)),
     slug: row.slug,
@@ -428,6 +431,31 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
 export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[] }
 export type PublishResult = { ok: true; slug: string } | { ok: false; error: string; blockers?: { code: string; message: string }[]; warnings?: PublishWarning[]; warningSetHash?: string }
 export type RestoreResult = { ok: true; page: AdminDestinationPage } | { ok: false; error: string }
+export type LifecycleResult = { ok: true } | { ok: false; error: string }
+
+export async function deleteAdminDestinationDraft(pageId: string): Promise<LifecycleResult> {
+  const supabase = getSupabase()
+  if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
+  const { error } = await supabase.rpc("delete_destination_draft", { p_page_id: pageId, p_deleted_by: "admin" })
+  return error ? { ok: false, error: error.message.includes("Published Page") ? "A Published Page cannot be deleted." : "The Draft could not be deleted." } : { ok: true }
+}
+
+export async function archiveAdminDestinationPage(pageId: string, replacementSlug: string): Promise<LifecycleResult> {
+  const supabase = getSupabase()
+  if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
+  const target = replacementSlug.trim() || "airport-transfers"
+  const { error } = await supabase.rpc("archive_destination_page", { p_page_id: pageId, p_replacement_slug: target, p_archived_by: "admin" })
+  if (!error) return { ok: true }
+  if (error.message.includes("Replacement destination")) return { ok: false, error: "Choose a Published Airport Page as the replacement." }
+  return { ok: false, error: error.message.includes("Published Page") ? "Only a Published Page can be archived." : "The Airport Page could not be archived." }
+}
+
+export async function setAdminBookingAvailability(pageId: string, available: boolean): Promise<LifecycleResult> {
+  const supabase = getSupabase()
+  if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
+  const { error } = await supabase.rpc("set_destination_booking_availability", { p_page_id: pageId, p_available: available, p_changed_by: "admin" })
+  return error ? { ok: false, error: "Only a Published Page can change booking availability." } : { ok: true }
+}
 
 async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
   const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }] = await Promise.all([

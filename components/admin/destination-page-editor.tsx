@@ -10,7 +10,7 @@ import { DestinationPicker, type PlaceSelection } from "@/components/destination
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { publishAdminDestinationPageAction, restoreAdminDestinationPageAction, saveAdminDestinationPageAction, setAirportFeaturedAction } from "@/lib/actions"
+import { archiveAdminDestinationPageAction, deleteAdminDestinationDraftAction, publishAdminDestinationPageAction, restoreAdminDestinationPageAction, saveAdminDestinationPageAction, setAdminBookingAvailabilityAction, setAirportFeaturedAction } from "@/lib/actions"
 import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picker"
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, normalizeDestinationContent, type DestinationContentDocument, type DestinationSectionType, type RichTextBlock } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
@@ -73,6 +73,8 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
   const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(initialPage))
   const [dirty, setDirty] = useState(false)
   const [featured, setFeatured] = useState(initialPage?.featured ?? false)
+  const [bookingAvailable, setBookingAvailable] = useState(initialPage?.bookingAvailable ?? true)
+  const [replacementSlug, setReplacementSlug] = useState("airport-transfers")
   const [pendingWarnings, setPendingWarnings] = useState<PublishWarning[]>([])
   const [pendingWarningSetHash, setPendingWarningSetHash] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -182,6 +184,34 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
     })
   }
 
+  function toggleBookingAvailability(nextAvailable: boolean) {
+    if (!form.id || dirty || initialPage?.lifecycleState !== "published") return
+    startTransition(async () => {
+      const result = await setAdminBookingAvailabilityAction(form.id!, nextAvailable)
+      if (!result.ok) { toast.error(result.error); return }
+      setBookingAvailable(nextAvailable)
+      toast.success(nextAvailable ? "Online booking restored." : "Online booking marked unavailable.")
+    })
+  }
+
+  function deleteDraft() {
+    if (!form.id || initialPage?.lifecycleState !== "draft" || !window.confirm("Permanently delete this never-published Draft? This cannot be undone.")) return
+    startTransition(async () => {
+      const result = await deleteAdminDestinationDraftAction(form.id!)
+      if (!result.ok) { toast.error(result.error); return }
+      window.location.href = "/admin/destination-pages"
+    })
+  }
+
+  function archive() {
+    if (!form.id || initialPage?.lifecycleState !== "published" || !window.confirm("Archive this Published Page? Its current URL will permanently redirect to the selected replacement.")) return
+    startTransition(async () => {
+      const result = await archiveAdminDestinationPageAction(form.id!, replacementSlug)
+      if (!result.ok) { toast.error(result.error); return }
+      window.location.href = "/admin/destination-pages"
+    })
+  }
+
   useEffect(() => {
     if (!pendingWarnings.length) return
     toast.warning(<div className="space-y-3">
@@ -199,6 +229,11 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
       {initialPage?.hasUnpublishedChanges && <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">This page has saved changes that are not public yet. Review them and publish when ready.</p>}
       <DraftPreviewPanel pageId={form.id} dirty={dirty} />
       {initialPage?.lifecycleState === "published" && <section className="mb-6 rounded-xl border border-border bg-card p-5"><label className="flex items-start gap-3"><input type="checkbox" checked={featured} disabled={isPending || dirty} onChange={(event) => toggleFeatured(event.target.checked)} /><span><span className="block font-medium">Featured Airport</span><span className="block text-sm text-muted-foreground">Show this Published Airport Page in the homepage and header. No more than six can be selected.</span></span></label></section>}
+      {initialPage && <section className="mb-6 space-y-4 rounded-xl border border-border bg-card p-5">
+        {initialPage.lifecycleState === "published" && <label className="flex items-start gap-3"><input type="checkbox" checked={bookingAvailable} disabled={isPending || dirty} onChange={(event) => toggleBookingAvailability(event.target.checked)} /><span><span className="block font-medium">Online booking available</span><span className="block text-sm text-muted-foreground">When off, visitors can still read this page but quote buttons are replaced with the Contact Us option.</span></span></label>}
+        {initialPage.lifecycleState === "published" && <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4"><label className="min-w-60 flex-1 text-sm"><span className="mb-1 block font-medium">Archive replacement</span><select aria-label="Archive replacement" className="h-9 w-full rounded-lg border border-input bg-background px-2" value={replacementSlug} onChange={(event) => setReplacementSlug(event.target.value)}><option value="airport-transfers">Airport Transfers index</option>{relatedCandidates.map((candidate) => <option key={candidate.id} value={candidate.slug}>{candidate.displayName}</option>)}</select></label><Button type="button" variant="destructive" disabled={isPending || dirty} onClick={archive}>Archive Page</Button></div>}
+        {initialPage.lifecycleState === "draft" && <div className="flex justify-end border-t border-border pt-4"><Button type="button" variant="destructive" disabled={isPending || dirty} onClick={deleteDraft}>Delete Draft</Button></div>}
+      </section>}
       <form onSubmit={handleSubmit(submit)} className="space-y-6">
         <EditorSection title="Related destinations" description="Only Published Airport Pages can be selected. One relationship supplies both page directions.">
           {!initialPage && <p className="rounded-lg bg-secondary px-3 py-2 text-sm">Save this page as a draft first, then add related destinations.</p>}

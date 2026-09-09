@@ -10,6 +10,7 @@ type DestinationPageRow = {
   id: string
   current_published_snapshot_id: string | null
   published_slug: string
+  booking_available: boolean
 }
 
 type DestinationSnapshotRow = {
@@ -53,6 +54,7 @@ export type DestinationPageLifecycle = "draft" | "published" | "archived" | "mis
 export type PublishedAirportPage = {
   presentation: AirportPagePresentation
   metadata: AirportPageSeo
+  bookingAvailable: boolean
 }
 
 export type AirportPageSeo = {
@@ -129,6 +131,7 @@ export async function getPublishedAirportRedirect(slug: string): Promise<string 
 
     const redirect = data as DestinationRedirectRow
     if (redirect.source_slug === redirect.target_slug) return null
+    if (redirect.target_slug === "airport-transfers") return redirect.target_slug
 
     const [{ data: targetPage, error: targetError }, { data: chainedRedirect, error: chainError }] = await Promise.all([
       supabase.from("destination_pages").select("id").eq("published_slug", redirect.target_slug).eq("page_type", "airport").eq("lifecycle_state", "published").maybeSingle(),
@@ -188,7 +191,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
   try {
     const { data: page, error: pageError } = await supabase
       .from("destination_pages")
-      .select("id, current_published_snapshot_id, published_slug")
+      .select("id, current_published_snapshot_id, published_slug, booking_available")
       .eq("published_slug", slug)
       .eq("page_type", "airport")
       .eq("lifecycle_state", "published")
@@ -255,6 +258,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
         content,
         vehicles: VEHICLE_CLASSES,
         relatedDestinations,
+        bookingAvailable: pageRow.booking_available,
       }),
       metadata: {
         title: snapshotRow.seo_title,
@@ -265,6 +269,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
           : { url: `/airport-transfers/${pageRow.published_slug.replace(/-airport-taxi$/, "")}.webp`, alt: `${airport.displayName} Airport transfer service` },
         airport,
       },
+      bookingAvailable: pageRow.booking_available,
     }
   } catch {
     return null

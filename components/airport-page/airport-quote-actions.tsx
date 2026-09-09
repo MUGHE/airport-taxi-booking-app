@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import type { AirportPagePresentation } from "@/lib/airport-page-data"
 
 export function AirportQuoteActions({ page, onDarkBackground = false }: { page: AirportPagePresentation; onDarkBackground?: boolean }) {
+  if (page.bookingAvailable === false) return <div className="mt-7 rounded-xl border border-background/25 bg-background/10 p-4 text-center"><p className="font-medium">Online booking is temporarily unavailable</p><p className="mt-1 text-sm opacity-80">Please contact our team and we’ll help arrange your transfer.</p><Button size="lg" className="mt-4" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></div>
   const primary = page.terminals.find((terminal) => terminal.isPrimary) ?? page.terminals[0]
   const [terminalId, setTerminalId] = useState(primary?.id ?? "")
   const terminal = page.terminals.find((item) => item.id === terminalId) ?? primary

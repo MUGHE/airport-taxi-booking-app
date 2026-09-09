@@ -150,8 +150,8 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
           </div>
         </div>
 
-        <div className="mx-auto max-w-3xl px-4 py-10 text-center lg:py-16"><h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.finalCta.heading}</h2><RichText blocks={page.finalCta.body} /></div>
-        <CallToAction />
+        <div className="mx-auto max-w-3xl px-4 py-10 text-center lg:py-16"><h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.bookingAvailable === false ? "Need help with your airport transfer?" : page.finalCta.heading}</h2>{page.bookingAvailable === false ? <><p className="mt-3 text-muted-foreground">Online booking is temporarily unavailable. Our team can help with your journey.</p><Button className="mt-6" size="lg" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></> : <RichText blocks={page.finalCta.body} />}</div>
+        {page.bookingAvailable === false ? <section className="bg-primary py-10 text-center text-primary-foreground"><h2 className="text-2xl font-semibold">Speak to our team</h2><Button className="mt-4" size="lg" variant="secondary" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></section> : <CallToAction />}
       </main>
       <SiteFooter />
     </div>

@@ -41,7 +41,7 @@ import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from 
 import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
 import { setAirportFeatured } from "./airport-directory"
-import { publishAdminDestinationPage, restoreAdminDestinationPage } from "./admin-destination-pages"
+import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability } from "./admin-destination-pages"
 
 
 export interface LoginResult {
@@ -150,6 +150,41 @@ export async function restoreAdminDestinationPageAction(pageId: string) {
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await restoreAdminDestinationPage(pageId)
   if (result.ok) {
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function deleteAdminDestinationDraftAction(pageId: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await deleteAdminDestinationDraft(pageId)
+  if (result.ok) {
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function archiveAdminDestinationPageAction(pageId: string, replacementSlug: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await archiveAdminDestinationPage(pageId, replacementSlug)
+  if (result.ok) {
+    revalidatePath("/", "layout")
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/sitemap.xml")
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function setAdminBookingAvailabilityAction(pageId: string, available: boolean) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await setAdminBookingAvailability(pageId, available)
+  if (result.ok) {
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath(`/airport-transfers/${pageId}`)
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }

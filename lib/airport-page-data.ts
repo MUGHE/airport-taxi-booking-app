@@ -36,6 +36,7 @@ export type AirportPagePresentation = {
   sections: AirportPageContentSection[]
   finalCta: { heading: string; body: RichTextBlock[] }
   mapLocation?: AirportMapLocation
+  bookingAvailable?: boolean
 }
 
 export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "fields" | "image">
@@ -134,6 +135,7 @@ export function createPublishedAirportPagePresentation({
   vehicles,
   relatedDestinations,
   mapLocation,
+  bookingAvailable,
 }: {
   shortName: string
   terminals: AirportPageTerminal[]
@@ -141,6 +143,7 @@ export function createPublishedAirportPagePresentation({
   vehicles: AirportPagePresentation["vehicles"]
   relatedDestinations?: AirportPagePresentation["relatedDestinations"]
   mapLocation?: AirportMapLocation
+  bookingAvailable?: boolean
 }): AirportPagePresentation {
   return {
     shortName,
@@ -160,5 +163,6 @@ export function createPublishedAirportPagePresentation({
     sections: content.sections ?? [],
     finalCta: content.finalCta ?? { heading: "Ready to book your airport transfer?", body: [] },
     mapLocation,
+    bookingAvailable,
   }
 }
