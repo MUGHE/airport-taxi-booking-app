@@ -7,7 +7,7 @@ import { DestinationPicker, type PlaceSelection } from "@/components/destination
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { saveAdminDestinationPageAction } from "@/lib/actions"
+import { publishAdminDestinationPageAction, saveAdminDestinationPageAction } from "@/lib/actions"
 import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picker"
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, normalizeDestinationContent, type DestinationContentDocument, type DestinationSectionType, type RichTextBlock } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
@@ -77,6 +77,16 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
     })
   }
 
+  function publish() {
+    if (!form.id) { setError("Save the Draft before publishing."); return }
+    setError(""); setSaved("")
+    startTransition(async () => {
+      const result = await publishAdminDestinationPageAction(form.id!)
+      if (!result.ok) { setError(result.error); return }
+      setDirty(false); setSaved("Published successfully.")
+    })
+  }
+
   return (
     <div className="mx-auto max-w-5xl">
       <Link href="/admin/destination-pages" className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Destination Pages</Link>
@@ -132,7 +142,7 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
 
         <section className="space-y-4 rounded-xl border border-border bg-card p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold">Airport Terminals</h3><p className="text-sm text-muted-foreground">Add each pickup location. Select exactly one primary entry for booking links.</p></div><Button type="button" variant="outline" size="sm" onClick={() => update("terminals", [...form.terminals, { ...emptyTerminal(), isPrimary: false, sortOrder: form.terminals.length }])}><Plus className="size-4" /> Add terminal</Button></div><div className="space-y-3">{form.terminals.map((terminal, index) => <div key={terminal.id ?? index} className="rounded-lg border border-border p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="font-medium">Terminal {index + 1}</p><div className="flex items-center gap-1"><Button type="button" variant="ghost" size="icon-xs" aria-label="Move terminal up" disabled={index === 0} onClick={() => moveTerminal(index, -1)}><ArrowUp /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label="Move terminal down" disabled={index === form.terminals.length - 1} onClick={() => moveTerminal(index, 1)}><ArrowDown /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label="Remove terminal" disabled={form.terminals.length === 1} onClick={() => update("terminals", form.terminals.filter((_, i) => i !== index))}><Trash2 /></Button></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label>Name</Label><Input value={terminal.displayName} onChange={(e) => updateTerminal(index, "displayName", e.target.value)} /></div><div className="space-y-1.5"><Label>Address</Label><Input value={terminal.address} onChange={(e) => updateTerminal(index, "address", e.target.value)} /></div><div className="space-y-1.5"><Label>Latitude</Label><Input type="number" step="any" value={terminal.latitude} onChange={(e) => updateTerminal(index, "latitude", e.target.value)} /></div><div className="space-y-1.5"><Label>Longitude</Label><Input type="number" step="any" value={terminal.longitude} onChange={(e) => updateTerminal(index, "longitude", e.target.value)} /></div></div><label className="mt-3 flex items-center gap-2 text-sm"><input type="radio" name="primary-terminal" checked={terminal.isPrimary} onChange={() => update("terminals", form.terminals.map((item, i) => ({ ...item, isPrimary: i === index })))} /> Primary Airport Terminal</label></div>)}</div></section>
 
-        {error && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}{saved && <p role="status" className="rounded-lg bg-secondary px-3 py-2 text-sm">{saved}</p>}<div className="sticky bottom-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur"><span className="text-sm text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><Button type="submit" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save Draft</Button></div>
+        {error && <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}{saved && <p role="status" className="rounded-lg bg-secondary px-3 py-2 text-sm">{saved}</p>}<div className="sticky bottom-3 flex items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg backdrop-blur"><span className="text-sm text-muted-foreground">{dirty ? "Unsaved changes" : "All changes saved"}</span><div className="flex gap-2"><Button type="submit" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save Draft</Button>{form.id && <Button type="button" variant="default" disabled={isPending || dirty} onClick={publish}>Publish</Button>}</div></div>
       </form>
     </div>
   )

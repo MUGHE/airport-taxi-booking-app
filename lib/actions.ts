@@ -40,6 +40,7 @@ import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig }
 import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
+import { publishAdminDestinationPage } from "./admin-destination-pages"
 
 
 export interface LoginResult {
@@ -114,6 +115,19 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
     revalidatePath("/admin/destination-pages")
     revalidatePath("/admin/destination-pages/new")
     revalidatePath(`/admin/destination-pages/${result.page.id}`)
+  }
+  return result
+}
+
+export async function publishAdminDestinationPageAction(pageId: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await publishAdminDestinationPage(pageId)
+  if (result.ok) {
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath(`/airport-transfers/${result.slug}`)
+    revalidatePath("/sitemap.xml")
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
   }
   return result
 }
