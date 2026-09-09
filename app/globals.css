@@ -228,7 +228,83 @@
   animation: help-shake 0.6s ease-in-out;
 }
 
+/* Tapping "Apply offer" opens the summary panel and points at the promo field without focusing it
+   — the customer taps the field themselves when they're ready. Without a cue landing on the field,
+   the panel would just appear and leave them to find it. This plays over the field once the panel
+   has opened: a halo that blooms outward and fades, twice, with the field tinted and lifted very
+   slightly under it — a "here it is" that finishes on its own rather than looping under someone's
+   typing. openPromo() in booking-flow.tsx handles the timing.
+
+   The halo is an outline, not a box-shadow, on purpose: the field's focus ring is a box-shadow, so
+   animating that property would blank the ring whenever the pulse and a real focus coincide. */
+@keyframes promo-spotlight {
+  /* Ripple out... */
+  0% {
+    border-color: var(--primary);
+    background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+    outline-color: color-mix(in oklch, var(--primary) 60%, transparent);
+    outline-width: 0px;
+    outline-offset: 0px;
+    transform: scale(1);
+  }
+  22% {
+    border-color: var(--primary);
+    background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+    outline-color: transparent;
+    outline-width: 3px;
+    outline-offset: 7px;
+    transform: scale(1.02);
+  }
+  /* ...and again, so it reads as a deliberate signal rather than a single flicker. */
+  30% {
+    border-color: var(--primary);
+    background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+    outline-color: color-mix(in oklch, var(--primary) 60%, transparent);
+    outline-width: 0px;
+    outline-offset: 0px;
+    transform: scale(1);
+  }
+  52% {
+    border-color: var(--primary);
+    background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+    outline-color: transparent;
+    outline-width: 3px;
+    outline-offset: 7px;
+    transform: scale(1.02);
+  }
+  /* Then hold the field itself lit — the ripples are over in half a second, and without this the
+     cue would be gone before someone has finished looking down at it. */
+  75% {
+    border-color: var(--primary);
+    background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+    outline-color: transparent;
+    outline-width: 3px;
+    outline-offset: 7px;
+    transform: scale(1);
+  }
+  /* Released back to the field's resting border, not left highlighted. */
+  100% {
+    border-color: var(--input);
+    background-color: transparent;
+    outline-color: transparent;
+    outline-width: 3px;
+    outline-offset: 7px;
+    transform: scale(1);
+  }
+}
+
+[data-promo-spotlight] [data-promo-input] {
+  /* The field's base classes set outline-style: none, which would leave the animated width and
+     colour with nothing to paint. */
+  outline-style: solid;
+  animation: promo-spotlight 1400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* The field still gets focus and the keyboard still opens — only the movement is dropped. */
+  [data-promo-spotlight] [data-promo-input] {
+    animation: none;
+  }
   .site-backdrop::before,
   .site-backdrop::after,
   .backdrop-streak {
@@ -246,6 +322,68 @@
   .hover-lift:hover {
     transform: none;
   }
+}
+
+/* Without this, dragging across the toast's own message text starts a native text selection
+   instead of (or as well as) the swipe gesture. Sonner only sets user-select:none reactively,
+   once a swipe is already under way (`[data-swiped='true']`) — too late, since the selection
+   that already started is exactly what breaks its own swipe detection: once
+   window.getSelection() is non-empty, sonner's pointermove handler silently no-ops on every
+   later move of that same drag, so the swipe never registers at all. Setting it proactively,
+   before any drag starts, is what makes the gesture reliable. */
+[data-sonner-toast] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* The glyph in front of the message IS the dismiss control. Sonner's default is the opposite:
+   a bordered close circle floating half outside the card, plus a separate, purely decorative
+   type icon in the leading slot — two X-ish marks where only the outer one worked. The decorative
+   icon is switched off in components/ui/sonner.tsx (icons.<type> = null) and the real close
+   button is moved into the slot it vacated, stripped of its circle chrome so it reads exactly
+   like the icon it replaces.
+
+   Every rule below carries an extra [data-sonner-toaster] ancestor over sonner's own selector so
+   it wins on specificity alone — sonner injects its stylesheet at runtime, so simply being later
+   in source order isn't something this can rely on. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-close-button] {
+  top: 50%;
+  left: 16px;
+  right: auto;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+[data-sonner-toaster] [data-sonner-toast][data-styled='true']:hover [data-close-button]:hover {
+  background: transparent;
+  border-color: transparent;
+}
+/* Holds the leading slot open: the button is positioned out of the flex flow, so without this
+   the message text would sit underneath it. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  padding-left: 40px;
+}
+/* A ~44px touch target around the 16px glyph, added as a transparent overlay rather than by
+   growing the glyph itself. */
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+}
+/* One close icon is rendered per toast type; show only the one this toast calls for. An untyped
+   toast (toast.message / toast(...)) carries no data-type at all and falls back to a plain X. */
+[data-sonner-toast] [data-close-button] [data-toast-glyph] {
+  display: none;
+}
+[data-sonner-toast][data-type='success'] [data-close-button] [data-toast-glyph='success'],
+[data-sonner-toast][data-type='info'] [data-close-button] [data-toast-glyph='info'],
+[data-sonner-toast][data-type='warning'] [data-close-button] [data-toast-glyph='warning'],
+[data-sonner-toast][data-type='error'] [data-close-button] [data-toast-glyph='error'],
+[data-sonner-toast]:not([data-type]) [data-close-button] [data-toast-glyph='default'] {
+  display: block;
 }
 
 @layer base {
