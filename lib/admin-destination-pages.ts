@@ -427,6 +427,7 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
 
 export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[] }
 export type PublishResult = { ok: true; slug: string } | { ok: false; error: string; blockers?: { code: string; message: string }[]; warnings?: PublishWarning[]; warningSetHash?: string }
+export type RestoreResult = { ok: true; page: AdminDestinationPage } | { ok: false; error: string }
 
 async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
   const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }] = await Promise.all([
@@ -468,4 +469,17 @@ export async function publishAdminDestinationPage(pageId: string, override?: Pub
     return { ok: false, error: message }
   }
   return { ok: true, slug: (data as { slug: string }).slug }
+}
+
+export async function restoreAdminDestinationPage(pageId: string): Promise<RestoreResult> {
+  const supabase = getSupabase()
+  if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
+
+  const { error } = await supabase.rpc("restore_destination_page", { p_page_id: pageId, p_restored_by: "admin" })
+  if (error) {
+    return { ok: false, error: error.message.includes("Recovery Snapshot") ? "There is no previous Published Snapshot to restore." : "The previous Published Snapshot could not be restored." }
+  }
+
+  const page = await getAdminDestinationPage(pageId)
+  return page ? { ok: true, page } : { ok: false, error: "The restored Draft could not be reloaded." }
 }

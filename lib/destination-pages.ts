@@ -10,6 +10,7 @@ type DestinationPageRow = {
   service_area: string
   lifecycle_state: "draft" | "published" | "archived"
   current_published_snapshot_id: string | null
+  published_slug: string
 }
 
 type DestinationSnapshotRow = {
@@ -117,7 +118,7 @@ export async function getPublishedAirportRedirect(slug: string): Promise<string 
     if (redirect.source_slug === redirect.target_slug) return null
 
     const [{ data: targetPage, error: targetError }, { data: chainedRedirect, error: chainError }] = await Promise.all([
-      supabase.from("destination_pages").select("id").eq("slug", redirect.target_slug).eq("page_type", "airport").eq("lifecycle_state", "published").maybeSingle(),
+      supabase.from("destination_pages").select("id").eq("published_slug", redirect.target_slug).eq("page_type", "airport").eq("lifecycle_state", "published").maybeSingle(),
       supabase.from("destination_page_redirects").select("source_slug").eq("source_slug", redirect.target_slug).maybeSingle(),
     ])
     if (targetError || chainError || !targetPage || chainedRedirect) return null
@@ -174,8 +175,8 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
   try {
     const { data: page, error: pageError } = await supabase
       .from("destination_pages")
-      .select("id, display_name, service_area, lifecycle_state, current_published_snapshot_id")
-      .eq("slug", slug)
+      .select("id, display_name, service_area, lifecycle_state, current_published_snapshot_id, published_slug")
+      .eq("published_slug", slug)
       .eq("page_type", "airport")
       .eq("lifecycle_state", "published")
       .maybeSingle()
@@ -230,7 +231,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
       metadata: {
         title: snapshotRow.seo_title,
         description: snapshotRow.meta_description,
-        canonical: `/airport-transfers/${slug}`,
+        canonical: `/airport-transfers/${pageRow.published_slug}`,
       },
     }
   } catch {
