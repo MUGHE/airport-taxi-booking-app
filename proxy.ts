@@ -27,6 +27,9 @@ export async function proxy(request: NextRequest) {
   // forward, so an admin who's actively using the dashboard is never signed
   // out mid-task — only a tab left idle for 30 minutes expires.
   const response = NextResponse.next()
+  if (pathname.startsWith("/admin/destination-pages/") && pathname.endsWith("/preview")) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
+  }
   response.cookies.set(ADMIN_SESSION_COOKIE, renewed, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

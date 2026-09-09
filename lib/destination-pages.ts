@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import { createPublishedAirportPagePresentation, createRouteBookingLinks, type AirportPagePresentation, type AirportPageTerminal, type PublishedAirportPageContent } from "@/lib/airport-page-data"
+import type { AdminDestinationPage } from "@/lib/admin-destination-pages"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { getPublishedPrimaryTerminals, listRelatedDestinations } from "@/lib/related-destinations"
 
@@ -40,6 +41,47 @@ export type DestinationPageLifecycle = "draft" | "published" | "archived" | "mis
 export type PublishedAirportPage = {
   presentation: AirportPagePresentation
   metadata: { title: string; description: string; canonical: string }
+}
+
+export async function createDraftAirportPagePresentation(page: AdminDestinationPage): Promise<AirportPagePresentation> {
+  const terminals: AirportPageTerminal[] = page.terminals.map((terminal) => ({
+    id: terminal.id ?? `${page.id}-${terminal.sortOrder}`,
+    name: terminal.displayName,
+    area: page.serviceArea,
+    latitude: terminal.latitude,
+    longitude: terminal.longitude,
+    isPrimary: terminal.isPrimary,
+  }))
+  const primary = terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]
+  const relatedTerminals = await getPublishedPrimaryTerminals(page.relatedDestinations.map((item) => item.pageId))
+  const relatedDestinations = page.relatedDestinations.flatMap((item) => {
+    const relatedTerminal = relatedTerminals.get(item.pageId)
+    if (!primary || !relatedTerminal) return []
+    return [{ id: item.id ?? item.pageId, displayName: item.displayName, href: `/airport-transfers/${item.slug}`, heading: item.heading, description: item.description, image: item.image?.secureUrl, bookingLinks: createRouteBookingLinks(primary, { name: relatedTerminal.display_name, latitude: Number(relatedTerminal.latitude), longitude: Number(relatedTerminal.longitude) }) }]
+  })
+  const content = page.draft.content
+  return createPublishedAirportPagePresentation({
+    shortName: page.displayName,
+    terminals,
+    content: {
+      heading: content.hero.heading || page.draft.h1,
+      intro: content.hero.body.map((block) => block.text),
+      benefits: [
+        { title: "Fixed, all-inclusive fare", description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.", icon: "fare" },
+        { title: "Flight tracking & meet & greet", description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.", icon: "flight" },
+      ],
+      faqs: content.airportFaqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
+      serviceFacts: content.serviceFacts,
+      globalFaqs: content.globalFaqs,
+      airportFaqs: content.airportFaqs,
+      reviews: content.reviews,
+      sections: content.sections,
+      heroImage: content.hero.image,
+      finalCta: content.finalCta,
+    },
+    vehicles: VEHICLE_CLASSES,
+    relatedDestinations,
+  })
 }
 
 function getSupabase() {
@@ -162,6 +204,11 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
       heading: snapshotRow.h1,
       airportFaqs: ((snapshotRow.content as Record<string, unknown>).airportFaqs ?? (snapshotRow.content as PublishedAirportPageContent).faqs) as PublishedAirportPageContent["airportFaqs"],
     }
+    const rawContent = snapshotRow.content as Record<string, unknown>
+    const hero = rawContent.hero as { image?: unknown } | undefined
+    content.heroImage = hero?.image as PublishedAirportPageContent["heroImage"]
+    content.sections = (rawContent.sections ?? []) as PublishedAirportPageContent["sections"]
+    content.finalCta = (rawContent.finalCta ?? { heading: "Ready to book your airport transfer?", body: [] }) as PublishedAirportPageContent["finalCta"]
 
     const related = await listRelatedDestinations(pageRow.id)
     const relatedTerminals = await getPublishedPrimaryTerminals(related.map((item) => item.pageId))

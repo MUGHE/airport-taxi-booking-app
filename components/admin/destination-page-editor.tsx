@@ -12,6 +12,7 @@ import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picke
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, normalizeDestinationContent, type DestinationContentDocument, type DestinationSectionType, type RichTextBlock } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
 import type { ReusableDestinationContent } from "@/lib/admin-destination-pages"
+import { DraftPreviewPanel } from "@/components/admin/draft-preview-panel"
 
 const emptyTerminal = (): AdminTerminal => ({ displayName: "Main Terminal", address: "", latitude: 0, longitude: 0, sortOrder: 0, isPrimary: true })
 
@@ -80,6 +81,7 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
     <div className="mx-auto max-w-5xl">
       <Link href="/admin/destination-pages" className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Destination Pages</Link>
       <div className="mb-6"><h2 className="text-xl font-semibold tracking-tight">{initialPage ? "Edit Airport Page" : "Create Airport Page"}</h2><p className="mt-1 text-sm text-muted-foreground">Build the identity and structured content for this Airport Page draft.</p></div>
+      <DraftPreviewPanel pageId={form.id} dirty={dirty} />
       <form onSubmit={submit} className="space-y-6">
         <section className="space-y-4 rounded-xl border border-border bg-card p-5">
           <div><h3 className="font-semibold">Related destinations</h3><p className="text-sm text-muted-foreground">Only Published Airport Pages can be selected. One relationship supplies both page directions.</p></div>

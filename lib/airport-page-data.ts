@@ -1,6 +1,7 @@
 import type { AirportPage } from "@/lib/airport-content"
 import type { ServiceLocation, VehicleClass } from "@/lib/types"
 import type { GlobalFaq, ServiceFact, VerifiedReview } from "@/lib/reusable-content"
+import type { DestinationImageReference, DestinationSection, RichTextBlock } from "@/lib/destination-content"
 
 export type AirportPageTerminal = {
   id: string
@@ -30,9 +31,14 @@ export type AirportPagePresentation = {
   airportFaqs: GlobalFaq[]
   reviews: VerifiedReview[]
   relatedDestinations: { id: string; displayName: string; href: string; heading: string; description: string; image?: string; bookingLinks: AirportBookingLinks }[]
+  heroImage?: DestinationImageReference
+  sections: AirportPageContentSection[]
+  finalCta: { heading: string; body: RichTextBlock[] }
 }
 
-export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews">>
+export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "fields" | "image">
+
+export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews" | "heroImage" | "sections" | "finalCta">>
 
 export function createAirportBookingLinks(
   terminal?: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
@@ -132,5 +138,8 @@ export function createPublishedAirportPagePresentation({
     airportFaqs: content.airportFaqs ?? [],
     reviews: content.reviews ?? [],
     relatedDestinations: relatedDestinations ?? [],
+    heroImage: content.heroImage,
+    sections: content.sections ?? [],
+    finalCta: content.finalCta ?? { heading: "Ready to book your airport transfer?", body: [] },
   }
 }

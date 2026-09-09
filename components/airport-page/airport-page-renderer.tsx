@@ -9,6 +9,17 @@ import { Button } from "@/components/ui/button"
 import type { AirportPagePresentation } from "@/lib/airport-page-data"
 import { formatCurrency } from "@/lib/fleet"
 import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
+import type { RichTextBlock } from "@/lib/destination-content"
+
+function RichText({ blocks }: { blocks: RichTextBlock[] }) {
+  return <div className="space-y-3 text-left text-muted-foreground">{blocks.map((block, index) => {
+    if (block.type === "link" && block.href) return <Link key={`${block.text}-${index}`} className="block text-primary underline" href={block.href}>{block.label || block.text}</Link>
+    if (block.type === "heading") return <h3 key={`${block.text}-${index}`} className="font-semibold text-foreground">{block.text}</h3>
+    if (block.type === "bold") return <p key={`${block.text}-${index}`} className="font-semibold text-foreground">{block.text}</p>
+    if (block.type === "list") return <li key={`${block.text}-${index}`} className="ml-5 list-disc">{block.text}</li>
+    return <p key={`${block.text}-${index}`} className="leading-relaxed">{block.text}</p>
+  })}</div>
+}
 
 export function AirportPageRenderer({ page }: { page: AirportPagePresentation }) {
   return (
@@ -32,8 +43,19 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
               {paragraph}
             </p>
           ))}
+          {page.heroImage && <img className="mx-auto mt-8 max-h-80 w-full rounded-2xl object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} />}
           <AirportQuoteActions page={page} />
         </div>
+
+        {page.sections.filter((section) => section.visible).map((section) => <section key={section.id} className="mx-auto max-w-5xl px-4 py-10 lg:py-16" data-preview-section={section.type}>
+          <div className="rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.title}</h2>
+            {section.image && <img className="mt-6 max-h-80 w-full rounded-xl object-cover" src={section.image.secureUrl} alt={section.image.altText} />}
+            <div className="mt-5"><RichText blocks={section.body} /></div>
+            {section.type === "airport_guide" && <div className="mt-6 grid gap-4 sm:grid-cols-2">{Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim()).map(([key, value]) => <div key={key}><h3 className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1")}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{value}</p></div>)}</div>}
+            {section.type === "map" && <div className="mt-6 rounded-xl bg-secondary p-5"><p className="font-medium">Airport map</p><p className="mt-1 text-sm text-muted-foreground">Showing the saved airport location at {page.terminals[0]?.latitude ?? "—"}, {page.terminals[0]?.longitude ?? "—"}.</p></div>}
+          </div>
+        </section>)}
 
         {page.terminals.length > 0 && (
           <div className="mx-auto max-w-4xl px-4 py-10">
@@ -52,7 +74,7 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
           </div>
         )}
 
-        {page.relatedDestinations.length > 0 && <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16"><h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Related destinations</h2><div className="mt-8 grid gap-5 sm:grid-cols-2">{page.relatedDestinations.map((related) => <article key={related.id} className="rounded-2xl border border-border/70 bg-card p-5"><h3 className="text-xl font-semibold"><Link className="hover:underline" href={related.href}>{related.heading}</Link></h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{related.description}</p><div className="mt-5 flex flex-wrap gap-2"><Button size="sm" nativeButton={false} render={<Link href={related.bookingLinks.toAirport} />}>Get fixed price to {related.displayName}</Button><Button size="sm" variant="outline" nativeButton={false} render={<Link href={related.bookingLinks.fromAirport} />}>From {related.displayName}</Button></div></article>)}</div></div>}
+        {page.relatedDestinations.length > 0 && <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16"><h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Related destinations</h2><div className="mt-8 grid gap-5 sm:grid-cols-2">{page.relatedDestinations.map((related) => <article key={related.id} className="rounded-2xl border border-border/70 bg-card p-5">{related.image && <img className="mb-4 aspect-video w-full rounded-xl object-cover" src={related.image} alt={related.displayName} />}<h3 className="text-xl font-semibold"><Link className="hover:underline" href={related.href}>{related.heading}</Link></h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{related.description}</p><div className="mt-5 flex flex-wrap gap-2"><Button size="sm" nativeButton={false} render={<Link href={related.bookingLinks.toAirport} />}>Get fixed price to {related.displayName}</Button><Button size="sm" variant="outline" nativeButton={false} render={<Link href={related.bookingLinks.fromAirport} />}>From {related.displayName}</Button></div></article>)}</div></div>}
 
         {page.serviceFacts.length > 0 && <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
           <div className="mx-auto max-w-2xl text-center"><h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Our service facts</h2></div>
@@ -108,6 +130,7 @@ export function AirportPageRenderer({ page }: { page: AirportPagePresentation })
           </div>
         </div>
 
+        <div className="mx-auto max-w-3xl px-4 py-10 text-center lg:py-16"><h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.finalCta.heading}</h2><RichText blocks={page.finalCta.body} /></div>
         <CallToAction />
       </main>
       <SiteFooter />

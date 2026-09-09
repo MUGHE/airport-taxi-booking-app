@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test"
 
+test("unauthenticated visitors cannot open a Draft preview", async ({ page }) => {
+  await page.goto("/admin/destination-pages/not-a-real-page/preview")
+  await expect(page).toHaveURL(/\/admin\/login\?from=/)
+  await expect(page.getByText("Draft preview")).not.toBeVisible()
+})
+
 test("admin can create an Airport Page draft and reload its identity and terminals", async ({ page }) => {
   test.skip(
     process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
@@ -30,6 +36,19 @@ test("admin can create an Airport Page draft and reload its identity and termina
   await page.getByLabel("Longitude").fill("-0.45")
   await page.getByRole("button", { name: "Save Draft" }).click()
   await expect(page.getByRole("status")).toHaveText("Draft saved.")
+  await expect(page.getByRole("heading", { name: "Side-by-side Draft preview" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Desktop" })).toHaveAttribute("aria-pressed", "true")
+  await page.getByRole("button", { name: "Tablet" }).click()
+  await expect(page.getByRole("button", { name: "Tablet" })).toHaveAttribute("aria-pressed", "true")
+  await page.getByRole("button", { name: "Mobile" }).click()
+  await expect(page.getByRole("button", { name: "Mobile" })).toHaveAttribute("aria-pressed", "true")
+  const preview = page.getByTitle("Mobile Draft preview")
+  await expect(preview).toBeVisible()
+  const previewPagePromise = page.waitForEvent("popup")
+  await page.getByRole("link", { name: "Open full preview" }).click()
+  const previewPage = await previewPagePromise
+  await expect(previewPage.getByRole("heading", { name: displayName }).first()).toBeVisible()
+  await previewPage.close()
 
   await page.getByRole("link", { name: "Destination Pages" }).click()
   await page.getByRole("link", { name: displayName }).click()
