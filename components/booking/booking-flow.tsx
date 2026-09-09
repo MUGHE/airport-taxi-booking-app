@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
-import { ArrowLeft, ArrowRight, Banknote, Briefcase, Calendar as CalendarIcon, Check, CreditCard, Loader2, MapPin, MapPinPlus, Repeat, Sparkles, Users, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Banknote, Briefcase, Calendar as CalendarIcon, Check, ChevronUp, CreditCard, Loader2, MapPin, MapPinPlus, Repeat, Sparkles, TicketPercent, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +23,14 @@ import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/dat
 import { toast } from "sonner"
 
 const STEPS = ["Trip", "Vehicle", "Details", "Review"] as const
+// The action bar panel's own open transition. The promo cue waits this out before it plays, so
+// keep it in step with the open duration on that panel's className. (Closing there is deliberately
+// quicker — getting a panel out of the way should feel immediate in a way that opening one does
+// not — but nothing is sequenced behind the close, so only this one is needed here.)
+const PANEL_OPEN_MS = 500
+// The promo field's arrival pulse, plus a little slack so clearing the attribute never cuts the
+// animation off mid-pulse. Keep in sync with the promo-spotlight keyframes in globals.css.
+const SPOTLIGHT_MS = 1500
 type AppliedPromo = { code: string; discountType: PromoDiscountType; discountValue: number }
 const fromParams = (params: URLSearchParams, prefix: "pickup" | "dropoff"): PlaceSelection | null => {
   const address = params.get(`${prefix}Address`)
@@ -193,7 +201,7 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
 
   // Built once and reused in both places it can appear — the desktop sidebar and the mobile
   // action bar's expandable panel — so there is exactly one place that lists Summary's props.
-  const summaryPanel = <Summary pickup={pickup} dropoff={dropoff} stops={stops} stopsTotal={stopsTotal} quote={quote} vehicleFare={vehicleFare} addOnsTotal={addOnsTotal} vehicle={vehicle} pickupDate={pickupDate} pickupTime={pickupTime} promotion={promotion} promoInput={promoInput} setPromoInput={setPromoInput} appliedPromo={appliedPromo} promoPending={promoPending} onApplyPromo={applyPromo} onRemovePromo={removePromo} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} paymentMethod={paymentMethod} />
+  const summaryPanel = (showMap: boolean) => <Summary showMap={showMap} pickup={pickup} dropoff={dropoff} stops={stops} stopsTotal={stopsTotal} quote={quote} vehicleFare={vehicleFare} addOnsTotal={addOnsTotal} vehicle={vehicle} pickupDate={pickupDate} pickupTime={pickupTime} promotion={promotion} promoInput={promoInput} setPromoInput={setPromoInput} appliedPromo={appliedPromo} promoPending={promoPending} onApplyPromo={applyPromo} onRemovePromo={removePromo} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} paymentMethod={paymentMethod} />
 
   return <><div className="grid gap-8 pb-24 lg:grid-cols-[1fr_340px] lg:pb-0"><div className="min-w-0">{promotion.active && <PromotionBanner percent={promotion.discountPercent} />}<MobileStepHeader step={step} onBack={() => setStep((value) => Math.max(value - 1, 0))} /><div className="hidden sm:block"><Stepper step={step} /></div><div className="mt-8">
     {step === 0 && <TripStep pickup={pickup} setPickup={setPickup} dropoff={dropoff} setDropoff={setDropoff} pickupDate={pickupDate} setPickupDate={setPickupDate} pickupTime={pickupTime} setPickupTime={setPickupTime} today={today} stops={stops} setStops={setStops} stopPricing={stopPricing} />}
@@ -201,8 +209,10 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
     {step === 2 && <DetailsStep {...{ customerName, setCustomerName, email, setEmail, phone, setPhone, passengers, setPassengers, bags, setBags, notes, setNotes, flightNumber, setFlightNumber, addOns, selectedAddOnIds, setSelectedAddOnIds, pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare: returnFareEstimate }} maxCapacity={vehicle?.capacity ?? 6} maxLuggage={vehicle?.luggage ?? 0} />}
     {step === 3 && <ReviewStep pickup={pickup?.address || ""} dropoff={dropoff?.address || ""} stops={stops} stopsTotal={stopsTotal} vehicle={vehicle?.name || ""} pickupDate={pickupDate} pickupTime={pickupTime} flightNumber={flightNumber} passengers={passengers} bags={bags} customerName={customerName} email={email} phone={phone} notes={notes} addOns={addOns.filter((addOn) => selectedAddOnIds.includes(addOn.id))} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} returnPickupAddress={effectiveReturnPickup?.address || ""} returnDropoffAddress={effectiveReturnDropoff?.address || ""} />}
   </div><div className="mt-8 hidden justify-between gap-3 sm:flex"><Button variant="ghost" onClick={() => setStep((value) => Math.max(value - 1, 0))} disabled={step === 0 || isPending}><ArrowLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ArrowRight className="size-4" /></Button> : <Button onClick={submit} disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm booking</Button>}</div></div>
-    <div className="hidden sm:block">{summaryPanel}</div></div>
-    <MobileActionBar step={step} total={mobileTotal} combinedTotal={mobileCombinedTotal} wantsReturn={wantsReturn} isPending={isPending} onNext={next} onSubmit={submit} summary={summaryPanel} />
+    <div className="hidden sm:block">{summaryPanel(true)}</div></div>
+    {/* No map in the bottom sheet: it costs ~200px of a panel whose whole job is the fare
+        breakdown and the offer field, and the route is already shown on the Trip step. */}
+    <MobileActionBar step={step} total={mobileTotal} combinedTotal={mobileCombinedTotal} wantsReturn={wantsReturn} isPending={isPending} onNext={next} onSubmit={submit} summary={summaryPanel(false)} canApplyPromo={quote != null} appliedPromo={appliedPromo} onRemovePromo={removePromo} />
   </>
 }
 function PromotionBanner({ percent }: { percent: number }) { return <div className="mb-6 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary"><Sparkles className="size-4 shrink-0" />Limited-time offer: {percent}% off every fare — the discount is already applied below.</div> }
@@ -233,9 +243,16 @@ function MobileStepHeader({ step, onBack }: { step: number; onBack: () => void }
 // content. Shows the running total once a vehicle (and so a fare) exists; step 0 has none yet.
 // z-index sits above the site-wide help bubble (help-button.tsx, z-50) so that floating button can
 // never sit on top of the primary action.
-function MobileActionBar({ step, total, combinedTotal, wantsReturn, isPending, onNext, onSubmit, summary }: { step: number; total: number | null; combinedTotal: number | null; wantsReturn: boolean; isPending: boolean; onNext: () => void; onSubmit: () => void; summary: React.ReactNode }) {
+function MobileActionBar({ step, total, combinedTotal, wantsReturn, isPending, onNext, onSubmit, summary, canApplyPromo, appliedPromo, onRemovePromo }: { step: number; total: number | null; combinedTotal: number | null; wantsReturn: boolean; isPending: boolean; onNext: () => void; onSubmit: () => void; summary: React.ReactNode; canApplyPromo: boolean; appliedPromo: AppliedPromo | null; onRemovePromo: () => void }) {
   const barRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
+  // Drives the arrival animation on the promo field (see openPromo and globals.css).
+  const [spotlight, setSpotlight] = useState(false)
+  const spotlightTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(spotlightTimer.current), [])
+
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [panelHeight, setPanelHeight] = useState(0)
   // Tracked in a ref, not state — a drag reads/writes this on every pointermove and a re-render
   // per pixel of finger movement isn't needed for anything (the gesture is only resolved once, on
   // release), just wasted work.
@@ -270,28 +287,83 @@ function MobileActionBar({ step, total, combinedTotal, wantsReturn, isPending, o
   // Nothing worth expanding for until a vehicle (and so a fare) is chosen on Trip.
   const canExpand = price != null
 
+  // The panel animates to the height its content actually needs, capped at 65vh — not to a flat
+  // 65vh. Animating to a cap the content never reaches means the panel stops growing partway
+  // through the transition (once max-height passes the content height) and the rest of the
+  // duration animates past content that isn't there: a 500ms open that visibly finishes in ~150ms,
+  // by a margin that shifts with how long the summary happens to be. Measured continuously rather
+  // than on open, so the number is already right at the moment it's needed, and so the panel
+  // follows its own content if that grows while open.
+  //
+  // Keyed on canExpand because the content only mounts once a fare exists: on a mount-only effect
+  // the ref is still null here and the measurement never happens at all.
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    const measure = () => setPanelHeight(Math.min(el.scrollHeight, window.innerHeight * 0.65))
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    window.addEventListener("resize", measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", measure)
+    }
+  }, [canExpand])
+
   // Drag the handle up to open, down to close — a plain tap (no meaningful movement) toggles too,
   // so the gesture stays discoverable for anyone who doesn't try dragging it first. Resolved once
   // on release rather than followed live: a direction + distance past a small threshold is enough
   // to decide open/closed without tracking (and mounting the panel to measure) every pixel in between.
   const DRAG_THRESHOLD = 24
-  function handleHandlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+  function handleHandlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Deliberately no setPointerCapture: capturing would retarget pointerup to this row, and the
+    // click event — dispatched to the common ancestor of down/up — would then land here instead of
+    // on the chip the finger is actually on, silently killing both buttons.
     dragRef.current = { startY: e.clientY, moved: false }
-    e.currentTarget.setPointerCapture(e.pointerId)
   }
-  function handleHandlePointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+  function handleHandlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const drag = dragRef.current
     if (!drag) return
     if (Math.abs(e.clientY - drag.startY) > 6) drag.moved = true
   }
-  function handleHandlePointerUp(e: React.PointerEvent<HTMLButtonElement>) {
+  function handleHandlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
     const drag = dragRef.current
     dragRef.current = null
-    if (!drag) return
-    if (!drag.moved) { setOpen((value) => !value); return }
+    // A tap is left to whichever chip was tapped — this row no longer toggles on tap, or every
+    // chip press would fire its own action and the toggle.
+    if (!drag || !drag.moved) return
     const draggedUp = drag.startY - e.clientY
     if (draggedUp > DRAG_THRESHOLD) setOpen(true)
     else if (draggedUp < -DRAG_THRESHOLD) setOpen(false)
+  }
+
+  // Opens the panel and points at the promo field without taking it over: no focus(), so no
+  // keyboard thrown up over the summary the customer just asked to see, and no caret landing
+  // somewhere they didn't put it. The animation does the pointing; tapping the field stays theirs.
+  //
+  // The field is found by query rather than a ref because <Summary> is rendered twice (desktop
+  // sidebar and this panel); a single ref passed to both would end up pointing at whichever
+  // mounted last, which on a phone is the display:none desktop copy. Scoping the query to this
+  // bar's own subtree always finds ours.
+  function openPromo() {
+    // Clearing the flag first is what lets a repeat tap replay the animation: the attribute has to
+    // actually leave the DOM before it can be re-added, or the browser sees the same still-running
+    // animation and nothing restarts.
+    setOpen(true)
+    setSpotlight(false)
+    window.clearTimeout(spotlightTimer.current)
+    // Sequenced behind the panel's own open rather than fired alongside it: scrolling a container
+    // that is still growing lands in the wrong place, and a pulse on a field still sliding into
+    // view reads as jitter rather than as a cue. "nearest" leaves an already-visible field where
+    // it is instead of scrolling for the sake of it.
+    spotlightTimer.current = window.setTimeout(() => {
+      barRef.current?.querySelector<HTMLInputElement>("[data-promo-input]")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      setSpotlight(true)
+      // Ends on its own rather than looping — a pulse still going while someone is typing their
+      // code stops being a cue and becomes a distraction.
+      spotlightTimer.current = window.setTimeout(() => setSpotlight(false), SPOTLIGHT_MS)
+    }, PANEL_OPEN_MS)
   }
 
   // A floating card (inset from the screen edges, fully rounded, its own shadow) — not full-bleed
@@ -304,27 +376,67 @@ function MobileActionBar({ step, total, combinedTotal, wantsReturn, isPending, o
     className="fixed inset-x-3 z-[60] overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:hidden"
     style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
   >
+    {/* Both of the things customers were missing behind the old bare drag handle — the offer entry
+        and the fare breakdown — now sit here as named, always-visible controls. The row still
+        drags open/closed for anyone who reaches for that gesture, but nothing depends on
+        discovering it. */}
     {canExpand && (
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-label={open ? "Drag down to hide trip summary" : "Drag up to show trip summary"}
+      <div
         onPointerDown={handleHandlePointerDown}
         onPointerMove={handleHandlePointerMove}
         onPointerUp={handleHandlePointerUp}
         onPointerCancel={() => { dragRef.current = null }}
-        className="flex w-full touch-none items-center justify-center py-2"
+        className="flex touch-none items-center justify-between gap-2 px-3 pb-2 pt-2.5"
       >
-        <span className="h-1 w-9 rounded-full bg-border" />
-      </button>
+        <div className="min-w-0">
+          {appliedPromo
+            ? <span className="flex min-w-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 py-1 pl-2.5 pr-1 text-xs font-medium text-primary">
+                <TicketPercent className="size-3.5 shrink-0" />
+                <span className="truncate font-mono">{appliedPromo.code}</span>
+                <button type="button" onClick={onRemovePromo} aria-label={`Remove promo code ${appliedPromo.code}`} className="flex size-5 shrink-0 items-center justify-center rounded-full hover:bg-primary/15">
+                  <X className="size-3.5" />
+                </button>
+              </span>
+            : canApplyPromo && <button type="button" onClick={openPromo} className="flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1.5 text-xs font-medium transition-transform duration-150 hover:bg-secondary/70 active:scale-95">
+                <TicketPercent className="size-3.5 shrink-0" />
+                Apply offer
+              </button>}
+        </div>
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          {open ? "Hide" : "Trip summary"}
+          {/* Matched to the panel so the chevron turns with it rather than finishing first. */}
+          <ChevronUp className={cn("size-3.5 transition-transform [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]", open ? "rotate-180 duration-500" : "duration-300")} />
+        </button>
+      </div>
     )}
     {/* Height-animated, not mount/unmount-animated: this is what makes the handle read as rising
         with the card's own top edge, rather than the panel popping in at full size behind a
         handle that never moved. Kept mounted (once a fare exists) so the max-height transition has
-        something to measure and animate. */}
+        something to measure and animate.
+        inert while collapsed: max-height:0 only clips the panel visually, so without it the promo
+        field stays tabbable and is still announced by screen readers from behind a closed panel. */}
     {canExpand && (
-      <div className="overflow-y-auto transition-[max-height] duration-300 ease-in-out" style={{ maxHeight: open ? "65vh" : "0px" }}>
-        <div className="border-t border-border p-4">{summary}</div>
+      <div
+        inert={!open}
+        data-promo-spotlight={spotlight ? "" : undefined}
+        // An even curve, not an aggressive ease-out. Sharp ease-outs (easeOutQuint and friends)
+        // put most of the travel into the first fifth of the duration, so the panel reads as
+        // snapping open in a fraction of its actual time and then crawling — raising the duration
+        // alone only lengthens the crawl. This one spreads the movement across the whole
+        // transition, so half a second actually feels like half a second.
+        className={cn(
+          "overflow-y-auto transition-[max-height] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]",
+          open ? "duration-500" : "duration-300",
+        )}
+        // Falls back to the cap for the first render, before the content has been measured.
+        style={{ maxHeight: open ? (panelHeight ? `${panelHeight}px` : "65vh") : "0px" }}
+      >
+        <div ref={contentRef} className="border-t border-border p-4">{summary}</div>
       </div>
     )}
     <div className={cn("flex items-center justify-between gap-3 px-4 py-3", canExpand && "border-t border-border")}>
@@ -581,11 +693,11 @@ export function PaymentMethodPicker({ value, onChange }: { value: PaymentMethod;
   ]
   return <div className="grid gap-3 sm:grid-cols-2">{options.map((option) => { const selected = option.id === value; return <button key={option.id} type="button" onClick={() => onChange(option.id)} className={cn("flex items-start gap-3 rounded-2xl border p-4 text-left", selected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border bg-card")}><span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full", selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}><option.icon className="size-4" /></span><span><span className="block text-sm font-semibold">{option.title}</span><span className="mt-0.5 block text-xs text-muted-foreground">{option.desc}</span></span></button> })}</div>
 }
-function Summary({ pickup, dropoff, stops, stopsTotal, quote, vehicleFare, addOnsTotal, vehicle, pickupDate, pickupTime, promotion, promoInput, setPromoInput, appliedPromo, promoPending, onApplyPromo, onRemovePromo, wantsReturn, returnDate, returnTime, returnFare, returnDiscount, paymentMethod }: { pickup: PlaceSelection | null; dropoff: PlaceSelection | null; stops: PlaceSelection[]; stopsTotal: number; quote: ReturnType<typeof computeFare> | null; vehicleFare: number | null; addOnsTotal: number; vehicle?: VehicleClass; pickupDate: string; pickupTime: string; promotion: SitePromotion; promoInput: string; setPromoInput: (value: string) => void; appliedPromo: AppliedPromo | null; promoPending: boolean; onApplyPromo: () => void; onRemovePromo: () => void; wantsReturn: boolean; returnDate: string; returnTime: string; returnFare: number | null; returnDiscount: ReturnTripDiscount; paymentMethod: PaymentMethod }) {
+function Summary({ showMap, pickup, dropoff, stops, stopsTotal, quote, vehicleFare, addOnsTotal, vehicle, pickupDate, pickupTime, promotion, promoInput, setPromoInput, appliedPromo, promoPending, onApplyPromo, onRemovePromo, wantsReturn, returnDate, returnTime, returnFare, returnDiscount, paymentMethod }: { showMap: boolean; pickup: PlaceSelection | null; dropoff: PlaceSelection | null; stops: PlaceSelection[]; stopsTotal: number; quote: ReturnType<typeof computeFare> | null; vehicleFare: number | null; addOnsTotal: number; vehicle?: VehicleClass; pickupDate: string; pickupTime: string; promotion: SitePromotion; promoInput: string; setPromoInput: (value: string) => void; appliedPromo: AppliedPromo | null; promoPending: boolean; onApplyPromo: () => void; onRemovePromo: () => void; wantsReturn: boolean; returnDate: string; returnTime: string; returnFare: number | null; returnDiscount: ReturnTripDiscount; paymentMethod: PaymentMethod }) {
   const subtotal = vehicleFare != null ? vehicleFare + addOnsTotal + stopsTotal : null
   const discountAmount = subtotal != null && appliedPromo ? computeDiscount(subtotal, appliedPromo) : 0
   const total = subtotal != null ? subtotal - discountAmount : null
   const combinedTotal = wantsReturn && total != null && returnFare != null ? total + returnFare : null
-  return <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24">{pickup && dropoff && <TripMap originLat={pickup.lat} originLng={pickup.lng} originLabel={pickup.address} originTime={pickupTime || undefined} destLat={dropoff.lat} destLng={dropoff.lng} destLabel={dropoff.address} waypoints={stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))} /> }<div className="rounded-2xl border border-border/70 bg-card p-5"><h3 className="font-semibold">Trip summary</h3><div className="mt-4 space-y-3 text-sm"><Line label="Pickup" value={pickup?.address || "—"} />{stops.filter((s) => s.address).map((stop, i) => <Line key={i} label={`Stop ${i + 1}`} value={stop.address} />)}<Line label="Drop-off" value={dropoff?.address || "—"} /><Line label="When" value={pickupDate ? `${formatDate(pickupDate)} · ${pickupTime}` : "—"} /><Line label="Vehicle" value={vehicle?.name || "—"} />{quote && promotion.active && vehicleFare != null && vehicleFare !== quote.fare && <div className="flex items-start justify-between gap-3"><span className="text-muted-foreground">Fare</span><span className="text-right font-medium"><span className="mr-1.5 text-muted-foreground line-through">{formatCurrency(quote.fare)}</span><span className="text-primary">{formatCurrency(vehicleFare)}</span></span></div>}{stopsTotal > 0 && <Line label={`Stops (${stops.length} × ${formatCurrency(stopsTotal / stops.length)})`} value={formatCurrency(stopsTotal)} />}{addOnsTotal > 0 && <Line label="Add-ons" value={formatCurrency(addOnsTotal)} />}{appliedPromo && discountAmount > 0 && <Line label={`Promo (${appliedPromo.code})`} value={`-${formatCurrency(discountAmount)}`} />}</div>{quote && <div className="mt-4 border-t pt-4">{appliedPromo ? <div className="flex items-center justify-between gap-2"><span className="font-mono text-sm font-medium">{appliedPromo.code}</span><Button size="sm" variant="ghost" onClick={onRemovePromo}>Remove</Button></div> : <div className="flex gap-2"><Input value={promoInput} onChange={(e) => setPromoInput(e.target.value.toUpperCase())} placeholder="Promo code" className="flex-1" /><Button size="sm" variant="outline" disabled={promoPending || !promoInput.trim()} onClick={onApplyPromo}>{promoPending ? <Loader2 className="size-4 animate-spin" /> : "Apply"}</Button></div>}</div>}<div className="mt-5 border-t pt-4"><div className="flex items-end justify-between"><span className="text-sm text-muted-foreground">{wantsReturn ? "Outbound fare" : "Total fare"}</span><span className="text-2xl font-semibold">{total != null ? formatCurrency(total) : "—"}</span></div>{promotion.active && <p className="mt-1 text-right text-xs text-primary">Includes {promotion.discountPercent}% site-wide discount</p>}</div>{wantsReturn && <div className="mt-4 border-t pt-4"><div className="flex items-end justify-between"><span className="text-sm text-muted-foreground">Return fare{returnDate && returnTime ? ` · ${formatDate(returnDate)} ${returnTime}` : ""}</span><span className="text-lg font-semibold">{returnFare != null ? formatCurrency(returnFare) : "—"}</span></div>{returnDiscount.active && <p className="mt-1 text-right text-xs text-primary">Includes {returnDiscount.discountPercent}% return-trip discount</p>}<div className="mt-3 flex items-end justify-between border-t pt-3"><span className="text-sm font-medium">Combined total</span><span className="text-xl font-semibold">{combinedTotal != null ? formatCurrency(combinedTotal) : "—"}</span></div><p className="mt-1 text-xs text-muted-foreground">{paymentMethod === "cash" ? "Booked as two separate trips, each paid in cash to your driver." : "Booked as two separate trips, charged together in one secure payment."}</p></div>}</div></aside>
+  return <aside className="h-fit min-w-0 space-y-4 lg:sticky lg:top-24">{showMap && pickup && dropoff && <TripMap originLat={pickup.lat} originLng={pickup.lng} originLabel={pickup.address} originTime={pickupTime || undefined} destLat={dropoff.lat} destLng={dropoff.lng} destLabel={dropoff.address} waypoints={stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng))} /> }<div className="rounded-2xl border border-border/70 bg-card p-5"><h3 className="font-semibold">Trip summary</h3><div className="mt-4 space-y-3 text-sm"><Line label="Pickup" value={pickup?.address || "—"} />{stops.filter((s) => s.address).map((stop, i) => <Line key={i} label={`Stop ${i + 1}`} value={stop.address} />)}<Line label="Drop-off" value={dropoff?.address || "—"} /><Line label="When" value={pickupDate ? `${formatDate(pickupDate)} · ${pickupTime}` : "—"} /><Line label="Vehicle" value={vehicle?.name || "—"} />{quote && promotion.active && vehicleFare != null && vehicleFare !== quote.fare && <div className="flex items-start justify-between gap-3"><span className="text-muted-foreground">Fare</span><span className="text-right font-medium"><span className="mr-1.5 text-muted-foreground line-through">{formatCurrency(quote.fare)}</span><span className="text-primary">{formatCurrency(vehicleFare)}</span></span></div>}{stopsTotal > 0 && <Line label={`Stops (${stops.length} × ${formatCurrency(stopsTotal / stops.length)})`} value={formatCurrency(stopsTotal)} />}{addOnsTotal > 0 && <Line label="Add-ons" value={formatCurrency(addOnsTotal)} />}{appliedPromo && discountAmount > 0 && <Line label={`Promo (${appliedPromo.code})`} value={`-${formatCurrency(discountAmount)}`} />}</div>{quote && <div className="mt-4 border-t pt-4">{appliedPromo ? <div className="flex items-center justify-between gap-2"><span className="font-mono text-sm font-medium">{appliedPromo.code}</span><Button size="sm" variant="ghost" onClick={onRemovePromo}>Remove</Button></div> : <div className="flex gap-2"><Input data-promo-input="" value={promoInput} onChange={(e) => setPromoInput(e.target.value.toUpperCase())} placeholder="Promo code" className="flex-1" /><Button size="sm" variant="outline" disabled={promoPending || !promoInput.trim()} onClick={onApplyPromo}>{promoPending ? <Loader2 className="size-4 animate-spin" /> : "Apply"}</Button></div>}</div>}<div className="mt-5 border-t pt-4"><div className="flex items-end justify-between"><span className="text-sm text-muted-foreground">{wantsReturn ? "Outbound fare" : "Total fare"}</span><span className="text-2xl font-semibold">{total != null ? formatCurrency(total) : "—"}</span></div>{promotion.active && <p className="mt-1 text-right text-xs text-primary">Includes {promotion.discountPercent}% site-wide discount</p>}</div>{wantsReturn && <div className="mt-4 border-t pt-4"><div className="flex items-end justify-between"><span className="text-sm text-muted-foreground">Return fare{returnDate && returnTime ? ` · ${formatDate(returnDate)} ${returnTime}` : ""}</span><span className="text-lg font-semibold">{returnFare != null ? formatCurrency(returnFare) : "—"}</span></div>{returnDiscount.active && <p className="mt-1 text-right text-xs text-primary">Includes {returnDiscount.discountPercent}% return-trip discount</p>}<div className="mt-3 flex items-end justify-between border-t pt-3"><span className="text-sm font-medium">Combined total</span><span className="text-xl font-semibold">{combinedTotal != null ? formatCurrency(combinedTotal) : "—"}</span></div><p className="mt-1 text-xs text-muted-foreground">{paymentMethod === "cash" ? "Booked as two separate trips, each paid in cash to your driver." : "Booked as two separate trips, charged together in one secure payment."}</p></div>}</div></aside>
 }
 function Line({ label, value }: { label: string; value: string }) { return <div className="flex items-start justify-between gap-3"><span className="text-muted-foreground">{label}</span><span className="text-right font-medium">{value}</span></div> }
