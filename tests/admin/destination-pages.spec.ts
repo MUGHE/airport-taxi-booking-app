@@ -57,6 +57,14 @@ test("admin can create an Airport Page draft and reload its identity and termina
   await expect(previewPage.getByRole("heading", { name: displayName }).first()).toBeVisible()
   await expect(previewPage.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/i)
   await expect(previewPage.locator('link[rel="canonical"]')).toHaveCount(0)
+  await expect(previewPage.getByText("Airport location")).toBeVisible()
+  await expect(previewPage.getByText(/Heathrow Airport/).last()).toBeVisible()
+  await previewPage.getByRole("button", { name: "View interactive map" }).click()
+  if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+    await expect(previewPage.getByTitle(/Google map of/)).toHaveAttribute("src", /google\.com\/maps\/embed\/v1\/place/)
+  } else {
+    await expect(previewPage.getByText(/map preview could not load/i)).toBeVisible()
+  }
   await previewPage.close()
 
   await page.getByRole("link", { name: "Destination Pages" }).click()

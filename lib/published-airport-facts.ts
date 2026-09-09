@@ -6,6 +6,7 @@ export type PublishedAirportFacts = {
   address: string
   latitude: number
   longitude: number
+  googlePlaceId: string
 }
 
 export function readPublishedAirportFacts(content: unknown): PublishedAirportFacts | null {
@@ -21,6 +22,7 @@ export function readPublishedAirportFacts(content: unknown): PublishedAirportFac
     || typeof value.address !== "string"
     || typeof value.latitude !== "number"
     || typeof value.longitude !== "number"
+    || typeof value.googlePlaceId !== "string"
   ) return null
   return value as PublishedAirportFacts
 }

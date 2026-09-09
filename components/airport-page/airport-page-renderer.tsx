@@ -10,6 +10,7 @@ import type { AirportPagePresentation } from "@/lib/airport-page-data"
 import { formatCurrency } from "@/lib/fleet"
 import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
 import type { RichTextBlock } from "@/lib/destination-content"
+import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
 
 function RichText({ blocks }: { blocks: RichTextBlock[] }) {
   return <div className="space-y-3 text-left text-muted-foreground">{blocks.map((block, index) => {
@@ -72,7 +73,7 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
             {section.image && <img className="mt-6 max-h-80 w-full rounded-xl object-cover" src={section.image.secureUrl} alt={section.image.altText} />}
             <div className="mt-5"><RichText blocks={section.body} /></div>
             {section.type === "airport_guide" && <div className="mt-6 grid gap-4 sm:grid-cols-2">{Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim()).map(([key, value]) => <div key={key}><h3 className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1")}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{value}</p></div>)}</div>}
-            {section.type === "map" && <div className="mt-6 rounded-xl bg-secondary p-5"><p className="font-medium">Airport map</p><p className="mt-1 text-sm text-muted-foreground">Showing the saved airport location at {page.terminals[0]?.latitude ?? "—"}, {page.terminals[0]?.longitude ?? "—"}.</p></div>}
+            {section.type === "map" && page.mapLocation && <AirportMapPreview location={page.mapLocation} />}
           </div>
         </section>)}
 

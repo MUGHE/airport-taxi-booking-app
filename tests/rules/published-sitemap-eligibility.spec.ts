@@ -35,6 +35,7 @@ test("public discovery reads airport identity from Published Snapshot facts", ()
     address: "Published address",
     latitude: 51.5,
     longitude: -0.1,
+    googlePlaceId: "published-place-id",
   }
 
   expect(readPublishedAirportFacts({ publishedFacts, draftFacts: { displayName: "Unpublished edit" } })).toEqual(publishedFacts)

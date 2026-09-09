@@ -83,6 +83,7 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
   return createPublishedAirportPagePresentation({
     shortName: page.displayName,
     terminals,
+    mapLocation: { placeId: page.googlePlaceId, address: page.address, latitude: page.latitude, longitude: page.longitude },
     content: {
       heading: content.hero.heading || page.draft.h1,
       intro: content.hero.body.map((block) => block.text),
@@ -250,6 +251,7 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
       presentation: createPublishedAirportPagePresentation({
         shortName: airport.displayName,
         terminals,
+        mapLocation: { placeId: airport.googlePlaceId, address: airport.address, latitude: airport.latitude, longitude: airport.longitude },
         content,
         vehicles: VEHICLE_CLASSES,
         relatedDestinations,

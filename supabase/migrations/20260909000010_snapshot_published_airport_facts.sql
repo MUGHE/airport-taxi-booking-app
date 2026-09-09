@@ -29,6 +29,7 @@ begin
       'displayName', page_record.display_name,
       'iataCode', page_record.iata_code,
       'serviceArea', page_record.service_area,
+      'googlePlaceId', page_record.google_place_id,
       'address', page_record.address,
       'latitude', page_record.latitude,
       'longitude', page_record.longitude
@@ -71,14 +72,14 @@ $preflight$;
 -- existing Published Snapshots can be backfilled even if an editor has since
 -- saved a newer Draft. Other pages are backfilled only when the preflight proves
 -- that no newer Draft exists. Later cycles are protected by the trigger below.
-with legacy_facts(slug, official_name, display_name, iata_code, service_area, address, latitude, longitude) as (
+with legacy_facts(slug, official_name, display_name, iata_code, service_area, google_place_id, address, latitude, longitude) as (
   values
-    ('heathrow-airport-taxi', 'London Heathrow Airport', 'Heathrow', 'LHR', 'Hillingdon', 'London Heathrow Airport, Hounslow, UK', 51.4700::double precision, -0.4543::double precision),
-    ('gatwick-airport-taxi', 'London Gatwick Airport', 'Gatwick', 'LGW', 'Crawley', 'London Gatwick Airport, Crawley, UK', 51.1537::double precision, -0.1821::double precision),
-    ('stansted-airport-taxi', 'London Stansted Airport', 'Stansted', 'STN', 'Uttlesford', 'London Stansted Airport, Stansted, UK', 51.8850::double precision, 0.2350::double precision),
-    ('luton-airport-taxi', 'London Luton Airport', 'Luton', 'LTN', 'Luton', 'London Luton Airport, Luton, UK', 51.8747::double precision, -0.3683::double precision),
-    ('london-city-airport-taxi', 'London City Airport', 'London City', 'LCY', 'Newham', 'London City Airport, London, UK', 51.5053::double precision, 0.0553::double precision),
-    ('southend-airport-taxi', 'London Southend Airport', 'Southend', 'SEN', 'Southend-on-Sea', 'London Southend Airport, Southend-on-Sea, UK', 51.5714::double precision, 0.6956::double precision)
+    ('heathrow-airport-taxi', 'London Heathrow Airport', 'Heathrow', 'LHR', 'Hillingdon', 'ChIJ6W3FzULyXEcR', 'London Heathrow Airport, Hounslow, UK', 51.4700::double precision, -0.4543::double precision),
+    ('gatwick-airport-taxi', 'London Gatwick Airport', 'Gatwick', 'LGW', 'Crawley', 'ChIJ8W0U5wqxdUgR', 'London Gatwick Airport, Crawley, UK', 51.1537::double precision, -0.1821::double precision),
+    ('stansted-airport-taxi', 'London Stansted Airport', 'Stansted', 'STN', 'Uttlesford', 'ChIJq1Wq8d8c2EcR', 'London Stansted Airport, Stansted, UK', 51.8850::double precision, 0.2350::double precision),
+    ('luton-airport-taxi', 'London Luton Airport', 'Luton', 'LTN', 'Luton', 'ChIJb7bYwDgzd0gR', 'London Luton Airport, Luton, UK', 51.8747::double precision, -0.3683::double precision),
+    ('london-city-airport-taxi', 'London City Airport', 'London City', 'LCY', 'Newham', 'ChIJt7x7y7QcdkgR', 'London City Airport, London, UK', 51.5053::double precision, 0.0553::double precision),
+    ('southend-airport-taxi', 'London Southend Airport', 'Southend', 'SEN', 'Southend-on-Sea', 'ChIJh8Q4w8Wl2EcR', 'London Southend Airport, Southend-on-Sea, UK', 51.5714::double precision, 0.6956::double precision)
 )
 update public.destination_page_snapshots snapshots
 set content = jsonb_set(
@@ -89,6 +90,7 @@ set content = jsonb_set(
     'displayName', coalesce(facts.display_name, pages.display_name),
     'iataCode', coalesce(facts.iata_code, pages.iata_code),
     'serviceArea', coalesce(facts.service_area, pages.service_area),
+    'googlePlaceId', coalesce(facts.google_place_id, pages.google_place_id),
     'address', coalesce(facts.address, pages.address),
     'latitude', coalesce(facts.latitude, pages.latitude),
     'longitude', coalesce(facts.longitude, pages.longitude)

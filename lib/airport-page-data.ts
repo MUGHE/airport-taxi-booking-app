@@ -2,6 +2,7 @@ import type { AirportPage } from "@/lib/airport-content"
 import type { ServiceLocation, VehicleClass } from "@/lib/types"
 import type { GlobalFaq, ServiceFact, VerifiedReview } from "@/lib/reusable-content"
 import type { DestinationImageReference, DestinationSection, RichTextBlock } from "@/lib/destination-content"
+import type { AirportMapLocation } from "@/lib/google-maps-links"
 
 export type AirportPageTerminal = {
   id: string
@@ -34,6 +35,7 @@ export type AirportPagePresentation = {
   heroImage?: DestinationImageReference
   sections: AirportPageContentSection[]
   finalCta: { heading: string; body: RichTextBlock[] }
+  mapLocation?: AirportMapLocation
 }
 
 export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "fields" | "image">
@@ -102,6 +104,7 @@ export function createAirportPagePresentation(
   return createPublishedAirportPagePresentation({
     shortName: airport.shortName,
     terminals,
+    mapLocation: terminals[0] ? { address: airport.name, latitude: terminals[0].latitude, longitude: terminals[0].longitude } : undefined,
     content: {
       heading: airport.h1,
       intro: airport.intro,
@@ -130,12 +133,14 @@ export function createPublishedAirportPagePresentation({
   content,
   vehicles,
   relatedDestinations,
+  mapLocation,
 }: {
   shortName: string
   terminals: AirportPageTerminal[]
   content: PublishedAirportPageContent
   vehicles: AirportPagePresentation["vehicles"]
   relatedDestinations?: AirportPagePresentation["relatedDestinations"]
+  mapLocation?: AirportMapLocation
 }): AirportPagePresentation {
   return {
     shortName,
@@ -154,5 +159,6 @@ export function createPublishedAirportPagePresentation({
     heroImage: content.heroImage,
     sections: content.sections ?? [],
     finalCta: content.finalCta ?? { heading: "Ready to book your airport transfer?", body: [] },
+    mapLocation,
   }
 }

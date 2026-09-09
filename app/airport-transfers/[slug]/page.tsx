@@ -53,6 +53,7 @@ function legacyPageSeo(airport: NonNullable<ReturnType<typeof getAirportPage>>):
       displayName: airport.shortName,
       iataCode: airport.code,
       serviceArea: airport.area,
+      googlePlaceId: "",
       address: `${airport.name}, ${airport.area}, UK`,
       latitude: primaryLocation?.lat ?? 0,
       longitude: primaryLocation?.lng ?? 0,
