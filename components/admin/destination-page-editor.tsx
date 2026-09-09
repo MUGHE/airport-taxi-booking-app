@@ -10,7 +10,7 @@ import { DestinationPicker, type PlaceSelection } from "@/components/destination
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { publishAdminDestinationPageAction, restoreAdminDestinationPageAction, saveAdminDestinationPageAction } from "@/lib/actions"
+import { publishAdminDestinationPageAction, restoreAdminDestinationPageAction, saveAdminDestinationPageAction, setAirportFeaturedAction } from "@/lib/actions"
 import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picker"
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, normalizeDestinationContent, type DestinationContentDocument, type DestinationSectionType, type RichTextBlock } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
@@ -50,6 +50,7 @@ function editorValues(form: SaveAdminDestinationPageInput): DestinationPageEdito
 export function DestinationPageEditor({ initialPage, relatedCandidates, reusableContent }: { initialPage?: AdminDestinationPage; relatedCandidates: { id: string; displayName: string; slug: string }[]; reusableContent: ReusableDestinationContent }) {
   const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(initialPage))
   const [dirty, setDirty] = useState(false)
+  const [featured, setFeatured] = useState(initialPage?.featured ?? false)
   const [pendingWarnings, setPendingWarnings] = useState<PublishWarning[]>([])
   const [pendingWarningSetHash, setPendingWarningSetHash] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -149,6 +150,16 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
     })
   }
 
+  function toggleFeatured(nextFeatured: boolean) {
+    if (!form.id || dirty || initialPage?.lifecycleState !== "published") return
+    startTransition(async () => {
+      const result = await setAirportFeaturedAction(form.id!, nextFeatured)
+      if (!result.ok) { toast.error(result.error); return }
+      setFeatured(nextFeatured)
+      toast.success(nextFeatured ? "Airport added to Featured navigation." : "Airport removed from Featured navigation.")
+    })
+  }
+
   useEffect(() => {
     if (!pendingWarnings.length) return
     toast.warning(<div className="space-y-3">
@@ -165,6 +176,7 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
       <div className="mb-6"><h2 className="text-xl font-semibold tracking-tight">{initialPage ? "Edit Airport Page" : "Create Airport Page"}</h2><p className="mt-1 text-sm text-muted-foreground">Build the identity and structured content for this Airport Page draft.</p></div>
       {initialPage?.hasUnpublishedChanges && <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">This page has saved changes that are not public yet. Review them and publish when ready.</p>}
       <DraftPreviewPanel pageId={form.id} dirty={dirty} />
+      {initialPage?.lifecycleState === "published" && <section className="mb-6 rounded-xl border border-border bg-card p-5"><label className="flex items-start gap-3"><input type="checkbox" checked={featured} disabled={isPending || dirty} onChange={(event) => toggleFeatured(event.target.checked)} /><span><span className="block font-medium">Featured Airport</span><span className="block text-sm text-muted-foreground">Show this Published Airport Page in the homepage and header. No more than six can be selected.</span></span></label></section>}
       <form onSubmit={handleSubmit(submit)} className="space-y-6">
         <section className="space-y-4 rounded-xl border border-border bg-card p-5">
           <div><h3 className="font-semibold">Related destinations</h3><p className="text-sm text-muted-foreground">Only Published Airport Pages can be selected. One relationship supplies both page directions.</p></div>

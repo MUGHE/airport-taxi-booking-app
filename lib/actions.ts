@@ -40,6 +40,7 @@ import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig }
 import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
+import { setAirportFeatured } from "./airport-directory"
 import { publishAdminDestinationPage, restoreAdminDestinationPage } from "./admin-destination-pages"
 
 
@@ -108,6 +109,18 @@ export async function getRelatedDestinationCandidatesAction(pageId?: string) {
   return listPublishedDestinationCandidates(pageId)
 }
 
+export async function setAirportFeaturedAction(pageId: string, featured: boolean) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await setAirportFeatured(pageId, featured)
+  if (result.ok) {
+    revalidatePath("/", "layout")
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
 export async function saveAdminDestinationPageAction(input: SaveAdminDestinationPageInput) {
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await saveAdminDestinationPage(input)
@@ -123,6 +136,7 @@ export async function publishAdminDestinationPageAction(pageId: string, override
   if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
   const result = await publishAdminDestinationPage(pageId, override)
   if (result.ok) {
+    revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${result.slug}`)
     revalidatePath("/sitemap.xml")
