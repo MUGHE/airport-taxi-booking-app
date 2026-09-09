@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, validateDestinationContent, type DestinationContentDocument } from "@/lib/destination-content"
 
 export type AdminDestinationPage = {
   id: string
@@ -20,6 +21,7 @@ export type AdminDestinationPage = {
     seoTitle: string
     metaDescription: string
     h1: string
+    content: DestinationContentDocument
   }
   terminals: AdminTerminal[]
 }
@@ -40,6 +42,7 @@ export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "p
   seoTitle?: string
   metaDescription?: string
   h1?: string
+  content?: DestinationContentDocument
 }
 
 type PageRow = {
@@ -122,7 +125,8 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     draft: {
       seoTitle: draft?.seo_title ?? `${row.display_name} Airport Taxi & Transfers`,
       metaDescription: draft?.meta_description ?? `Fixed-price taxi transfers to and from ${row.display_name} Airport.`,
-      h1: draft?.h1 ?? `${row.display_name} Airport Taxi & Transfers`,
+    h1: draft?.h1 ?? `${row.display_name} Airport Taxi & Transfers`,
+    content: normalizeDestinationContent(draft?.content, draft?.h1 ?? `${row.display_name} Airport Taxi & Transfers`),
     },
     terminals: terminals.sort((a, b) => a.sort_order - b.sort_order).map(toTerminal),
   }
@@ -185,6 +189,8 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
       return "Every Airport Terminal needs valid latitude and longitude values."
     }
   }
+  const contentError = validateDestinationContent(input.content, input.h1?.trim() || `${input.displayName.trim()} Airport Taxi & Transfers`)
+  if (contentError) return contentError
   return null
 }
 
@@ -227,6 +233,7 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
         address: normalized.address,
         latitude: normalized.latitude,
         longitude: normalized.longitude,
+        content_schema_version: DESTINATION_CONTENT_SCHEMA_VERSION,
         updated_at: new Date().toISOString(),
       }).eq("id", pageId).eq("page_type", "airport")
       if (updateError) throw updateError
@@ -243,6 +250,7 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
         address: normalized.address,
         latitude: normalized.latitude,
         longitude: normalized.longitude,
+        content_schema_version: DESTINATION_CONTENT_SCHEMA_VERSION,
       }).select("id").single()
       if (insertError || !data) throw insertError ?? new Error("Airport Page could not be created")
       pageId = data.id
@@ -257,7 +265,7 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       seo_title: normalized.seoTitle?.trim() || `${normalized.displayName} Airport Taxi & Transfers`,
       meta_description: normalized.metaDescription?.trim() || `Fixed-price taxi transfers to and from ${normalized.displayName} Airport.`,
       h1: normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`,
-      content: { heading: normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`, intro: [], benefits: [], faqs: [] },
+      content: normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`),
     }
     let snapshotId = currentPage.current_draft_snapshot_id
     if (snapshotId) {

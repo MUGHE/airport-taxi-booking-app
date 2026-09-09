@@ -38,3 +38,36 @@ test("admin can create an Airport Page draft and reload its identity and termina
   await expect(page.getByLabel("Name")).toHaveValue("Main Terminal")
   await expect(page.getByLabel("Address")).toHaveValue("Browser Test Terminal, UK")
 })
+
+test("admin can compose controlled sections and explicitly save them as a draft", async ({ page }) => {
+  test.skip(
+    process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
+    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+  )
+
+  await page.goto("/admin/login")
+  await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await page.goto("/admin/destination-pages/new")
+
+  await expect(page.getByText("Hero and quote form")).toBeVisible()
+  await expect(page.getByText("Final booking CTA")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Hide" }).first()).toBeDisabled()
+
+  await page.getByLabel("New section type").selectOption("reviews")
+  await page.getByRole("button", { name: "Add section" }).click()
+  const reviews = page.getByText("Verified reviews").last()
+  await expect(reviews).toBeVisible()
+  const reviewsCard = reviews.locator("..").locator("..")
+  await reviewsCard.getByRole("button", { name: "Hide" }).click()
+  await reviewsCard.getByLabel("Content").fill("Verified Heathrow passenger feedback")
+  await page.getByLabel("Hero heading").fill("A saved Heathrow airport transfer draft")
+  await page.getByRole("button", { name: "Save Draft" }).click()
+  await expect(page.getByRole("status")).toHaveText("Draft saved.")
+
+  await page.reload()
+  await expect(page.getByLabel("Hero heading")).toHaveValue("A saved Heathrow airport transfer draft")
+  await expect(page.getByText("Verified reviews").last()).toBeVisible()
+  await expect(page.getByText("Verified reviews").last().locator("..").locator("..")).toContainText("hidden")
+  await expect(page.getByText("Verified Heathrow passenger feedback")).toBeVisible()
+})
