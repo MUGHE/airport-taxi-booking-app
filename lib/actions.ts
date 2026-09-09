@@ -36,6 +36,9 @@ import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from "./fleet"
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
 import { getAdminDestinationPage, listAdminDestinationPages, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
+import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
+import { listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
+import type { CloudinaryImageKind } from "./cloudinary-validation"
 
 
 export interface LoginResult {
@@ -102,6 +105,27 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
     revalidatePath(`/admin/destination-pages/${result.page.id}`)
   }
   return result
+}
+
+export async function getCloudinaryAssetsAction(kind?: CloudinaryImageKind) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  try { return { ok: true as const, assets: await listCloudinaryAssets(kind) } }
+  catch { return { ok: false as const, error: "The image library could not be loaded." } }
+}
+
+export async function requestCloudinaryUploadSignatureAction(kind: CloudinaryImageKind) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (kind !== "hero" && kind !== "content") return { ok: false as const, error: "Unsupported image type." }
+  const config = getCloudinaryConfig()
+  if (!config) return { ok: false as const, error: cloudinaryConfigError() }
+  const timestamp = Math.floor(Date.now() / 1000)
+  const folder = `${config.uploadFolder}/${kind}`
+  return { ok: true as const, cloudName: config.cloudName, apiKey: config.apiKey, timestamp, folder, signature: createCloudinarySignature({ folder, timestamp }, config.apiSecret) }
+}
+
+export async function saveCloudinaryAssetAction(input: Omit<CloudinaryAsset, "id" | "uploadedAt" | "resourceType">) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  return saveCloudinaryAsset(input)
 }
 
 export interface CreateBookingResult {

@@ -33,11 +33,22 @@ export type DestinationSection = {
   title: string
   body: RichTextBlock[]
   fields: Record<string, string>
+  image?: DestinationImageReference
+}
+
+export type DestinationImageReference = {
+  assetId: string
+  publicId: string
+  secureUrl: string
+  width: number
+  height: number
+  format: string
+  altText: string
 }
 
 export type DestinationContentDocument = {
   schemaVersion: number
-  hero: { heading: string; body: RichTextBlock[] }
+  hero: { heading: string; body: RichTextBlock[]; image?: DestinationImageReference }
   sections: DestinationSection[]
   finalCta: { heading: string; body: RichTextBlock[] }
 }
@@ -122,7 +133,7 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
   if (!value || typeof value !== "object") return fallback
   const input = value as Record<string, unknown>
   const rawSections = Array.isArray(input.sections) ? input.sections : []
-  const sections = rawSections.flatMap((item, index) => {
+  const sections: DestinationSection[] = rawSections.flatMap((item, index) => {
     if (!item || typeof item !== "object") return []
     const raw = item as Record<string, unknown>
     if (!isSectionType(raw.type)) return []
@@ -135,6 +146,7 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
       title: safeText(raw.title).trim() || SECTION_LABELS[sectionType],
       body: normalizeBlocks(raw.body),
       fields: raw.fields && typeof raw.fields === "object" ? Object.fromEntries(Object.entries(raw.fields).map(([key, field]) => [key, safeText(field)])) : {},
+      image: raw.image && typeof raw.image === "object" ? normalizeImageReference(raw.image) : undefined,
     }]
   })
   const byType = new Set(sections.map((section) => section.type))
@@ -168,10 +180,17 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
   const finalCta = input.finalCta && typeof input.finalCta === "object" ? input.finalCta as Record<string, unknown> : {}
   return {
     schemaVersion: DESTINATION_CONTENT_SCHEMA_VERSION,
-    hero: { heading: safeText(hero.heading).trim() || fallback.hero.heading, body: normalizeBlocks(hero.body) },
+    hero: { heading: safeText(hero.heading).trim() || fallback.hero.heading, body: normalizeBlocks(hero.body), image: hero.image && typeof hero.image === "object" ? normalizeImageReference(hero.image) : undefined },
     sections,
     finalCta: { heading: safeText(finalCta.heading).trim() || fallback.finalCta.heading, body: normalizeBlocks(finalCta.body) },
   }
+}
+
+function normalizeImageReference(value: object): DestinationImageReference | undefined {
+  const image = value as Record<string, unknown>
+  if ([image.assetId, image.publicId, image.secureUrl, image.altText].some((item) => typeof item !== "string" || !item.trim()) || typeof image.width !== "number" || typeof image.height !== "number" || typeof image.format !== "string") return undefined
+  if (typeof image.secureUrl !== "string" || !image.secureUrl.startsWith("https://")) return undefined
+  return { assetId: image.assetId as string, publicId: image.publicId as string, secureUrl: image.secureUrl as string, width: image.width as number, height: image.height as number, format: image.format as string, altText: image.altText as string }
 }
 
 export function validateDestinationContent(value: unknown, fallbackHeading: string): string | null {

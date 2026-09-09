@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, validateDestinationContent, type DestinationContentDocument } from "@/lib/destination-content"
+import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, validateDestinationContent, type DestinationContentDocument, type DestinationImageReference } from "@/lib/destination-content"
 
 export type AdminDestinationPage = {
   id: string
@@ -202,6 +202,26 @@ function friendlyDatabaseError(error: unknown): string {
   return "The Airport Page could not be saved. Please check the fields and try again."
 }
 
+function imageReferences(content: DestinationContentDocument): DestinationImageReference[] {
+  return [content.hero.image, ...content.sections.map((section) => section.image)].filter((image): image is DestinationImageReference => Boolean(image))
+}
+
+async function validateSavedImages(supabase: SupabaseClient, content: DestinationContentDocument): Promise<string | null> {
+  const references = imageReferences(content)
+  if (!references.length) return null
+  const ids = [...new Set(references.map((image) => image.assetId))]
+  const { data, error } = await supabase.from("cloudinary_media_assets").select("id, public_id, secure_url, width, height, format, alt_text, rights_confirmed").in("id", ids)
+  if (error) return "The selected image could not be verified in the media library."
+  const rows = new Map((data ?? []).map((row) => [row.id as string, row as { id: string; public_id: string; secure_url: string; width: number; height: number; format: string; alt_text: string; rights_confirmed: boolean }]))
+  for (const reference of references) {
+    const row = rows.get(reference.assetId)
+    if (!row || !row.rights_confirmed || row.public_id !== reference.publicId || row.secure_url !== reference.secureUrl || Number(row.width) !== reference.width || Number(row.height) !== reference.height || row.format !== reference.format || row.alt_text !== reference.altText) {
+      return "Select a verified image from the media library before saving this draft."
+    }
+  }
+  return null
+}
+
 export async function saveAdminDestinationPage(input: SaveAdminDestinationPageInput): Promise<{ ok: true; page: AdminDestinationPage } | { ok: false; error: string }> {
   const supabase = getSupabase()
   if (!supabase) return { ok: false, error: "Destination Pages are not connected to the database." }
@@ -219,6 +239,9 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   }
   const error = validationError(normalized)
   if (error) return { ok: false, error }
+  const content = normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`)
+  const imageError = await validateSavedImages(supabase, content)
+  if (imageError) return { ok: false, error: imageError }
 
   let pageId = normalized.id
   try {
@@ -265,7 +288,7 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       seo_title: normalized.seoTitle?.trim() || `${normalized.displayName} Airport Taxi & Transfers`,
       meta_description: normalized.metaDescription?.trim() || `Fixed-price taxi transfers to and from ${normalized.displayName} Airport.`,
       h1: normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`,
-      content: normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`),
+      content,
     }
     let snapshotId = currentPage.current_draft_snapshot_id
     if (snapshotId) {
