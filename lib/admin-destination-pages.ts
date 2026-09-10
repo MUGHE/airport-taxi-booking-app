@@ -6,6 +6,9 @@ import { getPublishBlockers, getPublishWarnings, getWarningSetHash, type Existin
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
+const DUPLICATE_SLUG_ERROR = "That Airport Slug is already in use. Choose a different slug."
+const DUPLICATE_IATA_ERROR = "That IATA code is already in use. Check the airport code."
+
 export type AdminDestinationPage = {
   id: string
   pageType: "airport" | "city_town"
@@ -258,16 +261,25 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
     }
   }
   if (input.relatedDestinations.some((item) => item.pageId === input.id)) return "An Airport Page cannot relate to itself."
-  if (input.relatedDestinations.some((item) => !item.pageId || !item.heading.trim() || !item.description.trim() || !item.reverseHeading.trim() || !item.reverseDescription.trim())) return "Every related destination needs both directional headings and descriptions."
+  if (input.relatedDestinations.some((item) => !item.pageId || !item.heading.trim() || !item.description.trim() || !item.reverseHeading.trim() || !item.reverseDescription.trim())) return "Every Related Route needs both directional headings and descriptions."
   const contentError = validateDestinationContent(input.content, input.h1?.trim() || `${input.displayName.trim()} Airport Taxi & Transfers`)
   if (contentError) return contentError
   return null
 }
 
-function friendlyDatabaseError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error)
-  if (message.includes("destination_pages_slug_key") || message.includes("duplicate key") && message.includes("slug")) return "That Airport Slug is already in use. Choose a different slug."
-  if (message.includes("destination_pages_iata_code_key") || message.includes("duplicate key") && message.includes("iata")) return "That IATA code is already in use. Check the airport code."
+function databaseErrorText(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object") {
+    const databaseError = error as { message?: unknown; details?: unknown; code?: unknown }
+    return [databaseError.message, databaseError.details, databaseError.code].filter((value): value is string => typeof value === "string").join(" ")
+  }
+  return String(error)
+}
+
+export function friendlyDatabaseError(error: unknown): string {
+  const message = databaseErrorText(error)
+  if (message.includes("destination_pages_slug_key") || message.includes("duplicate key") && message.includes("slug")) return DUPLICATE_SLUG_ERROR
+  if (message.includes("destination_pages_iata_code_key") || message.includes("duplicate key") && message.includes("iata")) return DUPLICATE_IATA_ERROR
   if (message.toLowerCase().includes("duplicate key")) return "This airport conflicts with an existing Destination Page. Check the slug and IATA code."
   return "The Airport Page could not be saved. Please check the fields and try again."
 }
@@ -295,9 +307,9 @@ async function validateSavedImages(supabase: SupabaseClient, content: Destinatio
 async function validateRelatedDestinations(supabase: SupabaseClient, input: SaveAdminDestinationPageInput): Promise<string | null> {
   if (!input.relatedDestinations.length) return null
   const ids = input.relatedDestinations.map((item) => item.pageId)
-  if (new Set(ids).size !== ids.length) return "Each related destination can be selected only once."
+  if (new Set(ids).size !== ids.length) return "Each Related Route can be selected only once."
   const { data, error } = await supabase.from("destination_pages").select("id").in("id", ids).eq("page_type", "airport").eq("lifecycle_state", "published")
-  if (error || (data ?? []).length !== ids.length) return "Related destinations must be Published Airport Pages."
+  if (error || (data ?? []).length !== ids.length) return "Related Routes must connect Published Airport Pages."
   return null
 }
 
@@ -318,6 +330,14 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   }
   const error = validationError(normalized)
   if (error) return { ok: false, error }
+  const [{ data: duplicateSlugs, error: duplicateSlugError }, { data: duplicateIataCodes, error: duplicateIataError }] = await Promise.all([
+    supabase.from("destination_pages").select("id").eq("slug", normalized.slug),
+    supabase.from("destination_pages").select("id").eq("iata_code", normalized.iataCode),
+  ])
+  if (duplicateSlugError) return { ok: false, error: friendlyDatabaseError(duplicateSlugError) }
+  if (duplicateIataError) return { ok: false, error: friendlyDatabaseError(duplicateIataError) }
+  if (duplicateSlugs?.some((row) => row.id !== normalized.id)) return { ok: false, error: DUPLICATE_SLUG_ERROR }
+  if (duplicateIataCodes?.some((row) => row.id !== normalized.id)) return { ok: false, error: DUPLICATE_IATA_ERROR }
   const content = normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`)
   const reusableContentError = await validateReusableContent(content)
   if (reusableContentError) return { ok: false, error: reusableContentError }
@@ -460,14 +480,14 @@ export async function setAdminBookingAvailability(pageId: string, available: boo
 async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
   const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }] = await Promise.all([
     supabase.from("destination_pages").select("id, slug, iata_code, lifecycle_state").eq("page_type", "airport").neq("lifecycle_state", "archived"),
-    supabase.from("destination_page_snapshots").select("page_id, snapshot_kind, meta_description, content").in("snapshot_kind", ["draft", "published"]),
+    supabase.from("destination_page_snapshots").select("page_id, snapshot_kind, seo_title, meta_description, content").in("snapshot_kind", ["draft", "published"]),
   ])
   if (pageError || snapshotError) throw pageError ?? snapshotError
   const pageRows = (pages ?? []) as { id: string; slug: string; iata_code: string }[]
-  const snapshotRows = (snapshots ?? []) as { page_id: string; snapshot_kind: "draft" | "published"; meta_description: string; content: unknown }[]
+  const snapshotRows = (snapshots ?? []) as { page_id: string; snapshot_kind: "draft" | "published"; seo_title: string; meta_description: string; content: unknown }[]
   return pageRows.flatMap((page) => snapshotRows.filter((snapshot) => snapshot.page_id === page.id).map((snapshot) => {
     const content = normalizeDestinationContent(snapshot.content, `${page.slug} Airport Taxi`)
-    return { id: page.id, slug: page.slug, iataCode: page.iata_code, metaDescription: snapshot.meta_description, content, heroImageAssetId: content.hero.image?.assetId }
+    return { id: page.id, slug: page.slug, iataCode: page.iata_code, seoTitle: snapshot.seo_title, metaDescription: snapshot.meta_description, content, heroImageAssetId: content.hero.image?.assetId }
   }))
 }
 

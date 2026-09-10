@@ -9,16 +9,46 @@ import { Button } from "@/components/ui/button"
 import type { AirportPagePresentation } from "@/lib/airport-page-data"
 import { formatCurrency } from "@/lib/fleet"
 import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
-import type { RichTextBlock } from "@/lib/destination-content"
+import type { RichTextBlock, TiptapNode, TiptapDocument } from "@/lib/destination-content"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
 import { ResilientImage } from "@/components/airport-page/resilient-image"
 
-function RichText({ blocks }: { blocks: RichTextBlock[] }) {
+function safeNewTabProps(href: string) {
+  return href.startsWith("https://") ? { target: "_blank" as const, rel: "noopener noreferrer" } : {}
+}
+
+function InlineNode({ node }: { node: TiptapNode }) {
+  if (node.type === "text") {
+    let result: React.ReactNode = node.text
+    for (const mark of node.marks ?? []) {
+      if (mark.type === "bold") result = <strong>{result}</strong>
+      if (mark.type === "link" && typeof mark.attrs?.href === "string") result = <Link className="text-primary underline" href={mark.attrs.href} {...safeNewTabProps(mark.attrs.href)}>{result}</Link>
+    }
+    return result
+  }
+  return <>{(node.content ?? []).map((child, index) => <InlineNode key={`${child.type}-${index}`} node={child} />)}</>
+}
+
+function TiptapRichText({ document }: { document: TiptapDocument }) {
+  function renderNode(node: TiptapNode, index: number): React.ReactNode {
+    const content = (node.content ?? []).map((child, childIndex) => renderNode(child, childIndex))
+    if (node.type === "paragraph") return <p key={index} className="leading-relaxed"><InlineNode node={node} /></p>
+    if (node.type === "heading") return <h3 key={index} className="font-semibold text-foreground"><InlineNode node={node} /></h3>
+    if (node.type === "bulletList") return <ul key={index} className="ml-5 list-disc">{content}</ul>
+    if (node.type === "orderedList") return <ol key={index} className="ml-5 list-decimal">{content}</ol>
+    if (node.type === "listItem") return <li key={index}>{content}</li>
+    return null
+  }
+  return <div className="space-y-3 text-left text-muted-foreground">{document.content.map(renderNode)}</div>
+}
+
+function RichText({ blocks, document }: { blocks: RichTextBlock[]; document?: TiptapDocument }) {
+  if (document) return <TiptapRichText document={document} />
   return <div className="space-y-3 text-left text-muted-foreground">{blocks.map((block, index) => {
-    if (block.type === "link" && block.href) return <Link key={`${block.text}-${index}`} className="block text-primary underline" href={block.href}>{block.label || block.text}</Link>
+    if (block.type === "link" && block.href) return <Link key={`${block.text}-${index}`} className="block text-primary underline" href={block.href} {...safeNewTabProps(block.href)}>{block.label || block.text}</Link>
     if (block.type === "heading") return <h3 key={`${block.text}-${index}`} className="font-semibold text-foreground">{block.text}</h3>
     if (block.type === "bold") return <p key={`${block.text}-${index}`} className="font-semibold text-foreground">{block.text}</p>
-    if (block.type === "list") return <li key={`${block.text}-${index}`} className="ml-5 list-disc">{block.text}</li>
+    if (block.type === "list") return block.listStyle === "ordered" ? <ol key={`${block.text}-${index}`} className="ml-5 list-decimal"><li>{block.text}</li></ol> : <ul key={`${block.text}-${index}`} className="ml-5 list-disc"><li>{block.text}</li></ul>
     return <p key={`${block.text}-${index}`} className="leading-relaxed">{block.text}</p>
   })}</div>
 }
@@ -44,7 +74,7 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
                 className="[&_span]:text-background/90 [&_svg]:text-background/40 [&_a]:text-background/70"
               />
               <h1 className="mt-4 max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">{page.heading}</h1>
-              {page.intro.map((paragraph) => <p key={paragraph} className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-background/80">{paragraph}</p>)}
+              {page.introDocument ? <div className="mt-4 max-w-2xl text-background/80"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-background/80">{paragraph}</p>)}
               <AirportQuoteActions page={page} onDarkBackground />
             </div>
           </div>
@@ -60,7 +90,7 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
           <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
             {page.heading}
           </h1>
-          {page.intro.map((paragraph) => (
+          {page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.map((paragraph) => (
             <p key={paragraph} className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">
               {paragraph}
             </p>
@@ -72,7 +102,7 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
           <div className="rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.title}</h2>
             {section.image && <ResilientImage className="mt-6 aspect-video max-h-80 w-full rounded-xl object-cover" src={section.image.secureUrl} alt={section.image.altText} />}
-            <div className="mt-5"><RichText blocks={section.body} /></div>
+            <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>
             {section.type === "airport_guide" && <div className="mt-6 grid gap-4 sm:grid-cols-2">{Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim()).map(([key, value]) => <div key={key}><h3 className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1")}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{value}</p></div>)}</div>}
             {section.type === "map" && page.mapLocation && <AirportMapPreview location={page.mapLocation} />}
           </div>
@@ -95,7 +125,7 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
           </div>
         )}
 
-        {page.relatedDestinations.length > 0 && <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16"><h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Related destinations</h2><div className="mt-8 grid gap-5 sm:grid-cols-2">{page.relatedDestinations.map((related) => <article key={related.id} className="rounded-2xl border border-border/70 bg-card p-5">{related.image && <ResilientImage className="mb-4 aspect-video w-full rounded-xl object-cover" src={related.image} alt={related.displayName} />}<h3 className="text-xl font-semibold"><Link className="hover:underline" href={related.href}>{related.heading}</Link></h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{related.description}</p><div className="mt-5 flex flex-wrap gap-2"><Button size="sm" nativeButton={false} render={<Link href={related.bookingLinks.toAirport} />}>Get fixed price to {related.displayName}</Button><Button size="sm" variant="outline" nativeButton={false} render={<Link href={related.bookingLinks.fromAirport} />}>From {related.displayName}</Button></div></article>)}</div></div>}
+        {page.relatedDestinations.length > 0 && <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16"><h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Related Routes</h2><div className="mt-8 grid gap-5 sm:grid-cols-2">{page.relatedDestinations.map((related) => <article key={related.id} className="rounded-2xl border border-border/70 bg-card p-5">{related.image && <ResilientImage className="mb-4 aspect-video w-full rounded-xl object-cover" src={related.image} alt={related.displayName} />}<h3 className="text-xl font-semibold"><Link className="hover:underline" href={related.href}>{related.heading}</Link></h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{related.description}</p><div className="mt-5 flex flex-wrap gap-2"><Button size="sm" nativeButton={false} render={<Link href={related.bookingLinks.toAirport} />}>Get fixed price to {related.displayName}</Button><Button size="sm" variant="outline" nativeButton={false} render={<Link href={related.bookingLinks.fromAirport} />}>From {related.displayName}</Button></div></article>)}</div></div>}
 
         {page.serviceFacts.length > 0 && <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
           <div className="mx-auto max-w-2xl text-center"><h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Our service facts</h2></div>
@@ -151,7 +181,7 @@ export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPage
           </div>
         </div>
 
-        <div className="mx-auto max-w-3xl px-4 py-10 text-center lg:py-16"><h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.bookingAvailable === false ? "Need help with your airport transfer?" : page.finalCta.heading}</h2>{page.bookingAvailable === false ? <><p className="mt-3 text-muted-foreground">Online booking is temporarily unavailable. Our team can help with your journey.</p><Button className="mt-6" size="lg" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></> : <RichText blocks={page.finalCta.body} />}</div>
+        <div className="mx-auto max-w-3xl px-4 py-10 text-center lg:py-16"><h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.bookingAvailable === false ? "Need help with your airport transfer?" : page.finalCta.heading}</h2>{page.bookingAvailable === false ? <><p className="mt-3 text-muted-foreground">Online booking is temporarily unavailable. Our team can help with your journey.</p><Button className="mt-6" size="lg" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></> : <RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} />}</div>
         {page.bookingAvailable === false ? <section className="bg-primary py-10 text-center text-primary-foreground"><h2 className="text-2xl font-semibold">Speak to our team</h2><Button className="mt-4" size="lg" variant="secondary" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></section> : <CallToAction />}
       </main>
       <SiteFooter />

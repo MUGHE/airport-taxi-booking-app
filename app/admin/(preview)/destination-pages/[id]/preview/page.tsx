@@ -7,7 +7,7 @@ import { getAdminDestinationPage } from "@/lib/admin-destination-pages"
 
 export const dynamic = "force-dynamic"
 export const metadata: Metadata = {
-  title: "Draft preview",
+  title: "Full Preview",
   robots: { index: false, follow: false, nocache: true },
   alternates: { canonical: null },
 }
