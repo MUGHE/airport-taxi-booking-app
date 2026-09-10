@@ -12,7 +12,7 @@ test("accepts a compliant hero image and signs stable Cloudinary parameters", ()
 test("rejects unsupported formats, oversize files, and invalid hero dimensions", () => {
   expect(validateCloudinaryImage({ ...valid, format: "gif" })).toContain("JPG")
   expect(validateCloudinaryImage({ ...valid, bytes: CLOUDINARY_MAX_IMAGE_BYTES + 1 })).toContain("8 MB")
-  expect(validateCloudinaryImage({ ...valid, width: 1200 })).toContain("1600")
+  expect(validateCloudinaryImage({ ...valid, width: 1200, height: 675 })).toBeNull()
   expect(validateCloudinaryImage({ ...valid, height: 800 })).toContain("16:9")
 })
 

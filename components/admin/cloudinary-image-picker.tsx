@@ -121,7 +121,7 @@ export function CloudinaryImagePicker({ kind, value, onChange }: { kind: Cloudin
   }
 
   return <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
-    <div><p className="font-medium">{kind === "hero" ? "Hero image" : "Content image"}</p><p className="text-xs text-muted-foreground">{kind === "hero" ? "JPG, PNG, WebP, or AVIF · 16:9 · at least 1600 px wide" : "JPG, PNG, WebP, or AVIF · 4:3 or 16:9"} · up to 8 MB</p></div>
+    <div><p className="font-medium">{kind === "hero" ? "Hero image" : "Content image"}</p><p className="text-xs text-muted-foreground">{kind === "hero" ? "JPG, PNG, WebP, or AVIF · 16:9" : "JPG, PNG, WebP, or AVIF · 4:3 or 16:9"} · up to 8 MB</p></div>
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="space-y-1"><Label htmlFor={`${kind}-alt`}>Alt text</Label><Input id={`${kind}-alt`} value={altText} onChange={(event) => setAltText(event.target.value)} placeholder="Describe the airport image" /></div>
       <div className="space-y-1"><Label htmlFor={`${kind}-owner`}>Source / owner</Label><Input id={`${kind}-owner`} value={sourceOwner} onChange={(event) => setSourceOwner(event.target.value)} placeholder="ONE Airport Taxi / photographer" /></div>

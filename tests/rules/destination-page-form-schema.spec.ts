@@ -17,6 +17,21 @@ test("editor schema reports errors against the fields that need attention", () =
   expect(result.success).toBe(false)
   if (result.success) return
   expect(result.error.issues.map((issue) => issue.path[0])).toEqual(expect.arrayContaining([
-    "officialName", "displayName", "iataCode", "serviceArea", "slug", "googlePlaceId", "address",
+    "iataCode", "slug",
   ]))
+})
+
+test("editor schema allows a partial Draft while Publish owns completeness checks", () => {
+  const result = destinationPageEditorSchema.safeParse({
+    officialName: "Glasgow Airport",
+    displayName: "Glasgow Airport Taxi",
+    iataCode: "GLA",
+    serviceArea: "London and surrounding area",
+    slug: "",
+    googlePlaceId: "",
+    address: "",
+    latitude: 0,
+    longitude: 0,
+  })
+  expect(result.success).toBe(true)
 })

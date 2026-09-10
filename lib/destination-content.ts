@@ -23,7 +23,18 @@ export type RichTextBlock = {
   text: string
   href?: string
   label?: string
+  listStyle?: "bullet" | "ordered"
 }
+
+export type TiptapNode = {
+  type: string
+  text?: string
+  attrs?: Record<string, unknown>
+  marks?: { type: string; attrs?: Record<string, unknown> }[]
+  content?: TiptapNode[]
+}
+
+export type TiptapDocument = { type: "doc"; content: TiptapNode[] }
 
 export type DestinationSection = {
   id: string
@@ -32,6 +43,7 @@ export type DestinationSection = {
   required: boolean
   title: string
   body: RichTextBlock[]
+  bodyDocument?: TiptapDocument
   fields: Record<string, string>
   image?: DestinationImageReference
 }
@@ -48,9 +60,9 @@ export type DestinationImageReference = {
 
 export type DestinationContentDocument = {
   schemaVersion: number
-  hero: { heading: string; body: RichTextBlock[]; image?: DestinationImageReference }
+  hero: { heading: string; body: RichTextBlock[]; bodyDocument?: TiptapDocument; image?: DestinationImageReference }
   sections: DestinationSection[]
-  finalCta: { heading: string; body: RichTextBlock[] }
+  finalCta: { heading: string; body: RichTextBlock[]; bodyDocument?: TiptapDocument }
   serviceFacts: import("@/lib/reusable-content").ServiceFact[]
   globalFaqs: import("@/lib/reusable-content").GlobalFaq[]
   airportFaqs: import("@/lib/reusable-content").GlobalFaq[]
@@ -66,6 +78,14 @@ const REQUIRED_SECTION_TYPES = new Set<DestinationSectionType>([
   "map",
 ])
 
+export function isRequiredDestinationSectionType(type: DestinationSectionType): boolean {
+  return REQUIRED_SECTION_TYPES.has(type)
+}
+
+export function isSafeDestinationContentLink(value: unknown): value is string {
+  return typeof value === "string" && (value.startsWith("/") || value.startsWith("https://"))
+}
+
 export const SECTION_LABELS: Record<DestinationSectionType, string> = {
   introduction: "Introduction",
   benefits: "Benefits & service facts",
@@ -79,7 +99,7 @@ export const SECTION_LABELS: Record<DestinationSectionType, string> = {
   faq: "Airport FAQs",
   video: "Approved video",
   map: "Airport map",
-  related_destinations: "Related destinations",
+  related_destinations: "Related Routes",
 }
 
 function makeBlock(text = ""): RichTextBlock[] {
@@ -91,7 +111,7 @@ export function createDestinationSection(type: DestinationSectionType, id = `${t
     id,
     type,
     visible: true,
-    required: REQUIRED_SECTION_TYPES.has(type),
+    required: isRequiredDestinationSectionType(type),
     title: SECTION_LABELS[type],
     body: [],
     fields: type === "airport_guide" ? { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } : {},
@@ -125,11 +145,80 @@ function normalizeBlocks(value: unknown): RichTextBlock[] {
     if (type !== "heading" && type !== "paragraph" && type !== "bold" && type !== "list" && type !== "link") return []
     const text = safeText(block.text).trim()
     if (!text) return []
-    if (type !== "link") return [{ type, text }]
+    if (type !== "link") return [{ type, text, ...(type === "list" && (block.listStyle === "ordered" || block.listStyle === "bullet") ? { listStyle: block.listStyle } : {}) }]
     const href = safeText(block.href).trim()
     const label = safeText(block.label).trim() || text
-    if (!href || (!href.startsWith("/") && !href.startsWith("https://"))) return []
+    if (!isSafeDestinationContentLink(href)) return []
     return [{ type: "link", text, href, label }]
+  })
+}
+
+function normalizeTiptapNode(value: unknown): TiptapNode | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const raw = value as Record<string, unknown>
+  const type = raw.type
+  if (typeof type !== "string" || !["doc", "paragraph", "heading", "text", "bold", "bulletList", "orderedList", "listItem", "link"].includes(type)) return undefined
+  const node: TiptapNode = { type }
+  if (type === "text") {
+    if (typeof raw.text !== "string") return undefined
+    node.text = raw.text
+  }
+  if (type === "heading") {
+    const level = raw.attrs && typeof raw.attrs === "object" && typeof (raw.attrs as Record<string, unknown>).level === "number" ? (raw.attrs as Record<string, unknown>).level as number : 3
+    if (level < 1 || level > 6) return undefined
+    node.attrs = { level }
+  }
+  if (type === "link") {
+    const href = raw.attrs && typeof raw.attrs === "object" ? (raw.attrs as Record<string, unknown>).href : undefined
+    if (!isSafeDestinationContentLink(href)) return undefined
+    node.attrs = { href }
+  }
+  if (Array.isArray(raw.content)) node.content = raw.content.flatMap((child) => { const normalized = normalizeTiptapNode(child); return normalized ? [normalized] : [] })
+  if (Array.isArray(raw.marks)) node.marks = raw.marks.flatMap((mark) => { const normalized = normalizeTiptapNode({ ...mark, content: undefined }); return normalized ? [{ type: normalized.type, attrs: normalized.attrs }] : [] }).filter((mark) => mark.type === "bold" || mark.type === "link")
+  return node
+}
+
+function normalizeTiptapDocument(value: unknown): TiptapDocument | undefined {
+  const normalized = normalizeTiptapNode(value)
+  return normalized?.type === "doc" ? { type: "doc", content: normalized.content ?? [] } : undefined
+}
+
+export function blocksToTiptapDocument(blocks: RichTextBlock[]): TiptapDocument {
+  return {
+    type: "doc",
+    content: blocks.map((block) => {
+      const textNode: TiptapNode = { type: "text", text: block.text }
+      if (block.type === "heading") return { type: "heading", attrs: { level: 3 }, content: [textNode] }
+      if (block.type === "bold") return { type: "paragraph", content: [{ ...textNode, marks: [{ type: "bold" }] }] }
+      if (block.type === "link") return { type: "paragraph", content: [{ ...textNode, marks: [{ type: "link", attrs: { href: block.href || "/book" } }] }] }
+      if (block.type === "list") return { type: block.listStyle === "ordered" ? "orderedList" : "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [textNode] }] }] }
+      return { type: "paragraph", content: [textNode] }
+    }),
+  }
+}
+
+function nodeText(node: TiptapNode): string {
+  return node.text ?? (node.content ?? []).map(nodeText).join("")
+}
+
+function nodeMarks(node: TiptapNode, type: string) {
+  return (node.marks ?? []).filter((mark) => mark.type === type)
+}
+
+export function tiptapDocumentToBlocks(document: TiptapDocument): RichTextBlock[] {
+  return document.content.flatMap((node): RichTextBlock[] => {
+    if (node.type === "heading") return [{ type: "heading" as const, text: nodeText(node) }]
+    if (node.type === "bulletList" || node.type === "orderedList") {
+      return (node.content ?? []).map((item) => ({ type: "list" as const, text: nodeText(item), listStyle: node.type === "orderedList" ? "ordered" as const : "bullet" as const }))
+    }
+    if (node.type !== "paragraph") return []
+    const text = nodeText(node)
+    if (!text.trim()) return []
+    const textNodes = (node.content ?? []).filter((item) => item.type === "text")
+    const link = textNodes.flatMap((item) => nodeMarks(item, "link")).find((mark) => typeof mark.attrs?.href === "string")
+    if (link?.attrs?.href) return [{ type: "link" as const, text, href: link.attrs.href as string, label: text }]
+    if (textNodes.length > 0 && textNodes.every((item) => nodeMarks(item, "bold").length > 0)) return [{ type: "bold" as const, text }]
+    return [{ type: "paragraph" as const, text }]
   })
 }
 
@@ -147,9 +236,10 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
       id: safeText(raw.id).trim() || `${sectionType}-${index + 1}`,
       type: sectionType,
       visible: raw.visible !== false,
-      required: REQUIRED_SECTION_TYPES.has(sectionType),
+      required: isRequiredDestinationSectionType(sectionType),
       title: safeText(raw.title).trim() || SECTION_LABELS[sectionType],
       body: normalizeBlocks(raw.body),
+      bodyDocument: normalizeTiptapDocument(raw.bodyDocument),
       fields: raw.fields && typeof raw.fields === "object" ? Object.fromEntries(Object.entries(raw.fields).map(([key, field]) => [key, safeText(field)])) : {},
       image: raw.image && typeof raw.image === "object" ? normalizeImageReference(raw.image) : undefined,
     }]
@@ -185,9 +275,9 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
   const finalCta = input.finalCta && typeof input.finalCta === "object" ? input.finalCta as Record<string, unknown> : {}
   return {
     schemaVersion: DESTINATION_CONTENT_SCHEMA_VERSION,
-    hero: { heading: safeText(hero.heading).trim() || fallback.hero.heading, body: normalizeBlocks(hero.body), image: hero.image && typeof hero.image === "object" ? normalizeImageReference(hero.image) : undefined },
+    hero: { heading: safeText(hero.heading).trim() || fallback.hero.heading, body: normalizeBlocks(hero.body), bodyDocument: normalizeTiptapDocument(hero.bodyDocument), image: hero.image && typeof hero.image === "object" ? normalizeImageReference(hero.image) : undefined },
     sections,
-    finalCta: { heading: safeText(finalCta.heading).trim() || fallback.finalCta.heading, body: normalizeBlocks(finalCta.body) },
+    finalCta: { heading: safeText(finalCta.heading).trim() || fallback.finalCta.heading, body: normalizeBlocks(finalCta.body), bodyDocument: normalizeTiptapDocument(finalCta.bodyDocument) },
     serviceFacts: normalizeReusableItems(input.serviceFacts, "fact"),
     globalFaqs: normalizeReusableItems(input.globalFaqs, "faq"),
     airportFaqs: normalizeReusableItems(input.airportFaqs, "faq"),

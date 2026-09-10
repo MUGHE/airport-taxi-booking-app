@@ -1,6 +1,6 @@
 import type { VehicleClass } from "@/lib/types"
 import type { GlobalFaq, ServiceFact, VerifiedReview } from "@/lib/reusable-content"
-import type { DestinationImageReference, DestinationSection, RichTextBlock } from "@/lib/destination-content"
+import type { DestinationImageReference, DestinationSection, RichTextBlock, TiptapDocument } from "@/lib/destination-content"
 import type { AirportMapLocation } from "@/lib/google-maps-links"
 
 export type AirportPageTerminal = {
@@ -21,6 +21,7 @@ export type AirportPagePresentation = {
   shortName: string
   heading: string
   intro: string[]
+  introDocument?: TiptapDocument
   terminals: AirportPageTerminal[]
   bookingLinks: AirportBookingLinks
   benefits: { title: string; description: string; icon: "fare" | "flight" }[]
@@ -33,14 +34,14 @@ export type AirportPagePresentation = {
   relatedDestinations: { id: string; displayName: string; href: string; heading: string; description: string; image?: string; bookingLinks: AirportBookingLinks }[]
   heroImage?: DestinationImageReference
   sections: AirportPageContentSection[]
-  finalCta: { heading: string; body: RichTextBlock[] }
+  finalCta: { heading: string; body: RichTextBlock[]; bodyDocument?: TiptapDocument }
   mapLocation?: AirportMapLocation
   bookingAvailable?: boolean
 }
 
-export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "fields" | "image">
+export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "bodyDocument" | "fields" | "image">
 
-export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews" | "heroImage" | "sections" | "finalCta">>
+export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "introDocument" | "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews" | "heroImage" | "sections" | "finalCta">>
 
 export function createAirportBookingLinks(
   terminal?: Pick<AirportPageTerminal, "name" | "latitude" | "longitude">,
@@ -97,6 +98,7 @@ export function createPublishedAirportPagePresentation({
     shortName,
     heading: content.heading,
     intro: content.intro,
+    introDocument: content.introDocument,
     terminals,
     bookingLinks: createAirportBookingLinks(terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]),
     benefits: content.benefits,

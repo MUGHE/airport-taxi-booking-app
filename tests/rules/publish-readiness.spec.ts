@@ -13,6 +13,16 @@ function validInput(): PublishReadinessInput {
 }
 
 test("valid content has no publish blockers", () => { expect(getPublishBlockers(validInput())).toEqual([]) })
+
+test("service-area and map errors point to separate editor tabs", () => {
+  const input = validInput()
+  input.serviceArea = ""
+  expect(getPublishBlockers(input).map((item) => item.code)).toContain("missing-service-area")
+
+  input.serviceArea = "London"
+  input.googlePlaceId = ""
+  expect(getPublishBlockers(input).map((item) => item.code)).toContain("incomplete-location")
+})
 test("publish readiness classifies invalid slug, minimum counts, and required content", () => {
   const input = validInput()
   input.slug = "Example Airport"
@@ -26,6 +36,9 @@ test("unsafe and broken links block publication", () => {
   const input = validInput()
   input.content.sections[0].body = [{ type: "link", text: "Bad", href: "javascript:alert(1)", label: "Bad" }]
   expect(getPublishBlockers(input).map((item) => item.code)).toContain("unsafe-link")
+
+  input.content.sections[0].body = [{ type: "link", text: "Old page", href: "/airport-transfers/old-airport-taxi", label: "Old page" }]
+  expect(getPublishBlockers(input).map((item) => item.code)).toContain("broken-internal-link")
 })
 test("duplicate slug, IATA code, or SEO title is a publish blocker", () => {
   const input = validInput()

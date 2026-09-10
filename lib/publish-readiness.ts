@@ -52,7 +52,8 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
   const duplicate = input.existingPages?.find((page) => page.id !== input.id && (page.slug === input.slug || page.iataCode === input.iataCode || (page.seoTitle && page.seoTitle.toLowerCase() === input.seoTitle.trim().toLowerCase())))
   if (duplicate) block("duplicate-value", `The Airport Slug, IATA code, or SEO title conflicts with ${duplicate.slug}.`)
   if (!hasText(input.officialName) || !hasText(input.displayName) || !/^[A-Z]{3}$/.test(input.iataCode.trim())) block("incomplete-identity", "Official name, display name, and a three-letter IATA code are required.")
-  if (!hasText(input.serviceArea) || !hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A service area, Google Place, address, latitude, and longitude are required.")
+  if (!hasText(input.serviceArea)) block("missing-service-area", "A service area is required.")
+  if (!hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A Google Place, address, latitude, and longitude are required.")
   if (!input.terminals.length || input.terminals.some((terminal) => !hasText(terminal.displayName) || !hasText(terminal.address) || !Number.isFinite(terminal.latitude) || !Number.isFinite(terminal.longitude))) block("invalid-terminal", "Every Airport Terminal needs a name, address, and valid coordinates.")
   if (input.terminals.filter((terminal) => terminal.isPrimary).length !== 1) block("missing-primary-terminal", "Exactly one primary Airport Terminal is required.")
 
@@ -79,7 +80,7 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
     for (const link of section.body.filter((item) => item.type === "link")) {
       if (!link.href || (!link.href.startsWith("/") && !link.href.startsWith("https://"))) block("unsafe-link", "Links must use a known internal path or HTTPS.")
       if (link.href?.startsWith("https://") && !hasText(link.label)) block("missing-link-label", "External links need a visible label.")
-      if (link.href?.startsWith("/") && !SAFE_INTERNAL_PATHS.has(link.href) && !link.href.startsWith("/airport-transfers/")) block("broken-internal-link", `The internal link ${link.href} is not a known site path.`)
+      if (link.href?.startsWith("/") && !SAFE_INTERNAL_PATHS.has(link.href)) block("broken-internal-link", `The internal link ${link.href} is not a known site path. Choose a Related Route for another Airport Page.`)
     }
   }
   return blockers

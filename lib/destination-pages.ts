@@ -94,6 +94,7 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
     content: {
       heading: content.hero.heading || page.draft.h1,
       intro: content.hero.body.map((block) => block.text),
+      introDocument: content.hero.bodyDocument,
       benefits: [
         { title: "Fixed, all-inclusive fare", description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.", icon: "fare" },
         { title: "Flight tracking & meet & greet", description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.", icon: "flight" },

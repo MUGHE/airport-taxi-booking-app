@@ -25,7 +25,6 @@ export function validateCloudinaryImage(metadata: CloudinaryImageMetadata): stri
   if (!Number.isInteger(metadata.width) || !Number.isInteger(metadata.height) || metadata.width <= 0 || metadata.height <= 0) return "The image dimensions could not be verified."
   const ratio = metadata.width / metadata.height
   if (metadata.kind === "hero") {
-    if (metadata.width < 1600) return "Hero images must be at least 1600 pixels wide."
     if (Math.abs(ratio - 16 / 9) > 0.02) return "Hero images must use a 16:9 shape."
   } else if (Math.abs(ratio - 4 / 3) > 0.02 && Math.abs(ratio - 16 / 9) > 0.02) {
     return "Content images must use a 4:3 or 16:9 shape."
