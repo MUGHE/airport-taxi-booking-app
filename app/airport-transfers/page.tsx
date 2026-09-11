@@ -8,6 +8,7 @@ import { ServiceStrip } from "@/components/airport-transfers/service-strip"
 import { FleetGuidance } from "@/components/airport-transfers/fleet-guidance"
 import { AirportTransferFaq } from "@/components/airport-transfers/faq"
 import { getStopPricing } from "@/lib/actions"
+import { listPublishedAirportDirectory } from "@/lib/airport-directory"
 
 export const metadata: Metadata = {
   title: "Airport Transfers",
@@ -18,13 +19,14 @@ export const metadata: Metadata = {
 
 export default async function AirportTransfersHubPage() {
   const stopPricing = await getStopPricing()
+  const airports = await listPublishedAirportDirectory()
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="flex-1">
         <AirportTransfersHero stopPricing={stopPricing} />
-        <AirportGrid />
+        <AirportGrid airports={airports} />
         <ServiceStrip />
         <FleetGuidance />
         <AirportTransferFaq />

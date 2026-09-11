@@ -6,6 +6,7 @@ import { LoginForm } from "@/components/admin/login-form"
 export const metadata: Metadata = {
   title: "Admin Sign In",
   robots: { index: false, follow: false },
+  alternates: { canonical: null },
 }
 
 export default function AdminLoginPage() {

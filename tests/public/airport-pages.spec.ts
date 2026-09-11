@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test"
 
 const airportPages = [
-  ["heathrow", "Heathrow Airport Taxi & Transfers", "Heathrow"],
-  ["gatwick", "Gatwick Airport Taxi & Transfers", "Gatwick"],
-  ["stansted", "Stansted Airport Taxi & Transfers", "Stansted"],
-  ["luton", "Luton Airport Taxi & Transfers", "Luton"],
-  ["london-city", "London City Airport Taxi & Transfers", "London City"],
-  ["southend", "Southend Airport Taxi & Transfers", "Southend"],
+  ["heathrow-airport-taxi", "Heathrow Airport Taxi & Transfers", "Heathrow"],
+  ["gatwick-airport-taxi", "Gatwick Airport Taxi & Transfers", "Gatwick"],
+  ["stansted-airport-taxi", "Stansted Airport Taxi & Transfers", "Stansted"],
+  ["luton-airport-taxi", "Luton Airport Taxi & Transfers", "Luton"],
+  ["london-city-airport-taxi", "London City Airport Taxi & Transfers", "London City"],
+  ["southend-airport-taxi", "Southend Airport Taxi & Transfers", "Southend"],
 ] as const
 
 for (const [slug, heading, shortName] of airportPages) {
@@ -22,7 +22,8 @@ for (const [slug, heading, shortName] of airportPages) {
     await expect(page.getByRole("heading", { name: "Ready when your flight lands" })).toBeVisible()
     await expect(page.getByText(`Get a fixed price to ${shortName}`)).toBeVisible()
     await expect(page.getByText(`${shortName} to your destination`)).toBeVisible()
-    await expect(page.locator('a[href*="dropoffAddress"]')).toHaveAttribute("href", /\/book\?dropoffAddress=/)
-    await expect(page.locator('a[href*="pickupAddress"]')).toHaveAttribute("href", /\/book\?pickupAddress=/)
+    await expect(page.getByRole("button", { name: `Get a fixed price to ${shortName}` })).toHaveAttribute("href", /\/book\?dropoffAddress=/)
+    await expect(page.getByRole("button", { name: `${shortName} to your destination` })).toHaveAttribute("href", /\/book\?pickupAddress=/)
+    expect((await page.locator('script[type="application/ld+json"]').allTextContents()).join(" ")).not.toMatch(/aggregateRating|reviewRating|ratingValue/i)
   })
 }
