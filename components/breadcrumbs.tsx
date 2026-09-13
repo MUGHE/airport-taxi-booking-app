@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { SITE_URL } from "@/lib/site"
+import { serializeJsonLd } from "@/lib/json-ld"
 import { cn } from "@/lib/utils"
 
 export type BreadcrumbItem = {
@@ -54,7 +55,7 @@ export function Breadcrumbs({ items, className }: { items: BreadcrumbItem[]; cla
       </nav>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
       />
     </>
   )

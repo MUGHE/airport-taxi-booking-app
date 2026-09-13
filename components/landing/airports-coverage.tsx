@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { AIRPORT_PAGES } from "@/lib/airport-content"
+import { listFeaturedAirports } from "@/lib/airport-directory"
 
-export function AirportsCoverage() {
+export async function AirportsCoverage() {
+  const airports = await listFeaturedAirports()
   return (
     <section className="mx-auto max-w-6xl px-4 py-16 lg:py-24">
       <div className="mx-auto max-w-2xl text-center">
@@ -15,17 +16,18 @@ export function AirportsCoverage() {
       </div>
 
       <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {AIRPORT_PAGES.map((airport) => (
+        {airports.map((airport) => (
           <Link
             key={airport.slug}
             href={`/airport-transfers/${airport.slug}`}
             className="hover-lift group flex items-center justify-between rounded-xl border border-border/70 bg-card px-5 py-4 transition-colors hover:border-primary/40"
           >
-            <span className="font-medium">{airport.name}</span>
+            <span className="font-medium">{airport.displayName}</span>
             <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
         ))}
       </div>
+      <div className="mt-8 text-center"><Link href="/airport-transfers" className="text-sm font-medium text-primary underline-offset-4 hover:underline">View all airports</Link></div>
     </section>
   )
 }

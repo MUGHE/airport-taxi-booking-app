@@ -35,6 +35,14 @@ import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from "./fleet"
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
+import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
+import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
+import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
+import type { CloudinaryImageKind } from "./cloudinary-validation"
+import { listPublishedDestinationCandidates } from "./related-destinations"
+import { setAirportFeatured } from "./airport-directory"
+import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability } from "./admin-destination-pages"
+import { invalidateSafePublishedAirportPageCache } from "./public-airport-page-cache"
 
 
 export interface LoginResult {
@@ -80,6 +88,146 @@ export async function logoutAdmin(): Promise<void> {
  */
 export async function pingAdminSession(): Promise<boolean> {
   return isAdminAuthenticated()
+}
+
+export async function getAdminDestinationPages() {
+  if (!(await isAdminAuthenticated())) return []
+  return listAdminDestinationPages()
+}
+
+export async function getAdminDestinationPageById(id: string) {
+  if (!(await isAdminAuthenticated())) return null
+  return getAdminDestinationPage(id)
+}
+
+export async function getReusableDestinationContentAction() {
+  if (!(await isAdminAuthenticated())) return { serviceFacts: [], globalFaqs: [], reviews: [] }
+  return listReusableDestinationContent()
+}
+
+export async function getRelatedDestinationCandidatesAction(pageId?: string) {
+  if (!(await isAdminAuthenticated())) return []
+  return listPublishedDestinationCandidates(pageId)
+}
+
+export async function setAirportFeaturedAction(pageId: string, featured: boolean) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await setAirportFeatured(pageId, featured)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/", "layout")
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function saveAdminDestinationPageAction(input: SaveAdminDestinationPageInput) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await saveAdminDestinationPage(input)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/admin/destination-pages")
+    revalidatePath("/admin/destination-pages/new")
+    revalidatePath(`/admin/destination-pages/${result.page.id}`)
+  }
+  return result
+}
+
+export async function publishAdminDestinationPageAction(pageId: string, override?: import("./admin-destination-pages").PublishOverride) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await publishAdminDestinationPage(pageId, override)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/", "layout")
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath(`/airport-transfers/${result.slug}`)
+    revalidatePath("/sitemap.xml")
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function restoreAdminDestinationPageAction(pageId: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await restoreAdminDestinationPage(pageId)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function deleteAdminDestinationDraftAction(pageId: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await deleteAdminDestinationDraft(pageId)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function archiveAdminDestinationPageAction(pageId: string, replacementSlug: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await archiveAdminDestinationPage(pageId, replacementSlug)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/", "layout")
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/sitemap.xml")
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function setAdminBookingAvailabilityAction(pageId: string, available: boolean) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await setAdminBookingAvailability(pageId, available)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath(`/airport-transfers/${pageId}`)
+    revalidatePath("/admin/destination-pages")
+    revalidatePath(`/admin/destination-pages/${pageId}`)
+  }
+  return result
+}
+
+export async function getCloudinaryAssetsAction(kind?: CloudinaryImageKind) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  try {
+    const [assets, usage] = await Promise.all([listCloudinaryAssets(kind), listCloudinaryAssetUsage()])
+    return { ok: true as const, assets, usage: Object.fromEntries(usage) }
+  }
+  catch { return { ok: false as const, error: "The image library could not be loaded." } }
+}
+
+export async function deleteCloudinaryAssetAction(assetId: string, confirmed: boolean) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await deleteCloudinaryAsset(assetId, confirmed)
+  if (result.ok) revalidatePath("/admin/media-library")
+  return result
+}
+
+export async function requestCloudinaryUploadSignatureAction(kind: CloudinaryImageKind) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (kind !== "hero" && kind !== "content") return { ok: false as const, error: "Unsupported image type." }
+  const config = getCloudinaryConfig()
+  if (!config) return { ok: false as const, error: cloudinaryConfigError() }
+  const timestamp = Math.floor(Date.now() / 1000)
+  const folder = `${config.uploadFolder}/${kind}`
+  return { ok: true as const, cloudName: config.cloudName, apiKey: config.apiKey, timestamp, folder, signature: createCloudinarySignature({ folder, timestamp }, config.apiSecret) }
+}
+
+export async function saveCloudinaryAssetAction(input: Omit<CloudinaryAsset, "id" | "uploadedAt" | "resourceType">) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  return saveCloudinaryAsset(input)
 }
 
 export interface CreateBookingResult {
