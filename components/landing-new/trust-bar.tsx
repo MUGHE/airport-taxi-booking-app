@@ -10,16 +10,17 @@ const ITEMS = [
 
 export function TrustBar() {
   return (
-    <section className="border-y border-border/60 bg-card/60">
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:grid-cols-3 lg:grid-cols-5">
-        {ITEMS.map((item) => (
-          <div key={item.title} className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <item.icon className="size-4.5" />
+    <section className="landing-trust" aria-label="Why book with us">
+      <div className="landing-container landing-trust-grid">
+        {ITEMS.map((item, index) => (
+          <div key={item.title} className="landing-trust-item">
+            <span className="landing-trust-icon">
+              <item.icon aria-hidden="true" />
             </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold">{item.title}</p>
-              <p className="truncate text-xs text-muted-foreground">{item.text}</p>
+            <div>
+              <small>{String(index + 1).padStart(2, "0")}</small>
+              <strong>{item.title}</strong>
+              <p>{item.text}</p>
             </div>
           </div>
         ))}

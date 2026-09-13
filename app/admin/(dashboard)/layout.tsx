@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import { SiteHeader } from "@/components/site-header"
-import { SiteFooter } from "@/components/site-footer"
 import { LogoutButton } from "@/components/admin/logout-button"
 import { AdminNav } from "@/components/admin/admin-nav"
 import { IdleSessionGuard } from "@/components/admin/idle-session-guard"
@@ -33,7 +32,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         <AdminNav />
         <div className="mt-8">{children}</div>
       </main>
-      <SiteFooter />
     </div>
   )
 }

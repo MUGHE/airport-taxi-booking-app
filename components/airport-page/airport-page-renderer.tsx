@@ -1,17 +1,33 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Banknote, PlaneLanding, ShieldCheck } from "lucide-react"
+import {
+  ArrowRight,
+  Banknote,
+  Check,
+  Clock3,
+  Headphones,
+  Luggage,
+  MapPin,
+  Navigation,
+  PlaneLanding,
+  PlaneTakeoff,
+  Quote,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  UsersRound,
+} from "lucide-react"
+import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
+import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
+import { ResilientImage } from "@/components/airport-page/resilient-image"
 import { Breadcrumbs } from "@/components/breadcrumbs"
-import { CallToAction } from "@/components/landing/cta"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
+import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import type { AirportPagePresentation } from "@/lib/airport-page-data"
+import type { AirportPageContentSection, AirportPagePresentation } from "@/lib/airport-page-data"
+import type { RichTextBlock, TiptapDocument, TiptapNode } from "@/lib/destination-content"
 import { formatCurrency } from "@/lib/fleet"
-import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
-import type { RichTextBlock, TiptapNode, TiptapDocument } from "@/lib/destination-content"
-import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
-import { ResilientImage } from "@/components/airport-page/resilient-image"
 
 function safeNewTabProps(href: string) {
   return href.startsWith("https://") ? { target: "_blank" as const, rel: "noopener noreferrer" } : {}
@@ -22,7 +38,9 @@ function InlineNode({ node }: { node: TiptapNode }) {
     let result: React.ReactNode = node.text
     for (const mark of node.marks ?? []) {
       if (mark.type === "bold") result = <strong>{result}</strong>
-      if (mark.type === "link" && typeof mark.attrs?.href === "string") result = <Link className="text-primary underline" href={mark.attrs.href} {...safeNewTabProps(mark.attrs.href)}>{result}</Link>
+      if (mark.type === "link" && typeof mark.attrs?.href === "string") {
+        result = <Link className="font-semibold text-primary underline decoration-primary/30 underline-offset-4" href={mark.attrs.href} {...safeNewTabProps(mark.attrs.href)}>{result}</Link>
+      }
     }
     return result
   }
@@ -32,159 +50,178 @@ function InlineNode({ node }: { node: TiptapNode }) {
 function TiptapRichText({ document }: { document: TiptapDocument }) {
   function renderNode(node: TiptapNode, index: number): React.ReactNode {
     const content = (node.content ?? []).map((child, childIndex) => renderNode(child, childIndex))
-    if (node.type === "paragraph") return <p key={index} className="leading-relaxed"><InlineNode node={node} /></p>
-    if (node.type === "heading") return <h3 key={index} className="font-semibold text-foreground"><InlineNode node={node} /></h3>
-    if (node.type === "bulletList") return <ul key={index} className="ml-5 list-disc">{content}</ul>
-    if (node.type === "orderedList") return <ol key={index} className="ml-5 list-decimal">{content}</ol>
+    if (node.type === "paragraph") return <p key={index} className="leading-7"><InlineNode node={node} /></p>
+    if (node.type === "heading") return <h3 key={index} className="text-lg font-semibold text-foreground"><InlineNode node={node} /></h3>
+    if (node.type === "bulletList") return <ul key={index} className="airport-rich-list">{content}</ul>
+    if (node.type === "orderedList") return <ol key={index} className="airport-rich-list list-decimal">{content}</ol>
     if (node.type === "listItem") return <li key={index}>{content}</li>
     return null
   }
-  return <div className="space-y-3 text-left text-muted-foreground">{document.content.map(renderNode)}</div>
+  return <div className="space-y-4 text-left text-muted-foreground">{document.content.map(renderNode)}</div>
 }
 
 function RichText({ blocks, document }: { blocks: RichTextBlock[]; document?: TiptapDocument }) {
   if (document) return <TiptapRichText document={document} />
-  return <div className="space-y-3 text-left text-muted-foreground">{blocks.map((block, index) => {
-    if (block.type === "link" && block.href) return <Link key={`${block.text}-${index}`} className="block text-primary underline" href={block.href} {...safeNewTabProps(block.href)}>{block.label || block.text}</Link>
-    if (block.type === "heading") return <h3 key={`${block.text}-${index}`} className="font-semibold text-foreground">{block.text}</h3>
+  return <div className="space-y-4 text-left text-muted-foreground">{blocks.map((block, index) => {
+    if (block.type === "link" && block.href) return <Link key={`${block.text}-${index}`} className="block font-semibold text-primary underline decoration-primary/30 underline-offset-4" href={block.href} {...safeNewTabProps(block.href)}>{block.label || block.text}</Link>
+    if (block.type === "heading") return <h3 key={`${block.text}-${index}`} className="text-lg font-semibold text-foreground">{block.text}</h3>
     if (block.type === "bold") return <p key={`${block.text}-${index}`} className="font-semibold text-foreground">{block.text}</p>
-    if (block.type === "list") return block.listStyle === "ordered" ? <ol key={`${block.text}-${index}`} className="ml-5 list-decimal"><li>{block.text}</li></ol> : <ul key={`${block.text}-${index}`} className="ml-5 list-disc"><li>{block.text}</li></ul>
-    return <p key={`${block.text}-${index}`} className="leading-relaxed">{block.text}</p>
+    if (block.type === "list") return block.listStyle === "ordered" ? <ol key={`${block.text}-${index}`} className="airport-rich-list list-decimal"><li>{block.text}</li></ol> : <ul key={`${block.text}-${index}`} className="airport-rich-list"><li>{block.text}</li></ul>
+    return <p key={`${block.text}-${index}`} className="leading-7">{block.text}</p>
   })}</div>
 }
 
-export function AirportPageRenderer({ page, canonicalPath }: { page: AirportPagePresentation; canonicalPath?: string }) {
+const sectionLabels: Partial<Record<AirportPageContentSection["type"], string>> = {
+  airport_routes: "Airport connections",
+  city_routes: "City connections",
+  ferry_cruise: "Onward travel",
+  travel_information: "Plan your journey",
+  video: "See the journey",
+}
+
+const storyIcons = [Navigation, PlaneLanding, Luggage, MapPin]
+
+function StorySection({ section, index }: { section: AirportPageContentSection; index: number }) {
+  const Icon = storyIcons[index % storyIcons.length]
+  const reversed = index % 2 === 1
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      <main className="flex-1">
-        {page.heroImage ? <section className="relative overflow-hidden bg-foreground">
-          <div className="absolute inset-0">
-            <ResilientImage className="size-full object-cover object-center" src={page.heroImage.secureUrl} alt={page.heroImage.altText} />
-            <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/30" />
-          </div>
-          <div className="relative mx-auto max-w-6xl px-4 py-12 text-background sm:py-16 lg:py-20">
-            <div className="max-w-3xl">
-              <Breadcrumbs
-                items={[
-                  { label: "Home", href: "/" },
-                  { label: "Airport Transfers", href: "/airport-transfers" },
-                  { label: page.shortName, href: canonicalPath },
-                ]}
-                className="[&_span]:text-background/90 [&_svg]:text-background/40 [&_a]:text-background/70"
-              />
-              <h1 className="mt-4 max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">{page.heading}</h1>
-              {page.introDocument ? <div className="mt-4 max-w-2xl text-background/80"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="mt-4 max-w-2xl text-pretty text-lg leading-relaxed text-background/80">{paragraph}</p>)}
-              <AirportQuoteActions page={page} onDarkBackground />
-            </div>
-          </div>
-        </section> : <div className="mx-auto max-w-3xl px-4 pt-14 pb-4 text-center lg:pt-20">
-          <Breadcrumbs
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Airport Transfers", href: "/airport-transfers" },
-              { label: page.shortName, href: canonicalPath },
-            ]}
-            className="justify-center"
-          />
-          <h1 className="mt-4 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-            {page.heading}
-          </h1>
-          {page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.map((paragraph) => (
-            <p key={paragraph} className="mt-4 text-pretty text-lg leading-relaxed text-muted-foreground">
-              {paragraph}
-            </p>
-          ))}
-          <AirportQuoteActions page={page} />
-        </div>}
-
-        {page.sections.filter((section) => section.visible).map((section) => <section key={section.id} className="mx-auto max-w-5xl px-4 py-10 lg:py-16" data-preview-section={section.type}>
-          <div className="rounded-2xl border border-border/70 bg-card p-6 sm:p-8">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{section.title}</h2>
-            {section.image && <ResilientImage className="mt-6 aspect-video max-h-80 w-full rounded-xl object-cover" src={section.image.secureUrl} alt={section.image.altText} />}
-            <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>
-            {section.type === "airport_guide" && <div className="mt-6 grid gap-4 sm:grid-cols-2">{Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim()).map(([key, value]) => <div key={key}><h3 className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1")}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{value}</p></div>)}</div>}
-            {section.type === "map" && page.mapLocation && <AirportMapPreview location={page.mapLocation} />}
-          </div>
-        </section>)}
-
-        {page.terminals.length > 0 && (
-          <div className="mx-auto max-w-4xl px-4 py-10">
-            <h2 className="text-center text-2xl font-semibold tracking-tight">Terminals we cover</h2>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              {page.terminals.map((terminal) => (
-                <div key={terminal.id} className="rounded-2xl border border-border/70 bg-card p-5">
-                  <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <PlaneLanding className="size-4.5" />
-                  </span>
-                  <p className="mt-3 font-medium">{terminal.name}</p>
-                  <p className="text-sm text-muted-foreground">{terminal.area}</p>
-                </div>
+    <section className={`airport-story ${reversed ? "airport-story-reversed" : ""}`} data-preview-section={section.type}>
+      <div className="airport-container airport-story-grid">
+        <div className="airport-story-copy">
+          <div className="airport-chapter"><span>{String(index + 1).padStart(2, "0")}</span><span>{sectionLabels[section.type] ?? section.type.replace(/_/g, " ")}</span></div>
+          <h2>{section.title}</h2>
+          <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>
+          {Object.entries(section.fields).filter(([, value]) => value.trim()).length > 0 && (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {Object.entries(section.fields).filter(([, value]) => value.trim()).map(([key, value]) => (
+                <div key={key} className="airport-story-note"><Icon aria-hidden="true" /><div><h3>{key.replace(/([A-Z])/g, " $1")}</h3><p>{value}</p></div></div>
               ))}
             </div>
+          )}
+        </div>
+        {section.image ? (
+          <div className="airport-story-media">
+            <span className="airport-image-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} />
           </div>
+        ) : (
+          <div className="airport-story-placeholder" aria-hidden="true"><Icon /><span>{sectionLabels[section.type] ?? "Airport transfer"}</span></div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function RouteSection({ page, title = "Popular transfer routes" }: { page: AirportPagePresentation; title?: string }) {
+  if (page.relatedDestinations.length === 0) return null
+  return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Keep moving</p><h2>{title}</h2></div><p>Direct airport connections, ready to book.</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card">{related.image ? <ResilientImage className="airport-route-image" src={related.image} alt={related.displayName} /> : <div className="airport-route-image airport-route-placeholder"><Navigation aria-hidden="true" /></div>}<div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{related.heading}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>Get a fixed price <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
+}
+
+function ReviewSection({ page, title = "Verified reviews" }: { page: AirportPagePresentation; title?: string }) {
+  if (page.reviews.length === 0) return null
+  return <section className="airport-reviews" data-preview-section="reviews"><div className="airport-container"><div className="airport-review-heading"><p className="airport-eyebrow">Real journeys</p><h2>{title}</h2><p>Feedback from travellers who booked with us.</p></div><div className="airport-review-grid">{page.reviews.map((review, index) => <blockquote key={review.id} className="airport-review-card"><Quote aria-hidden="true" /><div className="airport-review-stars" aria-hidden="true">{Array.from({ length: 5 }, (_, star) => <Star key={star} />)}</div><p>“{review.quote}”</p><footer><span>{review.author}</span><small><Check aria-hidden="true" /> Verified · {review.source}</small></footer><span className="airport-review-number">{String(index + 1).padStart(2, "0")}</span></blockquote>)}</div></div></section>
+}
+
+function FaqSection({ page, title = "Frequently asked questions" }: { page: AirportPagePresentation; title?: string }) {
+  const airportFaqs = page.airportFaqs.length > 0 ? page.airportFaqs : page.faqs
+  return <section className="airport-faq" data-preview-section="faq"><div className="airport-container airport-faq-grid"><div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2>{title}</h2><p>Clear answers before you travel.</p><Link href="/contact">Still have a question? Talk to us <ArrowRight aria-hidden="true" /></Link></div><Accordion className="airport-faq-list" multiple>{[...page.globalFaqs, ...airportFaqs].map((faq, index) => <AccordionItem key={`${faq.question}-${index}`} value={`faq-${index}`}><AccordionTrigger>{faq.question}</AccordionTrigger><AccordionPanel>{faq.answer}</AccordionPanel></AccordionItem>)}</Accordion></div></section>
+}
+
+function BuilderSection({ section, page, index }: { section: AirportPageContentSection; page: AirportPagePresentation; index: number }) {
+  if (section.type === "introduction") {
+    return <section className="airport-introduction" data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">Your journey, handled</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Plan my transfer <ArrowRight className="size-4" /></Button></div>{section.image && <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" /><span>Door-to-door service<br /><small>Planned around your flight</small></span></div></div>}</div></section>
+  }
+
+  if (section.type === "benefits") {
+    return <section className="airport-benefits" data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">The ONE difference</p><h2>{section.title}</h2></div><p>Calm, dependable travel from booking to drop-off.</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><RichText blocks={section.body} document={section.bodyDocument} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><Sparkles aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div>{page.serviceFacts.length > 0 && <div className="airport-facts-grid airport-benefit-facts">{page.serviceFacts.map((fact, factIndex) => { const icons = [PlaneTakeoff, Clock3, UsersRound, ShieldCheck]; const Icon = icons[factIndex % icons.length]; return <article key={fact.id} className="airport-fact-card"><span className="airport-fact-number">{String(factIndex + 1).padStart(2, "0")}</span><Icon aria-hidden="true" /><h3>{fact.title}</h3><p>{fact.description}</p></article> })}</div>}</div></section>
+  }
+
+  if (section.type === "fleet_pricing") {
+    return <section className="airport-fleet-story" data-preview-section="fleet_pricing"><div className="airport-container airport-fleet-story-grid">{section.image && <div className="airport-fleet-story-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><span>01 — 06</span></div>}<div className="airport-fleet-story-copy"><p className="airport-eyebrow airport-eyebrow-light">Comfort for every group</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><Button className="mt-7" variant="secondary" nativeButton={false} render={<Link href="#vehicles" />}>Explore the fleet <ArrowRight className="size-4" /></Button></div></div></section>
+  }
+
+  if (section.type === "airport_guide") {
+    const guideFields = Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim())
+    return <section className="airport-guide" data-preview-section="airport_guide"><div className="airport-container"><div className="airport-guide-lead"><div><p className="airport-eyebrow">Know before you land</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div></div>{section.image && <div className="airport-guide-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /></div>}</div><div className="airport-guide-grid">{guideFields.map(([key, value], fieldIndex) => { const Icon = storyIcons[fieldIndex % storyIcons.length]; return <article key={key} className="airport-guide-card"><span>{String(fieldIndex + 1).padStart(2, "0")}</span><Icon aria-hidden="true" /><h3>{key.replace(/([A-Z])/g, " $1")}</h3><p>{value}</p></article> })}</div></div></section>
+  }
+
+  if (section.type === "map") {
+    return <section className="airport-map-chapter" data-preview-section="map"><div className="airport-container airport-map-grid"><div><p className="airport-eyebrow airport-eyebrow-light">Meet your driver with confidence</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><div className="airport-map-promise"><Clock3 aria-hidden="true" /><span><strong>Flight-aware pickup</strong><small>Your pickup adjusts when your flight does.</small></span></div></div>{page.mapLocation && <AirportMapPreview location={page.mapLocation} />}</div></section>
+  }
+
+  if (section.type === "reviews") return <ReviewSection page={page} title={section.title} />
+  if (section.type === "related_destinations") return <RouteSection page={page} title={section.title} />
+  if (section.type === "faq") return <FaqSection page={page} title={section.title} />
+  return <StorySection section={section} index={index} />
+}
+
+export function AirportPageRenderer({ page, canonicalPath, showFooter = true }: { page: AirportPagePresentation; canonicalPath?: string; showFooter?: boolean }) {
+  const visibleSections = page.sections.filter((section) => section.visible)
+  const configuredSectionTypes = new Set(page.sections.map((section) => section.type))
+
+  return (
+    <div className="airport-page flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        {page.heroImage ? (
+          <section className="airport-hero">
+            <div className="airport-hero-image"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} /></div>
+            <div className="airport-hero-shade" />
+            <div className="airport-container airport-hero-content">
+              <div className="airport-hero-copy">
+                <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
+                <div className="airport-rating"><ShieldCheck aria-hidden="true" /><span>Professional airport transfers</span></div>
+                <h1>{page.heading}</h1>
+                {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
+                <AirportQuoteActions page={page} onDarkBackground />
+              </div>
+            </div>
+            <div className="airport-trust-rail"><div className="airport-container airport-trust-grid">{[[Banknote, "Fixed fares", "Know the price before you ride"], [PlaneTakeoff, "Flight tracking", "Pickup timed to your arrival"], [Headphones, "Human support", "Help whenever plans change"]].map(([Icon, title, description]) => { const FeatureIcon = Icon as typeof Banknote; return <div key={title as string}><FeatureIcon aria-hidden="true" /><span><strong>{title as string}</strong><small>{description as string}</small></span></div> })}</div></div>
+          </section>
+        ) : (
+          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy"><Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" /><h1>{page.heading}</h1>{page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}<AirportQuoteActions page={page} onDarkBackground /></div></div></section>
         )}
 
-        {page.relatedDestinations.length > 0 && <div className="mx-auto max-w-5xl px-4 py-10 lg:py-16"><h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Related Routes</h2><div className="mt-8 grid gap-5 sm:grid-cols-2">{page.relatedDestinations.map((related) => <article key={related.id} className="rounded-2xl border border-border/70 bg-card p-5">{related.image && <ResilientImage className="mb-4 aspect-video w-full rounded-xl object-cover" src={related.image} alt={related.displayName} />}<h3 className="text-xl font-semibold"><Link className="hover:underline" href={related.href}>{related.heading}</Link></h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{related.description}</p><div className="mt-5 flex flex-wrap gap-2"><Button size="sm" nativeButton={false} render={<Link href={related.bookingLinks.toAirport} />}>Get fixed price to {related.displayName}</Button><Button size="sm" variant="outline" nativeButton={false} render={<Link href={related.bookingLinks.fromAirport} />}>From {related.displayName}</Button></div></article>)}</div></div>}
+        {visibleSections.map((section, index) => <BuilderSection key={section.id} section={section} page={page} index={index} />)}
 
-        {page.serviceFacts.length > 0 && <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
-          <div className="mx-auto max-w-2xl text-center"><h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Our service facts</h2></div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{page.serviceFacts.map((fact) => <div key={fact.id} className="rounded-2xl border border-border/70 bg-card p-5"><h3 className="font-semibold">{fact.title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{fact.description}</p></div>)}</div>
-        </div>}
+        {!configuredSectionTypes.has("benefits") && page.serviceFacts.length > 0 && <section className="airport-facts"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Service, made simple</p><h2>What you can count on</h2></div><p>Practical details that make the journey feel effortless.</p></div><div className="airport-facts-grid">{page.serviceFacts.map((fact, index) => { const icons = [PlaneTakeoff, Clock3, UsersRound, ShieldCheck]; const Icon = icons[index % icons.length]; return <article key={fact.id} className="airport-fact-card"><span className="airport-fact-number">{String(index + 1).padStart(2, "0")}</span><Icon aria-hidden="true" /><h3>{fact.title}</h3><p>{fact.description}</p></article> })}</div></div></section>}
 
-        <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Why book with us</h2>
-          </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2">
-            {page.benefits.map((benefit) => (
-              <div key={benefit.title} className="hover-lift rounded-2xl border border-border/70 bg-card p-5">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  {benefit.icon === "fare" ? <Banknote className="size-5" /> : <ShieldCheck className="size-5" />}
-                </span>
-                <h3 className="mt-4 font-semibold">{benefit.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{benefit.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        {page.terminals.length > 0 && <section className="airport-terminals"><div className="airport-container airport-terminal-grid"><div className="airport-terminal-heading"><p className="airport-eyebrow">Door to terminal</p><h2>Terminals we cover</h2><p>Choose your terminal while booking. We’ll plan the correct pickup point.</p></div><div className="airport-terminal-list">{page.terminals.map((terminal, index) => <div key={terminal.id} className="airport-terminal-card"><span><PlaneLanding aria-hidden="true" /></span><div><small>Terminal {String(index + 1).padStart(2, "0")}</small><h3>{terminal.name}</h3><p>{terminal.area}</p></div>{terminal.isPrimary && <strong>Primary</strong>}</div>)}</div></div></section>}
 
-        <div className="mx-auto max-w-6xl px-4 py-10 lg:py-16">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">Choose your vehicle</h2>
-            <p className="mt-3 text-pretty text-muted-foreground">Fares for {page.shortName} transfers start from:</p>
-          </div>
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {page.vehicles.map((vehicle) => (
-              <div key={vehicle.id} className="hover-lift rounded-2xl border border-border/70 bg-card p-5">
-                <div className="relative aspect-video overflow-hidden rounded-xl bg-secondary/40">
-                  <Image src={vehicle.image} alt={vehicle.name} fill className="object-contain p-4" />
+        {!configuredSectionTypes.has("related_destinations") && <RouteSection page={page} />}
+
+        <section className="airport-confidence-section"><div className="airport-container airport-confidence-grid"><div><p className="airport-eyebrow airport-eyebrow-light">The promise</p><h2>Why book with us</h2></div>{page.benefits.map((benefit) => <div key={benefit.title} className="airport-confidence-item"><span>{benefit.icon === "fare" ? <Banknote aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />}</span><div><h3>{benefit.title}</h3><p>{benefit.description}</p></div></div>)}</div></section>
+
+        <section id="vehicles" className="airport-vehicles"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Your ride</p><h2>Choose your vehicle</h2></div><p>Fares for {page.shortName} transfers start from:</p></div><div className="airport-vehicle-grid">{page.vehicles.map((vehicle, index) => <article key={vehicle.id} className="airport-vehicle-card"><div className="airport-vehicle-top"><span>{String(index + 1).padStart(2, "0")}</span><span><UsersRound aria-hidden="true" /> Chauffeur driven</span></div><div className="airport-vehicle-image"><Image src={vehicle.image} alt={vehicle.name} fill sizes="(min-width: 900px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-contain" /></div><h3>{vehicle.name}</h3><p>{vehicle.description}</p><div className="airport-vehicle-action"><span><small>One way from</small><strong>{formatCurrency(vehicle.minFare)}</strong></span><Button size="sm" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Select <ArrowRight className="size-3.5" /></Button></div></article>)}</div></div></section>
+
+        {!configuredSectionTypes.has("reviews") && <ReviewSection page={page} />}
+        {!configuredSectionTypes.has("faq") && <FaqSection page={page} />}
+
+        <section className="airport-final-wrap">
+          <div className="airport-container">
+            <div className="airport-final-cta">
+              <div className="airport-final-copy">
+                <p className="airport-eyebrow airport-eyebrow-light">{page.shortName} airport transfers</p>
+                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : page.finalCta.heading}</h2>
+                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div>}
+                <div className="airport-final-points">
+                  <span><Check aria-hidden="true" /> Fixed, clear pricing</span>
+                  <span><Check aria-hidden="true" /> Flight-aware pickup</span>
+                  <span><Check aria-hidden="true" /> Professional chauffeur</span>
                 </div>
-                <h3 className="mt-4 font-semibold">{vehicle.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{vehicle.description}</p>
-                <p className="mt-3 text-sm font-medium">From {formatCurrency(vehicle.minFare)}</p>
               </div>
-            ))}
+              <div className="airport-final-action">
+                <span className="airport-final-icon"><PlaneLanding aria-hidden="true" /></span>
+                <h3>Ready when your flight lands</h3>
+                <p>Book in a few minutes. We’ll handle the airport journey.</p>
+                <Button size="lg" variant="secondary" nativeButton={false} render={<Link href={page.bookingAvailable === false ? "/contact" : page.bookingLinks.toAirport} />}>{page.bookingAvailable === false ? "Contact our team" : "Get my fixed price"}<ArrowRight className="size-4" /></Button>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {page.reviews.length > 0 && <div className="mx-auto max-w-4xl px-4 py-10 lg:py-16">
-          <h2 className="text-center text-3xl font-semibold tracking-tight sm:text-4xl">Verified reviews</h2>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2">{page.reviews.map((review) => <blockquote key={review.id} className="rounded-2xl border border-border/70 bg-card p-5"><p className="leading-relaxed">“{review.quote}”</p><footer className="mt-3 text-sm text-muted-foreground">{review.author} · {review.source}</footer></blockquote>)}</div>
-        </div>}
-
-        <div className="mx-auto max-w-3xl px-4 py-10 lg:py-16">
-          <h2 className="text-balance text-center text-3xl font-semibold tracking-tight sm:text-4xl">Frequently asked questions</h2>
-          <div className="mt-8 space-y-8">
-            {page.globalFaqs.length > 0 && <div><p className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">Shared FAQs</p><div className="space-y-6">{page.globalFaqs.map((faq) => <div key={faq.id}><h3 className="font-semibold">{faq.question}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p></div>)}</div></div>}
-            {(page.airportFaqs.length > 0 || page.globalFaqs.length === 0) && <div><p className="mb-4 text-sm font-medium uppercase tracking-wide text-muted-foreground">Airport-specific FAQs</p><div className="space-y-6">{(page.airportFaqs.length > 0 ? page.airportFaqs : page.faqs).map((faq) => <div key={faq.question}><h3 className="font-semibold">{faq.question}</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p></div>)}</div></div>}
-          </div>
-        </div>
-
-        <div className="mx-auto max-w-3xl px-4 py-10 text-center lg:py-16"><h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{page.bookingAvailable === false ? "Need help with your airport transfer?" : page.finalCta.heading}</h2>{page.bookingAvailable === false ? <><p className="mt-3 text-muted-foreground">Online booking is temporarily unavailable. Our team can help with your journey.</p><Button className="mt-6" size="lg" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></> : <RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} />}</div>
-        {page.bookingAvailable === false ? <section className="bg-primary py-10 text-center text-primary-foreground"><h2 className="text-2xl font-semibold">Speak to our team</h2><Button className="mt-4" size="lg" variant="secondary" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></section> : <CallToAction />}
+        </section>
       </main>
-      <SiteFooter />
+      {showFooter && <SiteFooter />}
     </div>
   )
 }

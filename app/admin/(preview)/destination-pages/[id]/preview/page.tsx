@@ -17,5 +17,5 @@ export default async function DraftPreviewPage({ params }: { params: Promise<{ i
   if (!(await isAdminAuthenticated())) redirect(`/admin/login?from=/admin/destination-pages/${id}/preview`)
   const page = await getAdminDestinationPage(id)
   if (!page) notFound()
-  return <AirportPageRenderer page={await createDraftAirportPagePresentation(page)} />
+  return <AirportPageRenderer page={await createDraftAirportPagePresentation(page)} showFooter={false} />
 }

@@ -16,43 +16,34 @@ const AIRPORT_IMAGES: Record<string, string> = {
 export async function AirportsCoverage() {
   const airports = await listFeaturedAirports()
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 lg:py-24">
-      <div className="mx-auto max-w-2xl text-center">
-        <span className="text-xs font-semibold tracking-wide text-primary uppercase">
-          All London airports
-        </span>
-        <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-          Find your airport
-        </h2>
-        <p className="mt-3 text-pretty text-muted-foreground">
-          We provide airport transfers to and from all major London airports.
-        </p>
+    <section className="landing-airports">
+      <div className="landing-container">
+      <div className="landing-section-heading">
+        <div><span className="landing-eyebrow">All London airports</span><h2>Your airport. Your driver. Right on time.</h2></div>
+        <p>Door-to-door transfers across every major London airport and the places beyond.</p>
       </div>
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {airports.map((airport) => (
+      <div className="landing-airport-grid">
+        {airports.map((airport, index) => (
           <Link
             key={airport.slug}
             href={`/airport-transfers/${airport.slug}`}
-            className="hover-lift group overflow-hidden rounded-2xl border border-border/70 bg-card transition-colors hover:border-primary/40"
+            className="landing-airport-card group"
           >
-            <div className="relative aspect-[16/10]">
+            <div className="landing-airport-image absolute inset-0" style={{ position: "absolute" }}>
               <Image src={AIRPORT_IMAGES[airport.slug] ?? "/placeholder.svg"} alt={`${airport.displayName} airport`} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
             </div>
-            <div className="p-4">
-              <p className="font-semibold">
-                {airport.displayName} <span className="text-muted-foreground">({airport.iataCode})</span>
-              </p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Serving {airport.serviceArea}</p>
-              <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary">
-                Get a quote
-                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-              </span>
+            <div className="landing-airport-copy">
+              <small>Airport {String(index + 1).padStart(2, "0")}</small>
+              <h3>{airport.displayName} <span>({airport.iataCode})</span></h3>
+              <p>Serving {airport.serviceArea}</p>
+              <span className="landing-arrow-link">Explore transfers <ArrowRight aria-hidden="true" /></span>
             </div>
           </Link>
         ))}
       </div>
-      <div className="mt-8 text-center"><Link href="/airport-transfers" className="text-sm font-medium text-primary underline-offset-4 hover:underline">View all airports</Link></div>
+      <div className="landing-airports-action"><Link href="/airport-transfers" className="landing-arrow-link">View every airport <ArrowRight aria-hidden="true" /></Link></div>
+      </div>
     </section>
   )
 }

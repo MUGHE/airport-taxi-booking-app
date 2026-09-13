@@ -6,40 +6,40 @@ import { getSitePromotion, getStopPricing } from "@/lib/actions"
 export async function Hero() {
   const [promotion, stopPricing] = await Promise.all([getSitePromotion(), getStopPricing()])
   return (
-    <section className="relative overflow-hidden bg-foreground">
-      <div className="absolute inset-0">
+    <section className="landing-hero">
+      <div className="landing-hero-image absolute inset-0" style={{ position: "absolute" }}>
         <Image
-          src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1600&q=70&auto=format&fit=crop"
-          alt="Airport arrivals hall with travelers"
+          src="/airport-transfers/hero.webp"
+          alt="A professional airport transfer car waiting outside a London terminal"
           fill
           priority
           sizes="100vw"
-          className="object-cover opacity-70"
+          className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/85 to-foreground/40" />
       </div>
+      <div className="landing-hero-shade" />
 
-      <div className="relative mx-auto grid max-w-6xl items-start gap-10 px-4 py-16 lg:grid-cols-2 lg:py-24">
-        <div className="max-w-xl text-background">
-          <span className="text-xs font-semibold tracking-wide text-background/70 uppercase">
+      <div className="landing-container landing-hero-grid">
+        <div className="landing-hero-copy">
+          <span className="landing-eyebrow landing-eyebrow-light">
             London airport transfers
           </span>
-          <h1 className="mt-3 text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-            Your fixed-price airport transfer, ready when you land.
+          <h1>
+            The calmest part of your journey starts here.
           </h1>
-          <p className="mt-4 text-pretty text-lg leading-relaxed text-background/80">
-            Reliable transfers to and from all London airports, with professional
-            licensed chauffeurs, flight tracking and meet &amp; greet.
+          <p className="landing-hero-intro">
+            Fixed-price London airport transfers with a professional chauffeur,
+            live flight tracking, and a welcome waiting at arrivals.
           </p>
 
-          <div className="mt-5 flex items-center gap-2 text-sm">
-            <span className="flex items-center gap-0.5 text-accent">
+          <div className="landing-rating">
+            <span className="flex items-center gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className="size-4 fill-accent" />
+                <Star aria-hidden="true" key={i} className="fill-current" />
               ))}
             </span>
             <span className="font-semibold">Excellent 4.9/5</span>
-            <span className="text-background/60">·</span>
+            <span aria-hidden="true">·</span>
             <a href="#reviews" className="font-medium underline-offset-4 hover:underline">
               Read verified reviews
             </a>
@@ -52,12 +52,13 @@ export async function Hero() {
           )}
         </div>
 
-        <div className="w-full lg:justify-self-end lg:max-w-md">
-          <h2 className="mb-3 text-lg font-semibold text-background">
-            Get your fixed airport-transfer price
-          </h2>
-          <FareEstimator stopPricing={stopPricing} />
-          <p className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-background/70">
+        <div className="landing-quote-wrap">
+          <div className="landing-quote-heading">
+            <span>Plan your transfer</span>
+            <strong>Get your fixed price</strong>
+          </div>
+          <div className="landing-quote-card"><FareEstimator stopPricing={stopPricing} /></div>
+          <p className="landing-quote-notes">
             <span>No account needed</span>
             <span>No surge pricing</span>
             <span>Free flight tracking</span>
