@@ -20,33 +20,28 @@ const STEPS = [
 
 export function ProcessSteps() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 lg:py-24">
-      <div className="mx-auto max-w-2xl text-center">
-        <span className="text-xs font-semibold tracking-wide text-primary uppercase">
+    <section id="how" className="landing-process scroll-mt-20">
+      <div className="landing-container">
+      <div className="landing-section-heading">
+        <div>
+        <span className="landing-eyebrow">
           Simple. Reliable. Stress-free.
         </span>
-        <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-          Book in three simple steps
-        </h2>
+        <h2>From flight details to front door.</h2>
+        </div>
+        <p>Three simple steps. One clear price. No last-minute surprises.</p>
       </div>
 
-      <div className="relative mt-14 grid gap-10 sm:grid-cols-3">
-        <div
-          aria-hidden
-          className="absolute top-6 left-[16.5%] hidden h-px w-[67%] bg-border sm:block"
-        />
+      <div className="landing-process-grid">
         {STEPS.map((step, i) => (
-          <div key={step.title} className="relative flex flex-col items-center text-center">
-            <span className="relative z-10 flex size-12 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
-              {i + 1}
-            </span>
-            <step.icon className="mt-4 size-6 text-primary" />
-            <h3 className="mt-3 font-semibold">{step.title}</h3>
-            <p className="mt-2 max-w-[22ch] text-sm leading-relaxed text-muted-foreground">
-              {step.text}
-            </p>
-          </div>
+          <article key={step.title} className="landing-process-card">
+            <span>{String(i + 1).padStart(2, "0")}</span>
+            <step.icon aria-hidden="true" />
+            <h3>{step.title}</h3>
+            <p>{step.text}</p>
+          </article>
         ))}
+      </div>
       </div>
     </section>
   )

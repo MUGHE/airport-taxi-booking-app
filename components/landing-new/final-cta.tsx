@@ -1,39 +1,32 @@
 import Link from "next/link"
-import { PlaneTakeoff } from "lucide-react"
+import { ArrowRight, Check, PlaneTakeoff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 export function FinalCta() {
   return (
-    <section className="bg-primary text-primary-foreground">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-12 text-center lg:flex-row lg:justify-between lg:text-left">
-        <div className="flex items-center gap-4">
-          <PlaneTakeoff className="size-8 shrink-0 text-primary-foreground/80" />
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              Your journey starts with a fixed price.
-            </h2>
-            <p className="mt-1 text-sm text-primary-foreground/70">
-              Reliable airport transfers across London, 24/7.
-            </p>
+    <section className="landing-final-wrap">
+      <div className="landing-container landing-final-cta">
+        <div className="landing-final-copy">
+          <span className="landing-eyebrow landing-eyebrow-light">Ready when you are</span>
+          <h2>Your journey should feel easy before it even begins.</h2>
+          <p>Book your London airport transfer today and know exactly who is meeting you, where, and for how much.</p>
+          <div className="landing-final-points">
+            <span><Check aria-hidden="true" /> Fixed fare</span>
+            <span><Check aria-hidden="true" /> Flight tracking</span>
+            <span><Check aria-hidden="true" /> 24/7 support</span>
           </div>
         </div>
-        <div className="flex shrink-0 gap-3">
+        <div className="landing-final-action">
+          <span className="landing-final-icon"><PlaneTakeoff aria-hidden="true" /></span>
+          <h3>One less thing to think about.</h3>
+          <p>Enter your route and see your fixed price in moments.</p>
           <Button
             size="lg"
-            variant="secondary"
+            className="bg-white text-[#071d33] hover:bg-sky-50"
             nativeButton={false}
             render={<Link href="/book" />}
           >
-            Get fixed price
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
-            nativeButton={false}
-            render={<Link href="/track" />}
-          >
-            Track Booking
+            Get your fixed price <ArrowRight aria-hidden="true" />
           </Button>
         </div>
       </div>

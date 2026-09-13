@@ -68,7 +68,7 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const [vehicleId, setVehicleId] = useState(params.get("vehicle") || "")
   const [pickupDate, setPickupDate] = useState(params.get("pickupDate") || "")
   const [pickupTime, setPickupTime] = useState(params.get("pickupTime") || "")
-  const [wantsReturn, setWantsReturn] = useState(false)
+  const [wantsReturn, setWantsReturn] = useState(() => params.get("returnTrip") === "1")
   const [returnDate, setReturnDate] = useState("")
   const [returnTime, setReturnTime] = useState("")
   const [returnAddressSame, setReturnAddressSame] = useState(true)

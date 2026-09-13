@@ -25,25 +25,21 @@ const ITEMS = [
 
 export function ConfidenceBanner() {
   return (
-    <section className="bg-primary text-primary-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-14 lg:py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-semibold tracking-wide text-primary-foreground/70 uppercase">
+    <section className="landing-confidence">
+      <div className="landing-container landing-confidence-grid">
+        <div className="landing-confidence-heading">
+          <span className="landing-eyebrow landing-eyebrow-light">
             Always on your side
           </span>
-          <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-            Travel confidently, from runway to doorstep
-          </h2>
+          <h2>Built around the moments travel cannot predict.</h2>
+          <p>Delayed flight. Long passport queue. A change of plan. We stay ready.</p>
         </div>
 
-        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="landing-confidence-list">
           {ITEMS.map((item) => (
-            <div key={item.title} className="text-center sm:text-left">
-              <item.icon className="mx-auto size-6 text-primary-foreground/80 sm:mx-0" />
-              <h3 className="mt-3 font-semibold">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/70">
-                {item.text}
-              </p>
+            <div key={item.title} className="landing-confidence-item">
+              <span><item.icon aria-hidden="true" /></span>
+              <div><h3>{item.title}</h3><p>{item.text}</p></div>
             </div>
           ))}
         </div>

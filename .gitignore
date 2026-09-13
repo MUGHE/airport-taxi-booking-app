@@ -17,3 +17,10 @@ node_modules
 
 email_templates/
 marketing_plan/
+.agents/
+.playwright-cli/
+docs/
+skills-lock.json
+CONTEXT.md
+AGENTS.md
+.scratch/

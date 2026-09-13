@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { ArrowRight } from "lucide-react"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 
 const FAQS = [
@@ -21,26 +23,26 @@ const FAQS = [
 
 export function FAQ() {
   return (
-    <section className="mx-auto max-w-3xl px-4 py-16 lg:py-24">
-      <div className="mx-auto max-w-2xl text-center">
-        <span className="text-xs font-semibold tracking-wide text-primary uppercase">
-          Good to know
-        </span>
-        <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-          Frequently asked questions
-        </h2>
+    <section className="landing-faq">
+      <div className="landing-container landing-faq-grid">
+      <div className="landing-faq-heading">
+        <span className="landing-eyebrow">Good to know</span>
+        <h2>A little clarity before you travel.</h2>
+        <p>Everything you need for a smooth airport pickup, answered simply.</p>
+        <Link href="/help">Visit the help centre <ArrowRight aria-hidden="true" /></Link>
       </div>
 
-      <Accordion className="mt-10 rounded-2xl border border-border bg-card px-5">
+      <Accordion className="landing-faq-list">
         {FAQS.map((item, i) => (
           <AccordionItem key={item.q} value={`faq-${i}`}>
             <AccordionTrigger>{item.q}</AccordionTrigger>
-            <AccordionPanel className="pb-4 text-sm leading-relaxed text-muted-foreground">
+            <AccordionPanel>
               {item.a}
             </AccordionPanel>
           </AccordionItem>
         ))}
       </Accordion>
+      </div>
     </section>
   )
 }

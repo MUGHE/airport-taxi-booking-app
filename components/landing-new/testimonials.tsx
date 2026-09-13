@@ -1,4 +1,4 @@
-import { Star } from "lucide-react"
+import { BadgeCheck, Quote, Star } from "lucide-react"
 
 // Illustrative quotes for layout purposes only — not real customer testimonials.
 const REVIEWS = [
@@ -27,38 +27,38 @@ const REVIEWS = [
 
 export function Testimonials() {
   return (
-    <section id="reviews" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 lg:py-24">
-      <div className="mx-auto max-w-2xl text-center">
-        <span className="text-xs font-semibold tracking-wide text-primary uppercase">
-          Real journeys. Real people.
-        </span>
-        <h2 className="mt-2 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
-          Trusted by travelers, not just promises
-        </h2>
+    <section id="reviews" className="landing-reviews scroll-mt-20">
+      <div className="landing-container">
+      <div className="landing-section-heading">
+        <div><span className="landing-eyebrow">Real journeys. Real people.</span><h2>The welcome our passengers remember.</h2></div>
+        <p>Thoughtful drivers, clear communication, and no surprises on the meter.</p>
       </div>
 
-      <div className="mt-12 grid gap-6 sm:grid-cols-3">
-        {REVIEWS.map((review) => (
-          <div key={review.name} className="hover-lift rounded-2xl border border-border/70 bg-card p-6">
-            <span className="flex items-center gap-0.5 text-accent">
+      <div className="landing-review-grid">
+        {REVIEWS.map((review, index) => (
+          <article key={review.name} className="landing-review-card">
+            <Quote aria-hidden="true" className="landing-review-quote" />
+            <span className="landing-review-stars" aria-label="5 out of 5 stars">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className="size-4 fill-accent" />
+                <Star aria-hidden="true" key={i} />
               ))}
             </span>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            <p>
               &ldquo;{review.quote}&rdquo;
             </p>
-            <div className="mt-5 flex items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            <footer>
+              <span className="landing-review-avatar">
                 {review.initials}
               </span>
               <div>
-                <p className="text-sm font-semibold">{review.name}</p>
-                <p className="text-xs text-muted-foreground">{review.location}</p>
+                <strong>{review.name}</strong>
+                <small><BadgeCheck aria-hidden="true" /> Verified journey · {review.location}</small>
               </div>
-            </div>
-          </div>
+            </footer>
+            <span className="landing-review-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          </article>
         ))}
+      </div>
       </div>
     </section>
   )
