@@ -1,41 +1,44 @@
 "use client"
 
-import { MessageCircle, Phone } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
+import { LifeBuoy, MessageCircle, Phone, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CALL_LINK, WHATSAPP_LINK } from "@/lib/contact"
 
 export function HelpButton() {
-  const pathname = usePathname()
-  const isBookingForm = pathname === "/book"
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false)
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown)
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [open])
 
   return (
     <div
-      // bottom-[...] reads --mobile-action-bar-h — set by the booking flow's mobile action bar
-      // (booking-flow.tsx) while it's on screen — so this button lifts clear of it instead of
-      // sitting underneath. The variable is unset (falls back to 0px) on every other page, so
-      // this is identical to a plain bottom-4 there. sm and up never had the bar to begin with.
-      className={cn(
-        "fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6",
-        isBookingForm && "hidden sm:flex",
-      )}
+      ref={rootRef}
+      className="fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
     >
-      <ContactAction
-        href={WHATSAPP_LINK}
-        label="WhatsApp us"
-        className="bg-[#25D366] text-white hover:bg-[#1ebe57]"
-        target="_blank"
-      >
-        <MessageCircle className="size-5" />
-      </ContactAction>
-
-      <ContactAction
-        href={CALL_LINK}
-        label="Call us"
-        className="bg-primary text-primary-foreground hover:bg-primary/80"
-      >
-        <Phone className="size-5" />
-      </ContactAction>
+      <div className={cn("absolute right-0 bottom-[calc(3.5rem+0.75rem)] flex flex-col items-end gap-3 transition-all duration-200", open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
+        <ContactAction href={WHATSAPP_LINK} label="WhatsApp us" className="bg-[#25D366] text-white hover:bg-[#1ebe57]" onSelect={() => setOpen(false)} target="_blank"><MessageCircle className="size-5" /></ContactAction>
+        <ContactAction href={CALL_LINK} label="Call us" className="bg-primary text-primary-foreground hover:bg-primary/80" onSelect={() => setOpen(false)}><Phone className="size-5" /></ContactAction>
+      </div>
+      <button type="button" aria-label={open ? "Close help menu" : "Get help"} aria-expanded={open} onClick={() => setOpen((value) => !value)} className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:bg-primary/80 active:scale-95">
+        {open ? <X className="size-6" /> : <LifeBuoy className="size-6" />}
+      </button>
     </div>
   )
 }
@@ -45,18 +48,21 @@ function ContactAction({
   label,
   className,
   children,
+  onSelect,
   target,
 }: {
   href: string
   label: string
   className: string
   children: React.ReactNode
+  onSelect: () => void
   target?: string
 }) {
   return (
     <a
       href={href}
       aria-label={label}
+      onClick={onSelect}
       target={target}
       rel={target ? "noopener noreferrer" : undefined}
       className="group flex items-center gap-2"
