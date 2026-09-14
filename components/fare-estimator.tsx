@@ -82,7 +82,7 @@ export function FareEstimator({
 
   return (
     <div
-      className={`@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xl shadow-primary/5 sm:p-6 ${
+      className={`@container w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-5 text-foreground shadow-xl shadow-primary/5 sm:p-6 ${
         layout === "hub" ? "lg:p-5" : ""
       }`}
     >
