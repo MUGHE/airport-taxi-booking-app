@@ -1,114 +1,34 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { LifeBuoy, MessageCircle, Phone, X } from "lucide-react"
+import { MessageCircle, Phone } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CALL_LINK, WHATSAPP_LINK } from "@/lib/contact"
 
 export function HelpButton() {
-  const [open, setOpen] = useState(false)
-  const [shake, setShake] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  // Stops the nudge for good once the button's been opened at least once — someone who's already
-  // found it doesn't need it wiggling at them again.
-  const discoveredRef = useRef(false)
-
-  useEffect(() => {
-    if (!open) return
-
-    function handlePointerDown(e: PointerEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false)
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown)
-    document.addEventListener("keydown", handleKeyDown)
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown)
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [open])
-
-  useEffect(() => { if (open) discoveredRef.current = true }, [open])
-
-  // A quick shake a few seconds after landing on the page, then again every so often, so a first-
-  // time visitor's eye is drawn to it without it nagging forever once they've actually found it.
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-    let clearShakeTimer: ReturnType<typeof setTimeout>
-    function scheduleNudge(delay: number) {
-      timer = setTimeout(() => {
-        if (discoveredRef.current) return
-        setShake(true)
-        clearShakeTimer = setTimeout(() => setShake(false), 600) // matches the animation's duration, so re-adding the class later can replay it
-        scheduleNudge(8000)
-      }, delay)
-    }
-    scheduleNudge(4000)
-    return () => {
-      clearTimeout(timer)
-      clearTimeout(clearShakeTimer)
-    }
-  }, [])
-
   return (
     <div
-      ref={rootRef}
       // bottom-[...] reads --mobile-action-bar-h — set by the booking flow's mobile action bar
       // (booking-flow.tsx) while it's on screen — so this button lifts clear of it instead of
       // sitting underneath. The variable is unset (falls back to 0px) on every other page, so
       // this is identical to a plain bottom-4 there. sm and up never had the bar to begin with.
       className="fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
     >
-      {/* Absolutely positioned, not a normal flex child: when closed, `pointer-events-none` alone
-          still leaves this reserving its full stacked-buttons height in the flex layout — an
-          invisible dead zone above the visible button that swallows clicks meant for whatever page
-          content sits underneath it. Taking it out of flow means the root's own box is only ever
-          as tall as the button that's actually visible. */}
-      <div
-        className={cn(
-          "absolute right-0 bottom-[calc(3.5rem+0.75rem)] flex flex-col items-end gap-3 transition-all duration-200",
-          open
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-2 opacity-0",
-        )}
+      <ContactAction
+        href={WHATSAPP_LINK}
+        label="WhatsApp us"
+        className="bg-[#25D366] text-white hover:bg-[#1ebe57]"
+        target="_blank"
       >
-        <ContactAction
-          href={WHATSAPP_LINK}
-          label="WhatsApp us"
-          className="bg-[#25D366] text-white hover:bg-[#1ebe57]"
-          onSelect={() => setOpen(false)}
-          target="_blank"
-        >
-          <MessageCircle className="size-5" />
-        </ContactAction>
+        <MessageCircle className="size-5" />
+      </ContactAction>
 
-        <ContactAction
-          href={CALL_LINK}
-          label="Call us"
-          className="bg-primary text-primary-foreground hover:bg-primary/80"
-          onSelect={() => setOpen(false)}
-        >
-          <Phone className="size-5" />
-        </ContactAction>
-      </div>
-
-      <button
-        type="button"
-        aria-label={open ? "Close help menu" : "Get help"}
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:bg-primary/80 active:scale-95",
-          shake && "animate-help-shake",
-        )}
+      <ContactAction
+        href={CALL_LINK}
+        label="Call us"
+        className="bg-primary text-primary-foreground hover:bg-primary/80"
       >
-        {open ? <X className="size-6" /> : <LifeBuoy className="size-6" />}
-      </button>
+        <Phone className="size-5" />
+      </ContactAction>
     </div>
   )
 }
@@ -118,21 +38,18 @@ function ContactAction({
   label,
   className,
   children,
-  onSelect,
   target,
 }: {
   href: string
   label: string
   className: string
   children: React.ReactNode
-  onSelect: () => void
   target?: string
 }) {
   return (
     <a
       href={href}
       aria-label={label}
-      onClick={onSelect}
       target={target}
       rel={target ? "noopener noreferrer" : undefined}
       className="group flex items-center gap-2"
