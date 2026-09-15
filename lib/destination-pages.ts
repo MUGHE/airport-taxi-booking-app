@@ -121,6 +121,18 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+function reportPublicReadFailure(slug: string, stage: string, error?: unknown) {
+  const databaseError = error && typeof error === "object"
+    ? error as { code?: unknown; message?: unknown }
+    : null
+  console.error("[airport-page-read]", {
+    slug,
+    stage,
+    code: typeof databaseError?.code === "string" ? databaseError.code : undefined,
+    message: typeof databaseError?.message === "string" ? databaseError.message : error instanceof Error ? error.message : undefined,
+  })
+}
+
 const legacyAirportRedirects = new Map(LEGACY_AIRPORT_REDIRECTS)
 
 export async function getPublishedAirportRedirect(slug: string): Promise<string | null> {
@@ -193,7 +205,15 @@ function isPublishedContent(value: unknown): value is PublishedAirportPageConten
 
 async function loadPublishedAirportPage(slug: string): Promise<{ status: "published" | "missing" | "unavailable"; page?: PublishedAirportPage }> {
   const supabase = getSupabase()
-  if (!supabase) return { status: "unavailable" }
+  if (!supabase) {
+    reportPublicReadFailure(slug, "configuration", {
+      message: `Missing server environment variable(s): ${[
+        !process.env.NEXT_PUBLIC_SUPABASE_URL && "NEXT_PUBLIC_SUPABASE_URL",
+        !process.env.SUPABASE_SERVICE_ROLE_KEY && "SUPABASE_SERVICE_ROLE_KEY",
+      ].filter(Boolean).join(", ")}`,
+    })
+    return { status: "unavailable" }
+  }
 
   try {
     const { data: page, error: pageError } = await supabase
@@ -203,23 +223,47 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       .eq("page_type", "airport")
       .eq("lifecycle_state", "published")
       .maybeSingle()
-    if (pageError) return { status: "unavailable" }
+    if (pageError) {
+      reportPublicReadFailure(slug, "page-query", pageError)
+      return { status: "unavailable" }
+    }
     if (!page) return { status: "missing" }
 
     const pageRow = page as DestinationPageRow
-    if (!pageRow.current_published_snapshot_id) return { status: "unavailable" }
+    if (!pageRow.current_published_snapshot_id) {
+      reportPublicReadFailure(slug, "published-snapshot-pointer")
+      return { status: "unavailable" }
+    }
 
     const [{ data: snapshot, error: snapshotError }, { data: terminalRows, error: terminalError }, { data: legacyHero }] = await Promise.all([
       supabase.from("destination_page_snapshots").select("id, snapshot_kind, seo_title, meta_description, h1, content").eq("id", pageRow.current_published_snapshot_id).eq("page_id", pageRow.id).eq("snapshot_kind", "published").maybeSingle(),
       supabase.from("destination_page_terminals").select("id, display_name, address, latitude, longitude, sort_order, is_primary").eq("page_id", pageRow.id).order("sort_order"),
       supabase.from("destination_snapshot_media").select("destination_media_assets(id, public_id, delivery_url, width, height, format, alt_text)").eq("snapshot_id", pageRow.current_published_snapshot_id).eq("purpose", "hero").limit(1).maybeSingle(),
     ])
-    if (snapshotError || terminalError || !snapshot || !isPublishedContent((snapshot as DestinationSnapshotRow).content)) return { status: "unavailable" }
+    if (snapshotError) {
+      reportPublicReadFailure(slug, "snapshot-query", snapshotError)
+      return { status: "unavailable" }
+    }
+    if (terminalError) {
+      reportPublicReadFailure(slug, "terminal-query", terminalError)
+      return { status: "unavailable" }
+    }
+    if (!snapshot) {
+      reportPublicReadFailure(slug, "published-snapshot-missing")
+      return { status: "unavailable" }
+    }
+    if (!isPublishedContent((snapshot as DestinationSnapshotRow).content)) {
+      reportPublicReadFailure(slug, "published-content-validation")
+      return { status: "unavailable" }
+    }
 
     const snapshotRow = snapshot as DestinationSnapshotRow
     const rawContent = snapshotRow.content as Record<string, unknown>
     const airport = readPublishedAirportFacts(rawContent)
-    if (!airport) return { status: "unavailable" }
+    if (!airport) {
+      reportPublicReadFailure(slug, "published-airport-facts-validation")
+      return { status: "unavailable" }
+    }
 
     const terminals: AirportPageTerminal[] = (terminalRows as DestinationTerminalRow[]).map((terminal) => ({
       id: terminal.id,
@@ -279,7 +323,8 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       },
       bookingAvailable: pageRow.booking_available,
     } }
-  } catch {
+  } catch (error) {
+    reportPublicReadFailure(slug, "unexpected", error)
     return { status: "unavailable" }
   }
 }
