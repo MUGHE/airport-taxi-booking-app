@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js"
 import { cache } from "react"
 import { createPublishedAirportPagePresentation, createRouteBookingLinks, type AirportPagePresentation, type AirportPageTerminal, type PublishedAirportPageContent } from "@/lib/airport-page-data"
 import type { AdminDestinationPage } from "@/lib/admin-destination-pages"
+import { normalizeDestinationContent } from "@/lib/destination-content"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { getPublishedPrimaryTerminals, listRelatedDestinations } from "@/lib/related-destinations"
 import { LEGACY_AIRPORT_REDIRECTS } from "@/lib/legacy-airport-redirects.mjs"
@@ -182,25 +183,25 @@ export async function getDestinationPageLifecycle(slug: string): Promise<Destina
   }
 }
 
-function isPublishedContent(value: unknown): value is PublishedAirportPageContent {
-  if (!value || typeof value !== "object") return false
-  const content = value as Record<string, unknown>
-  return typeof content.heading === "string"
-    && Array.isArray(content.intro) && content.intro.every((item) => typeof item === "string")
-    && Array.isArray(content.benefits) && content.benefits.every((item) => {
-      if (!item || typeof item !== "object") return false
-      const benefit = item as Record<string, unknown>
-      return typeof benefit.title === "string" && typeof benefit.description === "string" && (benefit.icon === "fare" || benefit.icon === "flight")
-    })
-    && Array.isArray(content.faqs) && content.faqs.every((item) => {
-      if (!item || typeof item !== "object") return false
-      const faq = item as Record<string, unknown>
-      return typeof faq.question === "string" && typeof faq.answer === "string"
-    })
-    && (!content.serviceFacts || Array.isArray(content.serviceFacts))
-    && (!content.globalFaqs || Array.isArray(content.globalFaqs))
-    && (!content.airportFaqs || Array.isArray(content.airportFaqs))
-    && (!content.reviews || Array.isArray(content.reviews))
+export function publishedContentFromSnapshot(snapshot: Pick<DestinationSnapshotRow, "h1" | "content">): PublishedAirportPageContent {
+  const content = normalizeDestinationContent(snapshot.content, snapshot.h1)
+  return {
+    heading: snapshot.h1,
+    intro: content.hero.body.map((block) => block.text),
+    introDocument: content.hero.bodyDocument,
+    benefits: [
+      { title: "Fixed, all-inclusive fare", description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.", icon: "fare" },
+      { title: "Flight tracking & meet & greet", description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.", icon: "flight" },
+    ],
+    faqs: content.airportFaqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
+    serviceFacts: content.serviceFacts,
+    globalFaqs: content.globalFaqs,
+    airportFaqs: content.airportFaqs,
+    reviews: content.reviews,
+    sections: content.sections,
+    heroImage: content.hero.image,
+    finalCta: content.finalCta,
+  }
 }
 
 async function loadPublishedAirportPage(slug: string): Promise<{ status: "published" | "missing" | "unavailable"; page?: PublishedAirportPage }> {
@@ -252,11 +253,6 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       reportPublicReadFailure(slug, "published-snapshot-missing")
       return { status: "unavailable" }
     }
-    if (!isPublishedContent((snapshot as DestinationSnapshotRow).content)) {
-      reportPublicReadFailure(slug, "published-content-validation")
-      return { status: "unavailable" }
-    }
-
     const snapshotRow = snapshot as DestinationSnapshotRow
     const rawContent = snapshotRow.content as Record<string, unknown>
     const airport = readPublishedAirportFacts(rawContent)
@@ -273,14 +269,9 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       longitude: Number(terminal.longitude),
       isPrimary: terminal.is_primary,
     }))
-    const content: PublishedAirportPageContent = {
-      ...(snapshotRow.content as PublishedAirportPageContent),
-      heading: snapshotRow.h1,
-      airportFaqs: ((snapshotRow.content as Record<string, unknown>).airportFaqs ?? (snapshotRow.content as PublishedAirportPageContent).faqs) as PublishedAirportPageContent["airportFaqs"],
-    }
-    const hero = rawContent.hero as { image?: PublishedAirportPageContent["heroImage"] } | undefined
+    const content = publishedContentFromSnapshot(snapshotRow)
     const legacyHeroAsset = (legacyHero as LegacySnapshotMediaRow | null)?.destination_media_assets
-    content.heroImage = hero?.image ?? (legacyHeroAsset ? {
+    content.heroImage = content.heroImage ?? (legacyHeroAsset ? {
       assetId: legacyHeroAsset.id,
       publicId: legacyHeroAsset.public_id,
       secureUrl: legacyHeroAsset.delivery_url,
@@ -289,9 +280,6 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       format: legacyHeroAsset.format,
       altText: legacyHeroAsset.alt_text,
     } : undefined)
-    content.sections = (rawContent.sections ?? []) as PublishedAirportPageContent["sections"]
-    content.finalCta = (rawContent.finalCta ?? { heading: "Ready to book your airport transfer?", body: [] }) as PublishedAirportPageContent["finalCta"]
-
     const heroImage = content.heroImage
     const related = await listRelatedDestinations(pageRow.id)
     const relatedTerminals = await getPublishedPrimaryTerminals(related.map((item) => item.pageId))
