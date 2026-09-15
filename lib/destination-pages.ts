@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { cache } from "react"
 import { createPublishedAirportPagePresentation, createRouteBookingLinks, type AirportPagePresentation, type AirportPageTerminal, type PublishedAirportPageContent } from "@/lib/airport-page-data"
 import type { AdminDestinationPage } from "@/lib/admin-destination-pages"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
@@ -283,7 +284,7 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
   }
 }
 
-export async function readPublicAirportPage(slug: string): Promise<PublicAirportPageRead> {
+async function readPublicAirportPageUncached(slug: string): Promise<PublicAirportPageRead> {
   const loaded = await loadPublishedAirportPage(slug)
   if (loaded.status === "published" && loaded.page) {
     cacheSafePublishedAirportPage(slug, loaded.page)
@@ -296,6 +297,11 @@ export async function readPublicAirportPage(slug: string): Promise<PublicAirport
   if (loaded.status === "missing") return { status: "missing" }
   return { status: "unavailable" }
 }
+
+// Next renders metadata and page content separately during the same request.
+// Share one database read so a successful metadata read cannot be followed by
+// a second transient failure that replaces the public page with the error view.
+export const readPublicAirportPage = cache(readPublicAirportPageUncached)
 
 export async function getPublishedAirportPage(slug: string): Promise<PublishedAirportPage | null> {
   const result = await readPublicAirportPage(slug)
