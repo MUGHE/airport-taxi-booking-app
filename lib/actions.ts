@@ -9,6 +9,7 @@ import {
   getReturnTripDiscount as getStoredReturnTripDiscount,
   getSitePromotion as getStoredSitePromotion,
   getStopPricing as getStoredStopPricing,
+  getCongestionPricing as getStoredCongestionPricing,
   linkReturnTrip,
   listBookings,
   listActiveAddOns,
@@ -22,6 +23,7 @@ import {
   updateReturnTripDiscount as setReturnTripDiscount,
   updateSitePromotion as setSitePromotion,
   updateStopPricing as setStopPricing,
+  updateCongestionPricing as setCongestionPricing,
   updateVehiclePricing as setVehiclePricing,
   upsertAddOn as saveAddOn,
   deleteAddOn as removeAddOn,
@@ -30,10 +32,10 @@ import {
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingAddOn, BookingStatus, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
-import { applyPromotion, computeDiscount, computeFare, MIN_DISTANCE_MILES } from "./fleet"
+import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, MIN_DISTANCE_MILES } from "./fleet"
 import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
 import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
@@ -290,7 +292,9 @@ async function buildAndSaveBooking(
   // Never trust a client-supplied per-stop price — always the current admin-set rate.
   const stopPricing = await getStoredStopPricing()
   const stopsTotal = stops.length * stopPricing.pricePerStop
-  const subtotal = vehicleFare + addOnsTotal + stopsTotal
+  // Flat pass-through cost, so it sits outside every discount, like stops and add-ons.
+  const congestionCharge = congestionChargeFor([{ lat: input.pickupLat!, lng: input.pickupLng! }, { lat: input.dropoffLat!, lng: input.dropoffLng! }, ...stops], await getStoredCongestionPricing())
+  const subtotal = vehicleFare + addOnsTotal + stopsTotal + congestionCharge
 
   // Never trust a client-supplied discount amount — re-look-up the code and recompute
   // server-side, since it may have been disabled or changed since the customer applied it.
@@ -658,7 +662,8 @@ export async function updateBookingAction(reference: string, input: BookingEditI
   const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
   const stopPricing = await getStoredStopPricing()
   const stopsTotal = stops.length * stopPricing.pricePerStop
-  const subtotal = quote.fare + addOnsTotal + stopsTotal
+  const congestionCharge = congestionChargeFor([{ lat: input.pickupLat, lng: input.pickupLng }, { lat: input.dropoffLat, lng: input.dropoffLng }, ...stops], await getStoredCongestionPricing())
+  const subtotal = quote.fare + addOnsTotal + stopsTotal + congestionCharge
 
   let discountAmount = 0
   let promoCode = existing.promoCode
@@ -864,6 +869,27 @@ export async function updateStopPricingAction(pricePerStop: number): Promise<Upd
     return { ok: false, error: "Enter a valid price per stop." }
   }
   const pricing = await setStopPricing(pricePerStop)
+  revalidatePath("/admin"); revalidatePath("/book")
+  return { ok: true, pricing }
+}
+
+export async function getCongestionPricing(): Promise<CongestionPricing> {
+  return getStoredCongestionPricing()
+}
+
+export interface UpdateCongestionPricingResult {
+  ok: boolean
+  pricing?: CongestionPricing
+  error?: string
+}
+
+export async function updateCongestionPricingAction(fee: number, zone: [number, number][]): Promise<UpdateCongestionPricingResult> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!Number.isFinite(fee) || fee < 0) return { ok: false, error: "Enter a valid congestion fee." }
+  if (!Array.isArray(zone) || zone.length < 3 || zone.some((p) => !Array.isArray(p) || p.length !== 2 || !p.every((n) => Number.isFinite(n)))) {
+    return { ok: false, error: "The zone needs at least three valid \"lat, lng\" points." }
+  }
+  const pricing = await setCongestionPricing(fee, zone.map(([lat, lng]) => [lat, lng]))
   revalidatePath("/admin"); revalidatePath("/book")
   return { ok: true, pricing }
 }

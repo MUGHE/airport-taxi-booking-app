@@ -88,6 +88,13 @@ export interface StopPricing {
   updatedAt: string
 }
 
+/** Flat fee charged when a trip touches the congestion zone (a [lat, lng] polygon), admin-managed. */
+export interface CongestionPricing {
+  fee: number
+  zone: [number, number][]
+  updatedAt: string
+}
+
 export interface Booking {
   reference: string
   status: BookingStatus
