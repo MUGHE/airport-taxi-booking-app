@@ -26,14 +26,17 @@ export function ZoneMapEditor({ zone, onChange }: { zone: [number, number][]; on
         await loadGoogleMaps(apiKey!)
         if (cancelled || !hostRef.current) return
         const g = (window as any).google
-        const { Map } = await g.maps.importLibrary("maps")
+        const { Map, Polygon } = await g.maps.importLibrary("maps")
 
         const map = new Map(hostRef.current, { center: LONDON, zoom: 11, disableDefaultUI: true, zoomControl: true })
-        const polygon = new g.maps.Polygon({
+        const polygon = new Polygon({
           map, editable: true, draggable: false,
-          paths: zone.map(([lat, lng]) => ({ lat, lng })),
           strokeColor: "#2563eb", strokeWeight: 2, fillColor: "#2563eb", fillOpacity: 0.15,
         })
+        // Set via setPath, not the `paths` option: given an empty array, the constructor can't
+        // tell "one empty ring" from "zero rings" and picks zero, so getPath() (the first ring)
+        // comes back undefined for a brand-new zone. setPath always means the first ring.
+        polygon.setPath(zone.map(([lat, lng]) => ({ lat, lng })))
         polygonRef.current = polygon
         const path = polygon.getPath()
         const emit = () => onChangeRef.current(path.getArray().map((p: any) => [p.lat(), p.lng()] as [number, number]))

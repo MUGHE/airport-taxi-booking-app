@@ -88,8 +88,14 @@ export interface StopPricing {
   updatedAt: string
 }
 
-/** Flat fee charged when a trip touches the congestion zone (a [lat, lng] polygon), admin-managed. */
-export interface CongestionPricing {
+/**
+ * A named zone (a [lat, lng] polygon) and the flat fee added when a trip touches it, admin-
+ * managed. Fee may be negative (a discount for a zone like a home-base office) or positive (a
+ * surcharge zone). Multiple zones can be configured; a trip is charged the sum of every zone it
+ * touches.
+ */
+export interface CongestionZone {
+  name: string
   fee: number
   zone: [number, number][]
   updatedAt: string
