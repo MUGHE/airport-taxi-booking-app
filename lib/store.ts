@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
-import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destination, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destination, PromoCode, PromoDiscountType, Review, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { DEFAULT_CONGESTION_ZONE } from "./fleet"
 import { VEHICLE_CLASSES } from "./fleet"
 
@@ -17,6 +17,11 @@ type BookingRow = {
   promo_code: string | null; discount_amount: number | null
   outbound_trip_reference: string | null; return_trip_reference: string | null
   stripe_payment_intent_id: string | null; paid_at: string | null; created_at: string
+  review_requested_at: string | null
+}
+
+type ReviewRow = {
+  id: string; booking_reference: string; rating: number; comment: string; customer_name: string; created_at: string
 }
 
 function getSupabase() {
@@ -45,7 +50,12 @@ function toBooking(row: BookingRow): Booking {
     outboundTripReference: row.outbound_trip_reference ?? undefined, returnTripReference: row.return_trip_reference ?? undefined,
     stripeCheckoutSessionId: row.stripe_checkout_session_id ?? undefined,
     stripePaymentIntentId: row.stripe_payment_intent_id ?? undefined, paidAt: row.paid_at ?? undefined, createdAt: row.created_at,
+    reviewRequestedAt: row.review_requested_at ?? undefined,
   }
+}
+
+function toReview(row: ReviewRow): Review {
+  return { id: row.id, bookingReference: row.booking_reference, rating: row.rating, comment: row.comment, customerName: row.customer_name, createdAt: row.created_at }
 }
 
 function toBookingRow(booking: Booking): BookingRow {
@@ -64,6 +74,7 @@ function toBookingRow(booking: Booking): BookingRow {
     outbound_trip_reference: booking.outboundTripReference ?? null, return_trip_reference: booking.returnTripReference ?? null,
     stripe_checkout_session_id: booking.stripeCheckoutSessionId ?? null,
     stripe_payment_intent_id: booking.stripePaymentIntentId ?? null, paid_at: booking.paidAt ?? null, created_at: booking.createdAt,
+    review_requested_at: booking.reviewRequestedAt ?? null,
   }
 }
 type DatabaseError = { code?: string; message: string }
@@ -112,6 +123,24 @@ export async function setBookingStatus(reference: string, status: BookingStatus)
   const { data, error } = await getSupabase().from("bookings").update({ status }).eq("reference", reference.trim().toUpperCase()).select("*").maybeSingle()
   if (error) throwDatabaseError(error)
   return data ? toBooking(data as BookingRow) : null
+}
+export async function markReviewRequested(reference: string): Promise<void> {
+  const { error } = await getSupabase().from("bookings").update({ review_requested_at: new Date().toISOString() }).eq("reference", reference.trim().toUpperCase())
+  if (error) throwDatabaseError(error)
+}
+export async function findReviewByBooking(reference: string): Promise<Review | null> {
+  const { data, error } = await getSupabase().from("reviews").select("*").eq("booking_reference", reference.trim().toUpperCase()).maybeSingle()
+  if (error) throwDatabaseError(error)
+  return data ? toReview(data as ReviewRow) : null
+}
+export async function saveReview(review: Omit<Review, "id" | "createdAt">): Promise<Review> {
+  const { data, error } = await getSupabase()
+    .from("reviews")
+    .insert({ booking_reference: review.bookingReference, rating: review.rating, comment: review.comment, customer_name: review.customerName })
+    .select("*")
+    .single()
+  if (error) throwDatabaseError(error)
+  return toReview(data as ReviewRow)
 }
 /** Overwrites an existing booking's editable fields (support corrections) — the caller supplies the full, already-repriced booking. */
 export async function replaceBooking(booking: Booking): Promise<Booking | null> {

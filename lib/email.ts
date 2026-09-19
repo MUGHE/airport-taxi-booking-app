@@ -405,3 +405,84 @@ export async function sendInvoiceEmail(booking: Booking): Promise<{ ok: boolean;
     return { ok: false, error: "Unexpected error sending the invoice email." }
   }
 }
+
+/** Sent once a booking is marked "completed" (see updateBookingStatus). Always links to our
+ *  own branded rating page, never to Google directly — whether the customer is invited to
+ *  also post on Google is decided after they rate us, in submitReviewAction. */
+export async function sendReviewRequestEmail(booking: Booking): Promise<{ ok: boolean; error?: string }> {
+  const resend = getResendClient()
+  if (!resend) {
+    const error = "RESEND_API_KEY is not set; skipping review request email."
+    console.warn(error)
+    return { ok: false, error }
+  }
+
+  const appUrl = await getAppUrl()
+  if (!appUrl) {
+    const error = "NEXT_PUBLIC_APP_URL is not set; skipping review request email (its link would be broken without it)."
+    console.warn(error)
+    return { ok: false, error }
+  }
+
+  const fromAddress = process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>"
+  const reviewUrl = `${appUrl}/review/${booking.reference}`
+  const firstName = booking.customerName.trim().split(/\s+/)[0] || booking.customerName
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#111827;">How was your ride, ${escapeHtml(firstName)}?</h2>
+      <p style="color:#374151;">Thanks for riding with ${COMPANY_NAME}. It only takes a minute to tell us how it went.</p>
+      <p style="margin:24px 0;"><a href="${reviewUrl}" style="background:#111827;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">Rate your ride</a></p>
+      <p style="color:#6b7280;font-size:13px;">Booking reference: ${escapeHtml(booking.reference)}</p>
+    </div>
+  `
+
+  try {
+    const result = await resend.emails.send({
+      from: fromAddress,
+      to: booking.email,
+      subject: `How was your ride, ${firstName}?`,
+      html,
+    })
+    if (result.error) {
+      console.error("Failed to send review request email:", result.error)
+      return { ok: false, error: "Resend rejected the review request email." }
+    }
+    return { ok: true }
+  } catch (error) {
+    console.error("Failed to send review request email:", error)
+    return { ok: false, error: "Unexpected error sending the review request email." }
+  }
+}
+
+/** Internal alert so a low rating gets followed up on, since it never goes anywhere public. */
+export async function sendLowRatingAlertEmail(booking: Booking, rating: number, comment: string): Promise<void> {
+  const resend = getResendClient()
+  const supportEmail = process.env.SUPPORT_EMAIL
+  if (!resend || !supportEmail) return
+
+  const fromAddress = process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>"
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#b91c1c;">Low rating: ${rating}/5 — ${escapeHtml(booking.reference)}</h2>
+      <table style="border-collapse:collapse;width:100%;">
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Customer</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(booking.customerName)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Email</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(booking.email)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#6b7280;">Phone</td><td style="padding:6px 0;font-weight:600;color:#111827;">${escapeHtml(booking.phone)}</td></tr>
+      </table>
+      <p style="color:#374151;margin-top:16px;white-space:pre-wrap;">${comment ? escapeHtml(comment) : "(no comment left)"}</p>
+    </div>
+  `
+
+  try {
+    const result = await resend.emails.send({
+      from: fromAddress,
+      to: supportEmail,
+      subject: `Low rating (${rating}/5) — ${booking.reference}`,
+      html,
+    })
+    if (result.error) console.error("Failed to send low rating alert email:", result.error)
+  } catch (error) {
+    console.error("Failed to send low rating alert email:", error)
+  }
+}

@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache"
 import {
   findActivePromoCode,
   findBooking,
+  findReviewByBooking,
   generateReference,
+  markReviewRequested,
+  saveReview,
   getReturnTripDiscount as getStoredReturnTripDiscount,
   getSitePromotion as getStoredSitePromotion,
   getStopPricing as getStoredStopPricing,
@@ -36,7 +39,15 @@ import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destinati
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, MIN_DISTANCE_MILES } from "./fleet"
-import { sendBookingNotificationEmails, sendBookingUpdateEmail, sendCombinedBookingConfirmationEmails, sendInvoiceEmail } from "./email"
+import { getGoogleReviewUrl, REVIEW_PUBLISH_THRESHOLD } from "./company"
+import {
+  sendBookingNotificationEmails,
+  sendBookingUpdateEmail,
+  sendCombinedBookingConfirmationEmails,
+  sendInvoiceEmail,
+  sendLowRatingAlertEmail,
+  sendReviewRequestEmail,
+} from "./email"
 import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
 import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
@@ -588,7 +599,58 @@ export async function updateBookingStatus(
   if (!(await isAdminAuthenticated())) return null
   const updated = await setBookingStatus(reference, status)
   revalidatePath("/admin")
+
+  if (updated && status === "completed" && !updated.reviewRequestedAt) {
+    const result = await sendReviewRequestEmail(updated)
+    if (result.ok) {
+      await markReviewRequested(reference)
+    } else {
+      // Left unmarked on purpose: re-marking the booking "completed" (e.g. after fixing
+      // NEXT_PUBLIC_APP_URL/RESEND_API_KEY) will retry the send instead of being stuck forever.
+      console.error(`Review request email not sent for ${reference}: ${result.error}`)
+    }
+  }
+
   return updated
+}
+
+export interface ReviewPageData {
+  customerName: string
+  alreadySubmitted: boolean
+}
+
+/** Public — reachable only via the reference emailed in sendReviewRequestEmail. */
+export async function getReviewPageDataAction(reference: string): Promise<ReviewPageData | null> {
+  const booking = await findBooking(reference)
+  if (!booking) return null
+  const existing = await findReviewByBooking(booking.reference)
+  return { customerName: booking.customerName, alreadySubmitted: Boolean(existing) }
+}
+
+export interface SubmitReviewResult {
+  ok: boolean
+  error?: string
+  googleReviewUrl?: string | null
+}
+
+export async function submitReviewAction(reference: string, rating: number, comment: string): Promise<SubmitReviewResult> {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { ok: false, error: "Please choose a rating from 1 to 5." }
+
+  const booking = await findBooking(reference)
+  if (!booking) return { ok: false, error: "We couldn't find that booking." }
+
+  const existing = await findReviewByBooking(booking.reference)
+  if (existing) return { ok: false, error: "You've already submitted a review for this trip." }
+
+  const trimmedComment = comment.trim().slice(0, 2000)
+  await saveReview({ bookingReference: booking.reference, rating, comment: trimmedComment, customerName: booking.customerName })
+
+  if (rating <= 2) {
+    void sendLowRatingAlertEmail(booking, rating, trimmedComment).catch((error) => console.error("Failed to send low rating alert email:", error))
+  }
+
+  const googleReviewUrl = rating >= REVIEW_PUBLISH_THRESHOLD ? getGoogleReviewUrl() : null
+  return { ok: true, googleReviewUrl }
 }
 
 /** Fields support can correct from the admin control panel. */
