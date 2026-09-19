@@ -12,7 +12,7 @@ import {
   getReturnTripDiscount as getStoredReturnTripDiscount,
   getSitePromotion as getStoredSitePromotion,
   getStopPricing as getStoredStopPricing,
-  getCongestionPricing as getStoredCongestionPricing,
+  listCongestionZones as listStoredCongestionZones,
   linkReturnTrip,
   listBookings,
   listActiveAddOns,
@@ -26,7 +26,8 @@ import {
   updateReturnTripDiscount as setReturnTripDiscount,
   updateSitePromotion as setSitePromotion,
   updateStopPricing as setStopPricing,
-  updateCongestionPricing as setCongestionPricing,
+  upsertCongestionZone as saveCongestionZone,
+  deleteCongestionZone as removeCongestionZone,
   updateVehiclePricing as setVehiclePricing,
   upsertAddOn as saveAddOn,
   deleteAddOn as removeAddOn,
@@ -35,7 +36,7 @@ import {
 } from "./store"
 import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
 import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, CongestionZone, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
 import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, MIN_DISTANCE_MILES } from "./fleet"
@@ -304,7 +305,7 @@ async function buildAndSaveBooking(
   const stopPricing = await getStoredStopPricing()
   const stopsTotal = stops.length * stopPricing.pricePerStop
   // Flat pass-through cost, so it sits outside every discount, like stops and add-ons.
-  const congestionCharge = congestionChargeFor([{ lat: input.pickupLat!, lng: input.pickupLng! }, { lat: input.dropoffLat!, lng: input.dropoffLng! }, ...stops], await getStoredCongestionPricing())
+  const congestionCharge = congestionChargeFor([{ lat: input.pickupLat!, lng: input.pickupLng! }, { lat: input.dropoffLat!, lng: input.dropoffLng! }, ...stops], await listStoredCongestionZones())
   const subtotal = vehicleFare + addOnsTotal + stopsTotal + congestionCharge
 
   // Never trust a client-supplied discount amount — re-look-up the code and recompute
@@ -724,7 +725,7 @@ export async function updateBookingAction(reference: string, input: BookingEditI
   const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
   const stopPricing = await getStoredStopPricing()
   const stopsTotal = stops.length * stopPricing.pricePerStop
-  const congestionCharge = congestionChargeFor([{ lat: input.pickupLat, lng: input.pickupLng }, { lat: input.dropoffLat, lng: input.dropoffLng }, ...stops], await getStoredCongestionPricing())
+  const congestionCharge = congestionChargeFor([{ lat: input.pickupLat, lng: input.pickupLng }, { lat: input.dropoffLat, lng: input.dropoffLng }, ...stops], await listStoredCongestionZones())
   const subtotal = quote.fare + addOnsTotal + stopsTotal + congestionCharge
 
   let discountAmount = 0
@@ -935,25 +936,35 @@ export async function updateStopPricingAction(pricePerStop: number): Promise<Upd
   return { ok: true, pricing }
 }
 
-export async function getCongestionPricing(): Promise<CongestionPricing> {
-  return getStoredCongestionPricing()
+export async function getCongestionZones(): Promise<CongestionZone[]> {
+  return listStoredCongestionZones()
 }
 
-export interface UpdateCongestionPricingResult {
+export interface UpsertCongestionZoneResult {
   ok: boolean
-  pricing?: CongestionPricing
+  zone?: CongestionZone
   error?: string
 }
 
-export async function updateCongestionPricingAction(fee: number, zone: [number, number][]): Promise<UpdateCongestionPricingResult> {
+// Fee may be negative (a discount zone, e.g. around the company office) or positive (a
+// surcharge zone) — unlike stop/add-on pricing, this one is deliberately not clamped to >= 0.
+export async function upsertCongestionZoneAction(name: string, fee: number, zone: [number, number][]): Promise<UpsertCongestionZoneResult> {
   if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
-  if (!Number.isFinite(fee) || fee < 0) return { ok: false, error: "Enter a valid congestion fee." }
+  if (!name.trim()) return { ok: false, error: "Enter a zone name." }
+  if (!Number.isFinite(fee)) return { ok: false, error: "Enter a valid fee." }
   if (!Array.isArray(zone) || zone.length < 3 || zone.some((p) => !Array.isArray(p) || p.length !== 2 || !p.every((n) => Number.isFinite(n)))) {
     return { ok: false, error: "The zone needs at least three valid \"lat, lng\" points." }
   }
-  const pricing = await setCongestionPricing(fee, zone.map(([lat, lng]) => [lat, lng]))
+  const saved = await saveCongestionZone(name, fee, zone.map(([lat, lng]) => [lat, lng]))
   revalidatePath("/admin"); revalidatePath("/book")
-  return { ok: true, pricing }
+  return { ok: true, zone: saved }
+}
+
+export async function deleteCongestionZoneAction(name: string): Promise<{ ok: boolean; error?: string }> {
+  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  await removeCongestionZone(name)
+  revalidatePath("/admin"); revalidatePath("/book")
+  return { ok: true }
 }
 
 export interface UpdateVehiclePricingResult {

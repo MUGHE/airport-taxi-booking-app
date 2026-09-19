@@ -1,4 +1,4 @@
-import type { CongestionPricing, PromoCode, ServiceLocation, VehicleClass } from "./types"
+import type { CongestionZone, PromoCode, ServiceLocation, VehicleClass } from "./types"
 
 export const AIRPORTS: ServiceLocation[] = [
   // --- HEATHROW (LHR) ---
@@ -176,7 +176,7 @@ export function formatCurrency(value: number): string {
 
 // Default TfL Congestion Charge zone, hand-traced around the Inner Ring Road as [lat, lng] pairs:
 // Marylebone Rd → Euston Rd → City Rd → Tower Bridge → Elephant & Castle → Vauxhall → Park Lane.
-// Only the seed — the live zone and fee are admin-managed (see CongestionPricing).
+// Only the seed — live zones and fees are admin-managed (see CongestionZone).
 export const DEFAULT_CONGESTION_ZONE: [number, number][] = [
   [51.5226, -0.1633], // Edgware Rd / Marylebone Rd
   [51.5300, -0.1230], // King's Cross
@@ -203,8 +203,7 @@ function inPolygon(lat: number, lng: number, polygon: [number, number][]): boole
   return inside
 }
 
-/** The flat fee if the pickup, drop-off, or any stop lies inside the zone; otherwise 0. */
-export function congestionChargeFor(points: { lat: number; lng: number }[], pricing: Pick<CongestionPricing, "fee" | "zone">): number {
-  if (pricing.zone.length < 3) return 0
-  return points.some((p) => inPolygon(p.lat, p.lng, pricing.zone)) ? pricing.fee : 0
+/** Sum of every zone's fee that the pickup, drop-off, or any stop lies inside (can net negative). */
+export function congestionChargeFor(points: { lat: number; lng: number }[], zones: Pick<CongestionZone, "fee" | "zone">[]): number {
+  return zones.reduce((total, z) => (z.zone.length >= 3 && points.some((p) => inPolygon(p.lat, p.lng, z.zone)) ? total + z.fee : total), 0)
 }

@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
-import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destination, PromoCode, PromoDiscountType, Review, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, CongestionZone, Destination, PromoCode, PromoDiscountType, Review, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { DEFAULT_CONGESTION_ZONE } from "./fleet"
 import { VEHICLE_CLASSES } from "./fleet"
 
@@ -322,23 +322,28 @@ export async function updateStopPricing(pricePerStop: number): Promise<StopPrici
   return toStopPricing(data as StopPricingRow)
 }
 
-type CongestionPricingRow = { fee: number; zone: [number, number][]; updated_at: string }
-function toCongestionPricing(row: CongestionPricingRow): CongestionPricing {
-  return { fee: Number(row.fee), zone: row.zone ?? [], updatedAt: row.updated_at }
+type CongestionZoneRow = { name: string; fee: number; zone: [number, number][]; updated_at: string }
+function toCongestionZone(row: CongestionZoneRow): CongestionZone {
+  return { name: row.name, fee: Number(row.fee), zone: row.zone ?? [], updatedAt: row.updated_at }
 }
-const DEFAULT_CONGESTION_PRICING: CongestionPricing = { fee: 18, zone: DEFAULT_CONGESTION_ZONE, updatedAt: new Date(0).toISOString() }
-export async function getCongestionPricing(): Promise<CongestionPricing> {
-  const { data, error } = await getSupabase().from("congestion_pricing").select("fee, zone, updated_at").eq("id", true).maybeSingle()
+const DEFAULT_CONGESTION_ZONES: CongestionZone[] = [{ name: "Congestion Charge Zone", fee: 18, zone: DEFAULT_CONGESTION_ZONE, updatedAt: new Date(0).toISOString() }]
+export async function listCongestionZones(): Promise<CongestionZone[]> {
+  const { data, error } = await getSupabase().from("congestion_zones").select("*").order("name")
   if (error) {
-    if (isMissingRelationError(error)) return DEFAULT_CONGESTION_PRICING
+    if (isMissingRelationError(error)) return DEFAULT_CONGESTION_ZONES
     throwDatabaseError(error)
   }
-  return data ? toCongestionPricing(data as CongestionPricingRow) : DEFAULT_CONGESTION_PRICING
+  return (data as CongestionZoneRow[]).map(toCongestionZone)
 }
-export async function updateCongestionPricing(fee: number, zone: [number, number][]): Promise<CongestionPricing> {
-  const { data, error } = await getSupabase().from("congestion_pricing")
-    .upsert({ id: true, fee, zone, updated_at: new Date().toISOString() }, { onConflict: "id" })
-    .select("fee, zone, updated_at").single()
+export async function upsertCongestionZone(name: string, fee: number, zone: [number, number][]): Promise<CongestionZone> {
+  const { data, error } = await getSupabase().from("congestion_zones")
+    .upsert({ name: name.trim(), fee, zone, updated_at: new Date().toISOString() }, { onConflict: "name" })
+    .select("*").single()
   if (error) throwDatabaseError(error)
-  return toCongestionPricing(data as CongestionPricingRow)
+  return toCongestionZone(data as CongestionZoneRow)
+}
+export async function deleteCongestionZone(name: string): Promise<boolean> {
+  const { error } = await getSupabase().from("congestion_zones").delete().eq("name", name.trim())
+  if (error) throwDatabaseError(error)
+  return true
 }

@@ -17,7 +17,7 @@ import { createBooking, createReturnBooking, getDistanceQuote, previewPromoCode 
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { RouteCard } from "@/components/route-search"
 import { TripMap } from "@/components/trip-map"
-import type { BookingAddOn, CongestionPricing, PaymentMethod, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "@/lib/types"
+import type { BookingAddOn, CongestionZone, PaymentMethod, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import { toast } from "sonner"
@@ -54,10 +54,10 @@ const stopsFromParams = (params: URLSearchParams): PlaceSelection[] => {
 const NO_PROMOTION: SitePromotion = { active: false, discountPercent: 0, updatedAt: "" }
 const NO_RETURN_DISCOUNT: ReturnTripDiscount = { active: false, discountPercent: 0, updatedAt: "" }
 const NO_STOP_PRICING: StopPricing = { pricePerStop: 0, updatedAt: "" }
-const NO_CONGESTION_PRICING: CongestionPricing = { fee: 0, zone: [], updatedAt: "" }
+const NO_CONGESTION_ZONES: CongestionZone[] = []
 // Mirrors the server-side cap in lib/actions.ts — keep the two in sync.
 const MAX_STOPS = 3
-export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTION, returnDiscount = NO_RETURN_DISCOUNT, stopPricing = NO_STOP_PRICING, congestionPricing = NO_CONGESTION_PRICING }: { vehicles: VehicleClass[]; addOns: BookingAddOn[]; promotion?: SitePromotion; returnDiscount?: ReturnTripDiscount; stopPricing?: StopPricing; congestionPricing?: CongestionPricing }) {
+export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTION, returnDiscount = NO_RETURN_DISCOUNT, stopPricing = NO_STOP_PRICING, congestionZones = NO_CONGESTION_ZONES }: { vehicles: VehicleClass[]; addOns: BookingAddOn[]; promotion?: SitePromotion; returnDiscount?: ReturnTripDiscount; stopPricing?: StopPricing; congestionZones?: CongestionZone[] }) {
   const router = useRouter()
   const params = useSearchParams()
   const initialPickup = fromParams(params, "pickup")
@@ -155,7 +155,7 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const addOnsTotal = useMemo(() => addOns.filter((addOn) => selectedAddOnIds.includes(addOn.id)).reduce((total, addOn) => total + addOn.price, 0), [addOns, selectedAddOnIds])
   const stopsTotal = stops.length * stopPricing.pricePerStop
   // Same helper the server prices with, so the summary and the charged fare agree.
-  const congestionCharge = congestionChargeFor([pickup, dropoff, ...stops].filter((p): p is PlaceSelection => p != null), congestionPricing)
+  const congestionCharge = congestionChargeFor([pickup, dropoff, ...stops].filter((p): p is PlaceSelection => p != null), congestionZones)
   // "Same as above" just reverses the outbound trip; otherwise the customer picks their own
   // return locations (e.g. flying home from a different airport than they arrived at).
   const effectiveReturnPickup = returnAddressSame ? dropoff : returnPickup
