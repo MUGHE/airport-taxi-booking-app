@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { BookingFlow } from "@/components/booking/booking-flow"
-import { getBookingAddOns, getReturnTripDiscount, getSitePromotion, getStopPricing, getVehicleFleet } from "@/lib/actions"
+import { getBookingAddOns, getCongestionPricing, getReturnTripDiscount, getSitePromotion, getStopPricing, getVehicleFleet } from "@/lib/actions"
 
 export const metadata: Metadata = {
   title: "Book Your Airport Transfer",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 }
 
 export default async function BookPage() {
-  const [vehicles, addOns, promotion, returnDiscount, stopPricing] = await Promise.all([getVehicleFleet(), getBookingAddOns(), getSitePromotion(), getReturnTripDiscount(), getStopPricing()])
+  const [vehicles, addOns, promotion, returnDiscount, stopPricing, congestionPricing] = await Promise.all([getVehicleFleet(), getBookingAddOns(), getSitePromotion(), getReturnTripDiscount(), getStopPricing(), getCongestionPricing()])
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -35,7 +35,7 @@ export default async function BookPage() {
             </div>
           }
         >
-          <BookingFlow vehicles={vehicles} addOns={addOns} promotion={promotion} returnDiscount={returnDiscount} stopPricing={stopPricing} />
+          <BookingFlow vehicles={vehicles} addOns={addOns} promotion={promotion} returnDiscount={returnDiscount} stopPricing={stopPricing} congestionPricing={congestionPricing} />
         </Suspense>
       </main>
       <SiteFooter />

@@ -5,9 +5,11 @@ import { PromoCodesPanel } from "@/components/admin/promo-codes-panel"
 import { SitePromotionPanel } from "@/components/admin/site-promotion-panel"
 import { ReturnTripPanel } from "@/components/admin/return-trip-panel"
 import { StopPricingPanel } from "@/components/admin/stop-pricing-panel"
+import { CongestionPricingPanel } from "@/components/admin/congestion-pricing-panel"
 import {
   getAllBookingAddOns,
   getAllPromoCodes,
+  getCongestionPricing,
   getReturnTripDiscount,
   getSitePromotion,
   getStopPricing,
@@ -21,13 +23,14 @@ export const dynamic = "force-dynamic"
 // per-vehicle rate card, the two admin-managed discounts, the per-stop fee, and the
 // add-ons/promo codes that add to or discount the subtotal.
 export default async function AdminPricingPage() {
-  const [vehicles, addOns, promoCodes, promotion, returnTripDiscount, stopPricing] = await Promise.all([
+  const [vehicles, addOns, promoCodes, promotion, returnTripDiscount, stopPricing, congestionPricing] = await Promise.all([
     getVehicleFleet(),
     getAllBookingAddOns(),
     getAllPromoCodes(),
     getSitePromotion(),
     getReturnTripDiscount(),
     getStopPricing(),
+    getCongestionPricing(),
   ])
 
   return (
@@ -43,6 +46,7 @@ export default async function AdminPricingPage() {
         <SitePromotionPanel promotion={promotion} />
         <ReturnTripPanel discount={returnTripDiscount} />
         <StopPricingPanel pricing={stopPricing} />
+        <CongestionPricingPanel pricing={congestionPricing} />
         <AddOnsPanel addOns={addOns} />
         <PromoCodesPanel promoCodes={promoCodes} />
       </div>

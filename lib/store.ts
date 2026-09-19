@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto"
 import { createClient } from "@supabase/supabase-js"
-import type { Booking, BookingAddOn, BookingStatus, Destination, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import type { Booking, BookingAddOn, BookingStatus, CongestionPricing, Destination, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import { DEFAULT_CONGESTION_ZONE } from "./fleet"
 import { VEHICLE_CLASSES } from "./fleet"
 
 type BookingRow = {
@@ -290,4 +291,25 @@ export async function updateStopPricing(pricePerStop: number): Promise<StopPrici
     .select("price_per_stop, updated_at").single()
   if (error) throwDatabaseError(error)
   return toStopPricing(data as StopPricingRow)
+}
+
+type CongestionPricingRow = { fee: number; zone: [number, number][]; updated_at: string }
+function toCongestionPricing(row: CongestionPricingRow): CongestionPricing {
+  return { fee: Number(row.fee), zone: row.zone ?? [], updatedAt: row.updated_at }
+}
+const DEFAULT_CONGESTION_PRICING: CongestionPricing = { fee: 18, zone: DEFAULT_CONGESTION_ZONE, updatedAt: new Date(0).toISOString() }
+export async function getCongestionPricing(): Promise<CongestionPricing> {
+  const { data, error } = await getSupabase().from("congestion_pricing").select("fee, zone, updated_at").eq("id", true).maybeSingle()
+  if (error) {
+    if (isMissingRelationError(error)) return DEFAULT_CONGESTION_PRICING
+    throwDatabaseError(error)
+  }
+  return data ? toCongestionPricing(data as CongestionPricingRow) : DEFAULT_CONGESTION_PRICING
+}
+export async function updateCongestionPricing(fee: number, zone: [number, number][]): Promise<CongestionPricing> {
+  const { data, error } = await getSupabase().from("congestion_pricing")
+    .upsert({ id: true, fee, zone, updated_at: new Date().toISOString() }, { onConflict: "id" })
+    .select("fee, zone, updated_at").single()
+  if (error) throwDatabaseError(error)
+  return toCongestionPricing(data as CongestionPricingRow)
 }
