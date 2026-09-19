@@ -18,3 +18,16 @@ export const COMPANY_STREET_ADDRESS = process.env.COMPANY_STREET_ADDRESS?.trim()
 export const COMPANY_CITY = process.env.COMPANY_CITY?.trim() || ""
 export const COMPANY_POSTCODE = process.env.COMPANY_POSTCODE?.trim() || ""
 export const COMPANY_COUNTRY = process.env.COMPANY_COUNTRY?.trim() || "GB"
+
+// Post-ride reviews (lib/email.ts sendReviewRequestEmail, lib/actions.ts submitReviewAction).
+// Place ID for THIS business's own Google Business Profile — from the Google Business Profile
+// dashboard, or Maps > your listing > Share > "Get more reviews" link. Distinct from the
+// per-airport place IDs used elsewhere for destination-page SEO/schema.
+const GOOGLE_REVIEW_PLACE_ID = process.env.GOOGLE_REVIEW_PLACE_ID?.trim() || ""
+/** Star rating (out of 5) at or above which a customer is invited to also post on Google. */
+export const REVIEW_PUBLISH_THRESHOLD = 4
+
+/** Real Google review link for this business, or null if GOOGLE_REVIEW_PLACE_ID isn't set. */
+export function getGoogleReviewUrl(): string | null {
+  return GOOGLE_REVIEW_PLACE_ID ? `https://search.google.com/local/writereview?placeid=${GOOGLE_REVIEW_PLACE_ID}` : null
+}

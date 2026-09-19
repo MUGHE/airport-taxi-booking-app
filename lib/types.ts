@@ -138,6 +138,20 @@ export interface Booking {
   stripePaymentIntentId?: string
   paidAt?: string
   createdAt: string
+  /** Set once the post-ride review request email has been sent, so it's never sent twice. */
+  reviewRequestedAt?: string
+}
+
+/** A customer's post-ride rating, always kept regardless of score. Only bookings rated at or
+ *  above REVIEW_PUBLISH_THRESHOLD (lib/company.ts) are invited to also post on Google — a low
+ *  rating stays private and triggers an internal alert instead. */
+export interface Review {
+  id: string
+  bookingReference: string
+  rating: number
+  comment: string
+  customerName: string
+  createdAt: string
 }
 
 export type NewBookingInput = Omit<

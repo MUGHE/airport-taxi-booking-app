@@ -1,0 +1,2 @@
+[build]
+  command = "npx supabase@latest db push --db-url \"$SUPABASE_DB_URL\" && next build"
