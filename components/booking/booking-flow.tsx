@@ -87,6 +87,7 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const [distanceMiles, setDistanceMiles] = useState<number | null>(null)
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
   const [distanceLoading, setDistanceLoading] = useState(false)
+  const [returnRoute, setReturnRoute] = useState<{ distanceMiles: number; durationMinutes: number } | null>(null)
   const [promoInput, setPromoInput] = useState("")
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -161,9 +162,28 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const effectiveReturnPickup = returnAddressSame ? dropoff : returnPickup
   const effectiveReturnDropoff = returnAddressSame ? pickup : returnDropoff
   const canAdvance = step === 0 ? Boolean(pickup && dropoff && pickupDate && pickupTime) : step === 1 ? Boolean(vehicleId) : step === 2 ? Boolean(customerName.trim() && email.trim() && phone.trim() && (!wantsReturn || (returnDate && returnTime && effectiveReturnPickup && effectiveReturnDropoff))) : true
-  // Return-leg fare estimate — computed as soon as the vehicle (and its fare) is known, not
-  // gated on wantsReturn, so the Details step can show the savings before it's even checked.
-  const returnFareEstimate = vehicleFare != null ? (returnDiscount.active ? applyPromotion(vehicleFare, returnDiscount.discountPercent) : vehicleFare) : null
+  // The server prices the return leg from its own route (the reverse of a journey is rarely the
+  // same distance/duration), so fetch that route here too — otherwise the estimate shown drifts
+  // from what's actually charged.
+  const returnRouteKey = wantsReturn && effectiveReturnPickup && effectiveReturnDropoff ? `${effectiveReturnPickup.lat},${effectiveReturnPickup.lng}|${effectiveReturnDropoff.lat},${effectiveReturnDropoff.lng}` : ""
+  useEffect(() => {
+    let active = true
+    setReturnRoute(null)
+    if (!returnRouteKey || !effectiveReturnPickup || !effectiveReturnDropoff) return
+    void getDistanceQuote({ lat: effectiveReturnPickup.lat, lng: effectiveReturnPickup.lng }, { lat: effectiveReturnDropoff.lat, lng: effectiveReturnDropoff.lng })
+      .then((res) => { if (active && res.ok && res.distanceMiles != null && res.durationMinutes != null) setReturnRoute({ distanceMiles: res.distanceMiles, durationMinutes: res.durationMinutes }) })
+      .catch(() => {})
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnRouteKey])
+  // Return-leg fare, built exactly like the server does it: base fare from the return route
+  // (outbound route as a stand-in until it's chosen/loaded), site promotion, then the return
+  // discount — and the congestion charge for the return endpoints added on top, undiscounted.
+  const returnQuote = vehicle && returnRoute ? computeFare(vehicle, returnRoute.distanceMiles, returnRoute.durationMinutes) : quote
+  const returnCongestionCharge = returnRouteKey ? congestionChargeFor([effectiveReturnPickup!, effectiveReturnDropoff!], congestionZones) : congestionCharge
+  const returnVehicleFare = returnQuote ? (promotion.active ? applyPromotion(returnQuote.fare, promotion.discountPercent) : returnQuote.fare) : null
+  const returnFareFull = returnVehicleFare != null ? returnVehicleFare + returnCongestionCharge : null
+  const returnFareEstimate = returnVehicleFare != null ? (returnDiscount.active ? applyPromotion(returnVehicleFare, returnDiscount.discountPercent) : returnVehicleFare) + returnCongestionCharge : null
   // Mirrors Summary's own total/combinedTotal calc below — duplicated (not lifted) so the mobile
   // action bar can show the same figure without changing Summary's props.
   const mobileSubtotal = vehicleFare != null ? vehicleFare + addOnsTotal + stopsTotal + congestionCharge : null
@@ -209,7 +229,7 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   return <><div className="grid gap-8 pb-24 lg:grid-cols-[1fr_340px] lg:pb-0"><div className="min-w-0">{promotion.active && <PromotionBanner percent={promotion.discountPercent} />}<MobileStepHeader step={step} onBack={() => setStep((value) => Math.max(value - 1, 0))} /><div className="hidden sm:block"><Stepper step={step} /></div><div className="mt-8">
     {step === 0 && <TripStep pickup={pickup} setPickup={setPickup} dropoff={dropoff} setDropoff={setDropoff} pickupDate={pickupDate} setPickupDate={setPickupDate} pickupTime={pickupTime} setPickupTime={setPickupTime} today={today} stops={stops} setStops={setStops} stopPricing={stopPricing} />}
     {step === 1 && <VehicleStep vehicleId={vehicleId} setVehicleId={setVehicleId} distanceMiles={distanceMiles} durationMinutes={durationMinutes} vehicles={vehicles} loading={distanceLoading} promotion={promotion} congestionCharge={congestionCharge} />}
-    {step === 2 && <DetailsStep {...{ customerName, setCustomerName, email, setEmail, phone, setPhone, passengers, setPassengers, bags, setBags, notes, setNotes, flightNumber, setFlightNumber, addOns, selectedAddOnIds, setSelectedAddOnIds, pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare: returnFareEstimate }} maxCapacity={vehicle?.capacity ?? 6} maxLuggage={vehicle?.luggage ?? 0} />}
+    {step === 2 && <DetailsStep {...{ customerName, setCustomerName, email, setEmail, phone, setPhone, passengers, setPassengers, bags, setBags, notes, setNotes, flightNumber, setFlightNumber, addOns, selectedAddOnIds, setSelectedAddOnIds, pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare: returnFareEstimate, returnFareFull }} maxCapacity={vehicle?.capacity ?? 6} maxLuggage={vehicle?.luggage ?? 0} />}
     {step === 3 && <ReviewStep pickup={pickup?.address || ""} dropoff={dropoff?.address || ""} stops={stops} stopsTotal={stopsTotal} vehicle={vehicle?.name || ""} pickupDate={pickupDate} pickupTime={pickupTime} flightNumber={flightNumber} passengers={passengers} bags={bags} customerName={customerName} email={email} phone={phone} notes={notes} addOns={addOns.filter((addOn) => selectedAddOnIds.includes(addOn.id))} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} returnPickupAddress={effectiveReturnPickup?.address || ""} returnDropoffAddress={effectiveReturnDropoff?.address || ""} />}
   </div><div className="mt-8 hidden justify-between gap-3 sm:flex"><Button variant="ghost" onClick={() => setStep((value) => Math.max(value - 1, 0))} disabled={step === 0 || isPending}><ArrowLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ArrowRight className="size-4" /></Button> : <Button onClick={submit} disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm booking</Button>}</div></div>
     <div className="hidden sm:block">{summaryPanel(true)}</div></div>
@@ -587,7 +607,7 @@ function DetailsStep(props: any) { return <div><Heading title="Passenger details
             })}</div></div><div className="sm:col-span-2"><Field label="Notes for your driver (optional)"><Textarea value={props.notes} onChange={(e) => props.setNotes(e.target.value)} rows={3} /></Field></div></div><ReturnTripOption {...props} /></div> }
 function ReturnTripOption(props: any) {
   const [returnDateOpen, setReturnDateOpen] = useState(false)
-  const { pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare } = props
+  const { pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, returnFare, returnFareFull } = props
   const minTimeToday = minPickupTimeToday()
   const minReturnDate = pickupDate || today
   // The return leg can't start before the outbound one lands — floor is whichever of
@@ -605,7 +625,7 @@ function ReturnTripOption(props: any) {
     if (returnFloorTime && value && value < returnFloorTime) { toast.error("Return time can't be before your pickup."); setReturnTime(returnFloorTime); return }
     setReturnTime(value)
   }
-  const savings = vehicleFare != null && returnFare != null ? vehicleFare - returnFare : 0
+  const savings = returnFareFull != null && returnFare != null ? returnFareFull - returnFare : 0
 
   return <div className={cn("mt-6 rounded-2xl border-2 p-4 sm:p-5", wantsReturn ? "border-primary bg-primary/5" : "border-primary/40 bg-primary/5")}>
     <label className="flex cursor-pointer items-start gap-3">
