@@ -2,7 +2,8 @@
 -- current Place draft code. This migration is deliberately additive.
 
 alter table public.destination_pages
-  add column if not exists primary_parent_id uuid;
+  add column if not exists primary_parent_id uuid,
+  add column if not exists primary_parent_page_id uuid;
 
 update public.destination_pages
 set primary_parent_id = primary_parent_page_id
@@ -11,16 +12,22 @@ where primary_parent_id is null
 
 alter table public.destination_place_aliases
   add column if not exists name text,
+  add column if not exists alias text,
   add column if not exists normalized_name text,
   add column if not exists display_order integer not null default 0;
 
 update public.destination_place_aliases
-set name = coalesce(name, alias),
-    normalized_name = coalesce(normalized_name, lower(regexp_replace(trim(alias), '\s+', ' ', 'g')))
-where name is null or normalized_name is null;
+set name = coalesce(nullif(name, ''), alias),
+    alias = coalesce(nullif(alias, ''), name),
+    normalized_name = coalesce(
+      nullif(normalized_name, ''),
+      lower(regexp_replace(trim(coalesce(name, alias)), '\s+', ' ', 'g'))
+    )
+where name is null or name = '' or alias is null or alias = '' or normalized_name is null;
 
 alter table public.destination_place_aliases
   alter column name set not null,
+  alter column alias set not null,
   alter column normalized_name set not null;
 
 create unique index if not exists destination_place_aliases_page_id_normalized_name_key
