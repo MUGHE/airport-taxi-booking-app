@@ -620,7 +620,8 @@ export async function publishAdminDestinationPage(pageId: string, override?: Pub
   const page = await getAdminDestinationPage(pageId)
   if (!page) return { ok: false, error: "Destination Page not found." }
   const existingPages = await listQualityPages(supabase)
-  const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages }
+  const validNearbyCandidateCount = new Set(existingPages.filter((item) => item.pageType === "place" && item.id !== pageId).map((item) => item.id)).size
+  const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages, validNearbyCandidateCount }
   const blockers = getPublishBlockers(readiness)
   if (blockers.length) return { ok: false, error: blockers.map((item) => item.message).join(" "), blockers }
   const warnings = getPublishWarnings(readiness)

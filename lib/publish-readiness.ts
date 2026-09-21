@@ -25,6 +25,8 @@ export type PublishReadinessInput = {
   h1: string
   content: DestinationContentDocument
   existingPages?: ExistingQualityPage[]
+  validNearbyCandidateCount?: number
+  googlePlaceReviewStatus?: "valid" | "invalid" | "unreviewed"
 }
 
 export type PublishBlocker = { code: string; message: string }
@@ -68,6 +70,7 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
     if (!hasText(input.officialName) || !hasText(input.displayName) || !hasText(input.placeType) || !hasText(input.placeGroupId)) block("incomplete-identity", "Official name, display name, Place type, and Place Group are required.")
     if (input.primaryParentId === input.id) block("invalid-parent", "A Place cannot be its own Primary Parent.")
     if (!hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A confirmed Google Place, address, and valid coordinates are required.")
+    if (input.googlePlaceReviewStatus && input.googlePlaceReviewStatus !== "valid") block("unreviewed-google-place", "Review the selected Google Place again before publishing.")
     if (!hasText(input.seoTitle)) block("missing-seo-title", "An SEO title is required.")
     if (!hasText(input.metaDescription)) block("missing-meta-description", "A meta description is required.")
     if (!hasText(input.h1)) block("missing-h1", "An H1 heading is required.")
@@ -170,6 +173,13 @@ function repeatedWordCount(left: string, right: string): number {
   return longest
 }
 
+function isOlderThanTwelveMonths(checkedDate: string, now = new Date()): boolean {
+  const parsed = new Date(`${checkedDate}T00:00:00Z`)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkedDate) || Number.isNaN(parsed.getTime())) return false
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear() - 1, now.getUTCMonth(), now.getUTCDate()))
+  return parsed < cutoff
+}
+
 export function getPublishWarnings(input: PublishReadinessInput): PublishWarning[] {
   const warnings: PublishWarning[] = []
   const otherPages = (input.existingPages ?? []).filter((page) => page.id !== input.id)
@@ -195,6 +205,27 @@ export function getPublishWarnings(input: PublishReadinessInput): PublishWarning
     message: `The selected hero image is already used by ${duplicateHero.slug}.`,
     reason: "Reusing a hero image can make destination pages look less distinctive.",
   })
+  if (input.pageType === "place") {
+    const staleSource = input.content.sections.some((section) => section.sourceNotes.some((note) => isOlderThanTwelveMonths(note.checkedDate)))
+    if (staleSource) warnings.push({
+      code: "stale-source-note",
+      message: "At least one important Source Note is more than twelve months old.",
+      reason: "Older local information may no longer be accurate. Check the source before publishing.",
+    })
+
+    const nearbyCount = input.relatedDestinations.filter((item) => item.kind === "nearby_place").length
+    if ((input.validNearbyCandidateCount ?? 0) >= 3 && nearbyCount < 3) warnings.push({
+      code: "fewer-nearby-places",
+      message: "This Place has fewer than three Nearby Places selected.",
+      reason: "Nearby Places help visitors discover related areas. Add at least three when enough valid Published Place Pages exist.",
+    })
+
+    if (!input.content.hero.image) warnings.push({
+      code: "missing-unique-hero-image",
+      message: "This Place does not have a unique hero image.",
+      reason: "A unique image helps visitors tell this Place Page apart from other pages. You may publish without one.",
+    })
+  }
   return warnings
 }
 

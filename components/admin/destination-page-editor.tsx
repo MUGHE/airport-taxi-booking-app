@@ -43,7 +43,7 @@ type DraftSaveState = "idle" | "saving" | "saved" | "error"
 
 function blockerTab(code: string): EditorTab {
   if (["invalid-slug", "duplicate-value", "missing-seo-title", "missing-meta-description", "missing-h1"].includes(code)) return "seo"
-  if (["incomplete-location", "invalid-terminal", "missing-primary-terminal"].includes(code)) return "location"
+  if (["incomplete-location", "invalid-terminal", "missing-primary-terminal", "unreviewed-google-place"].includes(code)) return "location"
   if (code === "missing-service-area") return "basic-info"
   if (code === "missing-hero") return "hero"
   if (code === "minimum-faqs") return "faq-trust"
@@ -149,6 +149,8 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
     metaDescription: form.metaDescription ?? "",
     h1: form.h1 ?? "",
     content,
+    validNearbyCandidateCount: new Set(relatedCandidates.filter((candidate) => candidate.pageType === "place").map((candidate) => candidate.id)).size,
+    googlePlaceReviewStatus: pageType === "place" ? (placeReview === "valid" ? "valid" : placeReview === "invalid" ? "invalid" : "unreviewed") : undefined,
   })
   const allPublishBlockers = [...publishBlockers, ...serverBlockers.filter((serverBlocker) => !publishBlockers.some((blocker) => blocker.code === serverBlocker.code))]
   const blockerCounts = allPublishBlockers.reduce<Partial<Record<EditorTab, number>>>((counts, blocker) => {
@@ -368,7 +370,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
               <div className="flex flex-wrap items-center gap-2">
                 <FullPreviewButton pageId={form.id} dirty={dirty} />
                 <Button type="submit" variant="outline" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save draft</Button>
-                {pageType === "airport" && <Button type="button" disabled={!form.id || isPending || dirty} onClick={publish}>Publish</Button>}
+                <Button type="button" disabled={!form.id || isPending || dirty} onClick={publish}>Publish</Button>
               </div>
             </div>
             <div className="overflow-x-auto border-t border-border px-2 sm:px-4">
