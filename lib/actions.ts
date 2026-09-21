@@ -49,7 +49,7 @@ import {
   sendLowRatingAlertEmail,
   sendReviewRequestEmail,
 } from "./email"
-import { getAdminDestinationPage, listAdminDestinationPages, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
+import { getAdminDestinationPage, listAdminDestinationPages, listPlaceIdentityOptions, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
 import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
@@ -122,6 +122,30 @@ export async function getReusableDestinationContentAction() {
 export async function getRelatedDestinationCandidatesAction(pageId?: string) {
   if (!(await isAdminAuthenticated())) return []
   return listPublishedDestinationCandidates(pageId)
+}
+
+export async function getPlaceIdentityOptionsAction() {
+  if (!(await isAdminAuthenticated())) return { groups: [], parents: [] }
+  return listPlaceIdentityOptions()
+}
+
+export async function reviewGooglePlaceAction(placeId: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  if (!apiKey) return { ok: false as const, error: "Google Place review is not configured." }
+  if (!placeId.trim()) return { ok: false as const, error: "Select a Google Place before reviewing it." }
+  try {
+    const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId.trim())}`, {
+      headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "id,formattedAddress,location" },
+      cache: "no-store",
+    })
+    if (response.status === 400) return { ok: false as const, error: "This Google Place identifier is invalid. Select the place again." }
+    if (response.status === 404) return { ok: false as const, error: "This Google Place identifier is obsolete. Search for the place and select its current result." }
+    if (!response.ok) return { ok: false as const, error: "Google could not review this place right now. Try again later." }
+    return { ok: true as const }
+  } catch {
+    return { ok: false as const, error: "Google could not review this place right now. Try again later." }
+  }
 }
 
 export async function setAirportFeaturedAction(pageId: string, featured: boolean) {

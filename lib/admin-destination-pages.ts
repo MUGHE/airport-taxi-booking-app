@@ -4,10 +4,12 @@ import { DEFAULT_GLOBAL_FAQS, DEFAULT_SERVICE_FACTS, DEFAULT_VERIFIED_REVIEWS, t
 import { listRelatedDestinations } from "@/lib/related-destinations"
 import { getPublishBlockers, getPublishWarnings, getWarningSetHash, type ExistingQualityPage, type PublishWarning } from "@/lib/publish-readiness"
 import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
+import { findPlaceIdentityConflict, normalizePlaceIdentity, wouldCreateParentCycle } from "@/lib/place-identity"
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
 const DUPLICATE_SLUG_ERROR = "That Airport Slug is already in use. Choose a different slug."
+const DUPLICATE_PLACE_SLUG_ERROR = "That Place Slug is already in use. Choose a different slug."
 const DUPLICATE_IATA_ERROR = "That IATA code is already in use. Check the airport code."
 
 export type AdminDestinationPage = {
@@ -22,6 +24,11 @@ export type AdminDestinationPage = {
   displayName: string
   iataCode: string
   serviceArea: string
+  placeType: string
+  placeGroupId: string
+  primaryParentId: string
+  aliases: string[]
+  coveredLocalities: AdminCoveredLocality[]
   googlePlaceId: string
   address: string
   latitude: number
@@ -36,6 +43,10 @@ export type AdminDestinationPage = {
   terminals: AdminTerminal[]
   relatedDestinations: AdminRelatedDestination[]
 }
+
+export type AdminCoveredLocality = { id?: string; name: string; localityType: string; notes: string }
+export type AdminPlaceGroup = { id: string; name: string }
+export type AdminParentPlace = { id: string; displayName: string }
 
 export type AdminRelatedDestination = {
   id?: string
@@ -60,7 +71,7 @@ export type AdminTerminal = {
   isPrimary: boolean
 }
 
-export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "pageType" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
+export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
   id?: string
   terminals: AdminTerminal[]
   relatedDestinations: AdminRelatedDestination[]
@@ -81,6 +92,9 @@ type PageRow = {
   display_name: string | null
   iata_code: string | null
   service_area: string | null
+  place_type: string | null
+  place_group_id: string | null
+  primary_parent_id: string | null
   google_place_id: string | null
   address: string | null
   latitude: number | null
@@ -170,7 +184,7 @@ function toTerminal(row: TerminalRow): AdminTerminal {
   }
 }
 
-function toPage(row: PageRow, draft: SnapshotRow | undefined, published: SnapshotRow | undefined, terminals: TerminalRow[], relatedDestinations: AdminRelatedDestination[] = []): AdminDestinationPage {
+function toPage(row: PageRow, draft: SnapshotRow | undefined, published: SnapshotRow | undefined, terminals: TerminalRow[], relatedDestinations: AdminRelatedDestination[] = [], aliases: string[] = [], coveredLocalities: AdminCoveredLocality[] = []): AdminDestinationPage {
   const policy = getDestinationPagePolicy(row.page_type)
   return {
     id: row.id,
@@ -184,6 +198,11 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     displayName: row.display_name ?? "",
     iataCode: row.iata_code ?? "",
     serviceArea: row.service_area ?? "",
+    placeType: row.place_type ?? "",
+    placeGroupId: row.place_group_id ?? "",
+    primaryParentId: row.primary_parent_id ?? "",
+    aliases,
+    coveredLocalities,
     googlePlaceId: row.google_place_id ?? "",
     address: row.address ?? "",
     latitude: row.latitude == null ? 0 : Number(row.latitude),
@@ -201,7 +220,7 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
 }
 
 async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<AdminDestinationPage[]> {
-  let pageQuery = supabase.from("destination_pages").select("*").eq("page_type", "airport").order("updated_at", { ascending: false })
+  let pageQuery = supabase.from("destination_pages").select("*").order("updated_at", { ascending: false })
   if (pageId) pageQuery = pageQuery.eq("id", pageId)
 
   const { data: pages, error: pageError } = await pageQuery
@@ -209,12 +228,16 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
   if (!pages?.length) return []
 
   const ids = (pages as PageRow[]).map((page) => page.id)
-  const [{ data: snapshots, error: snapshotError }, { data: terminals, error: terminalError }] = await Promise.all([
+  const [{ data: snapshots, error: snapshotError }, { data: terminals, error: terminalError }, { data: aliases, error: aliasError }, { data: localities, error: localityError }] = await Promise.all([
     supabase.from("destination_page_snapshots").select("id, page_id, snapshot_kind, seo_title, meta_description, h1, content, created_at").in("page_id", ids),
     supabase.from("destination_page_terminals").select("id, page_id, display_name, address, latitude, longitude, sort_order, is_primary").in("page_id", ids).order("sort_order"),
+    supabase.from("destination_place_aliases").select("id, page_id, name, display_order").in("page_id", ids).order("display_order"),
+    supabase.from("destination_covered_localities").select("id, page_id, name, locality_type, notes, display_order").in("page_id", ids).order("display_order"),
   ])
   if (snapshotError) throw snapshotError
   if (terminalError) throw terminalError
+  if (aliasError) throw aliasError
+  if (localityError) throw localityError
 
   const snapshotRows = (snapshots ?? []) as SnapshotRow[]
   const terminalRows = (terminals ?? []) as TerminalRow[]
@@ -223,6 +246,9 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
     snapshotRows.find((snapshot) => snapshot.id === page.current_draft_snapshot_id),
     snapshotRows.find((snapshot) => snapshot.id === page.current_published_snapshot_id),
     terminalRows.filter((terminal) => terminal.page_id === page.id),
+    [],
+    (aliases ?? []).filter((alias) => alias.page_id === page.id).map((alias) => alias.name as string),
+    (localities ?? []).filter((locality) => locality.page_id === page.id).map((locality) => ({ id: locality.id as string, name: locality.name as string, localityType: locality.locality_type as string, notes: (locality.notes as string | null) ?? "" })),
   ))
   for (const page of result) {
     const related = await listRelatedDestinations(page.id)
@@ -244,10 +270,33 @@ export async function getAdminDestinationPage(id: string): Promise<AdminDestinat
   return pages[0] ?? null
 }
 
+export async function listPlaceIdentityOptions(): Promise<{ groups: AdminPlaceGroup[]; parents: AdminParentPlace[] }> {
+  const supabase = getSupabase()
+  if (!supabase) return { groups: [], parents: [] }
+  const [{ data: groups, error: groupError }, { data: parents, error: parentError }] = await Promise.all([
+    supabase.from("destination_place_groups").select("id, name").eq("active", true).order("display_order").order("name"),
+    supabase.from("destination_pages").select("id, display_name").eq("page_type", "place").neq("lifecycle_state", "archived").order("display_name"),
+  ])
+  if (groupError || parentError) throw groupError ?? parentError
+  return {
+    groups: (groups ?? []).map((group) => ({ id: group.id as string, name: group.name as string })),
+    parents: (parents ?? []).map((parent) => ({ id: parent.id as string, displayName: (parent.display_name as string | null) ?? "Unnamed Place" })),
+  }
+}
+
 function validationError(input: SaveAdminDestinationPageInput): string | null {
-  const policy = getDestinationPagePolicy("airport")
-  if (input.iataCode.trim() && !/^[A-Z]{3}$/.test(input.iataCode.trim())) return "IATA code must be exactly three uppercase letters."
-  if (input.slug.trim() && !policy.slug.isValid(input.slug.trim())) return "Use a lowercase slug ending in -airport-taxi."
+  const policy = getDestinationPagePolicy(input.pageType)
+  if (input.pageType === "airport" && input.iataCode.trim() && !/^[A-Z]{3}$/.test(input.iataCode.trim())) return "IATA code must be exactly three uppercase letters."
+  if (input.slug.trim() && !policy.slug.isValid(input.slug.trim())) return input.pageType === "place" ? "Use a short lowercase Place Slug with words separated by hyphens." : "Use a lowercase slug ending in -airport-taxi."
+  if (input.pageType === "place") {
+    if (input.iataCode || input.terminals.length) return "Place Pages cannot have IATA codes or Airport Terminals."
+    if (!input.placeType) return "Choose a Place type before saving this Draft."
+    if (!input.placeGroupId) return "Choose one Place Group before saving this Draft."
+    const conflict = findPlaceIdentityConflict({ names: [input.displayName, input.officialName], aliases: input.aliases, coveredLocalities: input.coveredLocalities.map((item) => item.name) })
+    if (conflict) return `“${conflict}” is used more than once in this Place identity.`
+    if (input.coveredLocalities.some((item) => !item.name.trim() || !item.localityType.trim())) return "Every Covered Locality needs a name and locality type."
+    return null
+  }
   const terminals = input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal")
   if (terminals.filter((terminal) => terminal.isPrimary).length > 1) return "Select only one primary Airport Terminal."
   for (const terminal of terminals) {
@@ -276,8 +325,10 @@ export function friendlyDatabaseError(error: unknown): string {
   const message = databaseErrorText(error)
   if (message.includes("destination_pages_slug_key") || message.includes("duplicate key") && message.includes("slug")) return DUPLICATE_SLUG_ERROR
   if (message.includes("destination_pages_iata_code_key") || message.includes("duplicate key") && message.includes("iata")) return DUPLICATE_IATA_ERROR
-  if (message.toLowerCase().includes("duplicate key")) return "This airport conflicts with an existing Destination Page. Check the slug and IATA code."
-  return "The Airport Page could not be saved. Please check the fields and try again."
+  if (message.includes("Ambiguous active Place identity")) return "That Place name, alias, or Covered Locality is already used by another active Place."
+  if (message.includes("Primary Parent relationship cannot form a cycle")) return "Choose a Primary Parent that does not create a loop."
+  if (message.toLowerCase().includes("duplicate key")) return "This conflicts with an existing Destination Page. Check the identity fields."
+  return "The Destination Page could not be saved. Please check the fields and try again."
 }
 
 function imageReferences(content: DestinationContentDocument): DestinationImageReference[] {
@@ -320,9 +371,14 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
     displayName: input.displayName.trim(),
     iataCode: input.iataCode.trim().toUpperCase(),
     serviceArea: input.serviceArea.trim(),
+    placeType: input.placeType.trim(),
+    placeGroupId: input.placeGroupId.trim(),
+    primaryParentId: input.primaryParentId.trim(),
+    aliases: input.aliases.map((alias) => alias.trim().replace(/\s+/g, " ")).filter(Boolean),
+    coveredLocalities: input.coveredLocalities.map((locality) => ({ ...locality, name: locality.name.trim().replace(/\s+/g, " "), localityType: locality.localityType.trim(), notes: locality.notes.trim() })),
     googlePlaceId: input.googlePlaceId.trim(),
     address: input.address.trim(),
-    terminals: input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal").map((terminal, index) => ({ ...terminal, displayName: terminal.displayName.trim(), address: terminal.address.trim(), sortOrder: index })),
+    terminals: input.pageType === "place" ? [] : input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal").map((terminal, index) => ({ ...terminal, displayName: terminal.displayName.trim(), address: terminal.address.trim(), sortOrder: index })),
   }
   const error = validationError(normalized)
   if (error) return { ok: false, error }
@@ -332,9 +388,16 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   ])
   if (duplicateSlugError) return { ok: false, error: friendlyDatabaseError(duplicateSlugError) }
   if (duplicateIataError) return { ok: false, error: friendlyDatabaseError(duplicateIataError) }
-  if (duplicateSlugs?.some((row) => row.id !== normalized.id)) return { ok: false, error: DUPLICATE_SLUG_ERROR }
-  if (duplicateIataCodes?.some((row) => row.id !== normalized.id)) return { ok: false, error: DUPLICATE_IATA_ERROR }
-  const content = normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`)
+  if (duplicateSlugs?.some((row) => row.id !== normalized.id)) return { ok: false, error: normalized.pageType === "place" ? DUPLICATE_PLACE_SLUG_ERROR : DUPLICATE_SLUG_ERROR }
+  if (normalized.pageType === "airport" && duplicateIataCodes?.some((row) => row.id !== normalized.id)) return { ok: false, error: DUPLICATE_IATA_ERROR }
+  if (normalized.pageType === "place" && normalized.primaryParentId) {
+    const { data: parentRows, error: parentError } = await supabase.from("destination_pages").select("id, primary_parent_id").eq("page_type", "place")
+    if (parentError) return { ok: false, error: "The Primary Parent could not be checked." }
+    const parents = new Map((parentRows ?? []).map((row) => [row.id as string, row.primary_parent_id as string | null]))
+    if (wouldCreateParentCycle(normalized.id ?? "new-place", normalized.primaryParentId, parents)) return { ok: false, error: "Choose a Primary Parent that does not create a loop." }
+  }
+  const policy = getDestinationPagePolicy(normalized.pageType)
+  const content = normalized.content ?? normalizeDestinationContent(undefined, normalized.h1?.trim() || policy.defaults.h1(normalized.displayName), normalized.pageType)
   const reusableContentError = await validateReusableContent(content)
   if (reusableContentError) return { ok: false, error: reusableContentError }
   const imageError = await validateSavedImages(supabase, content, normalized.relatedDestinations.flatMap((item) => [item.image, item.reverseImage].filter((image): image is DestinationImageReference => Boolean(image))))
@@ -352,6 +415,9 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
         display_name: normalized.displayName || null,
         iata_code: normalized.iataCode || null,
         service_area: normalized.serviceArea || null,
+        place_type: normalized.pageType === "place" ? normalized.placeType || null : null,
+        place_group_id: normalized.pageType === "place" ? normalized.placeGroupId || null : null,
+        primary_parent_id: normalized.pageType === "place" ? normalized.primaryParentId || null : null,
         google_place_id: hasLocation ? normalized.googlePlaceId : null,
         address: hasLocation ? normalized.address : null,
         latitude: hasLocation ? normalized.latitude : null,
@@ -361,25 +427,28 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
         ...pageValues,
         content_schema_version: DESTINATION_CONTENT_SCHEMA_VERSION,
         updated_at: new Date().toISOString(),
-      }).eq("id", pageId).eq("page_type", "airport")
+      }).eq("id", pageId).eq("page_type", normalized.pageType)
       if (updateError) throw updateError
     } else {
       const hasLocation = Boolean(normalized.googlePlaceId && normalized.address)
       const { data, error: insertError } = await supabase.from("destination_pages").insert({
-        page_type: "airport",
+        page_type: normalized.pageType,
         lifecycle_state: "draft",
         slug: normalized.slug || null,
         official_name: normalized.officialName || null,
         display_name: normalized.displayName || null,
         iata_code: normalized.iataCode || null,
         service_area: normalized.serviceArea || null,
+        place_type: normalized.pageType === "place" ? normalized.placeType || null : null,
+        place_group_id: normalized.pageType === "place" ? normalized.placeGroupId || null : null,
+        primary_parent_id: normalized.pageType === "place" ? normalized.primaryParentId || null : null,
         google_place_id: hasLocation ? normalized.googlePlaceId : null,
         address: hasLocation ? normalized.address : null,
         latitude: hasLocation ? normalized.latitude : null,
         longitude: hasLocation ? normalized.longitude : null,
         content_schema_version: DESTINATION_CONTENT_SCHEMA_VERSION,
       }).select("id").single()
-      if (insertError || !data) throw insertError ?? new Error("Airport Page could not be created")
+      if (insertError || !data) throw insertError ?? new Error("Destination Page could not be created")
       pageId = data.id
     }
 
@@ -389,9 +458,9 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       page_id: pageId,
       snapshot_kind: "draft",
       created_at: new Date().toISOString(),
-      seo_title: normalized.seoTitle?.trim() || `${normalized.displayName} Airport Taxi & Transfers`,
-      meta_description: normalized.metaDescription?.trim() || `Fixed-price taxi transfers to and from ${normalized.displayName} Airport.`,
-      h1: normalized.h1?.trim() || `${normalized.displayName} Airport Taxi & Transfers`,
+      seo_title: normalized.seoTitle?.trim() || policy.defaults.seoTitle(normalized.displayName),
+      meta_description: normalized.metaDescription?.trim() || policy.defaults.metaDescription(normalized.displayName),
+      h1: normalized.h1?.trim() || policy.defaults.h1(normalized.displayName),
       content,
     }
     let snapshotId = currentPage.current_draft_snapshot_id
@@ -418,6 +487,15 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
     })
     if (terminalError) throw terminalError
 
+    if (normalized.pageType === "place") {
+      const { error: supportError } = await supabase.rpc("replace_destination_place_support", {
+        p_page_id: pageId,
+        p_aliases: normalized.aliases.map((name) => ({ name })),
+        p_localities: normalized.coveredLocalities,
+      })
+      if (supportError) throw supportError
+    }
+
     const { error: deleteRelationshipsError } = await supabase.from("destination_page_relationships").delete().or(`page_a_id.eq.${pageId},page_b_id.eq.${pageId}`)
     if (deleteRelationshipsError) throw deleteRelationshipsError
     for (const related of normalized.relatedDestinations) {
@@ -437,7 +515,7 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
     }
 
     const saved = await loadPageRows(supabase, pageId)
-    if (!saved[0]) return { ok: false, error: "The Airport Page was saved but could not be reloaded." }
+    if (!saved[0]) return { ok: false, error: "The Destination Page was saved but could not be reloaded." }
     return { ok: true, page: saved[0] }
   } catch (saveError) {
     if (!input.id && pageId) {
