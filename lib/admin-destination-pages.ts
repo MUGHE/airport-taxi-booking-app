@@ -35,6 +35,7 @@ export type AdminDestinationPage = {
   latitude: number
   longitude: number
   updatedAt: string
+  draftUpdatedAt: string
   draft: {
     seoTitle: string
     metaDescription: string
@@ -75,7 +76,7 @@ export type AdminTerminal = {
   isPrimary: boolean
 }
 
-export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
+export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "draftUpdatedAt" | "terminals"> & {
   id?: string
   terminals: AdminTerminal[]
   relatedDestinations: AdminRelatedDestination[]
@@ -212,6 +213,7 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     latitude: row.latitude == null ? 0 : Number(row.latitude),
     longitude: row.longitude == null ? 0 : Number(row.longitude),
     updatedAt: row.updated_at,
+    draftUpdatedAt: draft?.created_at ?? "",
     draft: {
       seoTitle: draft?.seo_title ?? policy.defaults.seoTitle(row.display_name ?? ""),
       metaDescription: draft?.meta_description ?? policy.defaults.metaDescription(row.display_name ?? ""),
@@ -556,8 +558,19 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   }
 }
 
-export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[] }
+export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[]; expectedDraftUpdatedAt?: string }
 export type PublishResult = { ok: true; slug: string } | { ok: false; error: string; blockers?: { code: string; message: string }[]; warnings?: PublishWarning[]; warningSetHash?: string }
+export type PublishReview = {
+  ok: true
+  pageId: string
+  pageType: DestinationPageType
+  displayName: string
+  slug: string
+  draftUpdatedAt: string
+  blockers: { code: string; message: string }[]
+  warnings: PublishWarning[]
+  warningSetHash: string
+} | { ok: false; error: string }
 export type RestoreResult = { ok: true; page: AdminDestinationPage } | { ok: false; error: string }
 export type LifecycleResult = { ok: true } | { ok: false; error: string }
 
@@ -614,7 +627,7 @@ async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQuali
   }))
 }
 
-export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride): Promise<PublishResult> {
+async function getPublishReview(pageId: string): Promise<PublishReview> {
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
   const page = await getAdminDestinationPage(pageId)
@@ -623,24 +636,79 @@ export async function publishAdminDestinationPage(pageId: string, override?: Pub
   const validNearbyCandidateCount = new Set(existingPages.filter((item) => item.pageType === "place" && item.id !== pageId).map((item) => item.id)).size
   const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages, validNearbyCandidateCount }
   const blockers = getPublishBlockers(readiness)
-  if (blockers.length) return { ok: false, error: blockers.map((item) => item.message).join(" "), blockers }
   const warnings = getPublishWarnings(readiness)
   const warningSetHash = getWarningSetHash(warnings)
-  if (warnings.length && (!override || override.warningSetHash !== warningSetHash || JSON.stringify(override.warnings) !== JSON.stringify(warnings))) {
-    return { ok: false, error: override ? "The quality warnings changed. Review them before publishing." : "Review the quality warnings before publishing.", warnings, warningSetHash }
-  }
   const reusableContentError = await validateReusableContent(page.draft.content)
-  if (reusableContentError) return { ok: false, error: reusableContentError, blockers: [{ code: "invalid-reusable-content", message: reusableContentError }] }
+  if (reusableContentError) blockers.push({ code: "invalid-reusable-content", message: reusableContentError })
   const imageError = await validateSavedImages(supabase, page.draft.content, page.relatedDestinations.flatMap((item) => [item.image, item.reverseImage].filter((image): image is DestinationImageReference => Boolean(image))))
-  if (imageError) return { ok: false, error: imageError, blockers: [{ code: "invalid-media", message: imageError }] }
+  if (imageError) blockers.push({ code: "invalid-media", message: imageError })
   const relatedError = await validateRelatedDestinations(supabase, { ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content })
-  if (relatedError) return { ok: false, error: relatedError, blockers: [{ code: "invalid-relationships", message: relatedError }] }
-  const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin", p_override: override ? { warningCodes: warnings.map((warning) => warning.code), warningReasons: warnings.map((warning) => warning.reason) } : {} })
+  if (relatedError) blockers.push({ code: "invalid-relationships", message: relatedError })
+  return { ok: true, pageId, pageType: page.pageType, displayName: page.displayName, slug: page.slug, draftUpdatedAt: page.draftUpdatedAt, blockers, warnings, warningSetHash }
+}
+
+export async function reviewAdminDestinationPage(pageId: string): Promise<PublishReview> {
+  return getPublishReview(pageId)
+}
+
+export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride): Promise<PublishResult> {
+  const supabase = getSupabase()
+  if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
+  const review = await getPublishReview(pageId)
+  if (!review.ok) return review
+  if (review.blockers.length) return { ok: false, error: review.blockers.map((item) => item.message).join(" "), blockers: review.blockers }
+  if (override?.expectedDraftUpdatedAt && override.expectedDraftUpdatedAt !== review.draftUpdatedAt) return { ok: false, error: "This Draft changed after it was reviewed. Refresh the list and review it again." }
+  if (review.warnings.length && (!override || override.warningSetHash !== review.warningSetHash || JSON.stringify(override.warnings) !== JSON.stringify(review.warnings))) {
+    return { ok: false, error: override ? "The quality warnings changed. Review them before publishing." : "Review the quality warnings before publishing.", warnings: review.warnings, warningSetHash: review.warningSetHash }
+  }
+  const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin", p_override: override ? { warningCodes: review.warnings.map((warning) => warning.code), warningReasons: review.warnings.map((warning) => warning.reason) } : {} })
   if (error) {
     const message = error.message.toLowerCase().includes("duplicate") ? "That SEO title, Airport Slug, or IATA code conflicts with another Published Page." : "Publish failed. The previous public Published Snapshot is unchanged."
     return { ok: false, error: message }
   }
   return { ok: true, slug: (data as { slug: string }).slug }
+}
+
+export type BulkPublishSelection = {
+  pageId: string
+  expectedDraftUpdatedAt: string
+  override?: PublishOverride
+}
+
+export type BulkPublishReportItem = {
+  pageId: string
+  displayName: string
+  slug: string
+  status: "published" | "skipped" | "failed"
+  reason: string
+  fixLink?: string
+}
+
+export async function bulkPublishPlaceDrafts(selections: BulkPublishSelection[]): Promise<BulkPublishReportItem[]> {
+  const uniqueSelections = [...new Map(selections.map((selection) => [selection.pageId, selection])).values()]
+  const report: BulkPublishReportItem[] = []
+  for (const selection of uniqueSelections) {
+    const page = await getAdminDestinationPage(selection.pageId)
+    const displayName = page?.displayName || "Unknown Place Page"
+    const slug = page?.slug || ""
+    const fixLink = `/admin/destination-pages/${selection.pageId}`
+    if (!page || page.pageType !== "place") {
+      report.push({ pageId: selection.pageId, displayName, slug, status: "skipped", reason: "Only Place Pages can be bulk published.", fixLink })
+      continue
+    }
+    if (page.lifecycleState === "archived" || (page.lifecycleState === "published" && !page.hasUnpublishedChanges)) {
+      report.push({ pageId: selection.pageId, displayName, slug, status: "skipped", reason: "This Place has no unpublished changes to publish.", fixLink })
+      continue
+    }
+    if (selection.expectedDraftUpdatedAt !== page.draftUpdatedAt) {
+      report.push({ pageId: selection.pageId, displayName, slug, status: "skipped", reason: "This Draft changed after selection. Review the newer Draft before publishing.", fixLink })
+      continue
+    }
+    const result = await publishAdminDestinationPage(selection.pageId, selection.override ? { ...selection.override, expectedDraftUpdatedAt: selection.expectedDraftUpdatedAt } : { warningSetHash: "", warnings: [], expectedDraftUpdatedAt: selection.expectedDraftUpdatedAt })
+    if (result.ok) report.push({ pageId: selection.pageId, displayName, slug: result.slug, status: "published", reason: "Published successfully." })
+    else report.push({ pageId: selection.pageId, displayName, slug, status: result.blockers?.length || result.warnings?.length ? "skipped" : "failed", reason: result.error, fixLink })
+  }
+  return report
 }
 
 export async function restoreAdminDestinationPage(pageId: string): Promise<RestoreResult> {

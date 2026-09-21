@@ -49,7 +49,7 @@ import {
   sendLowRatingAlertEmail,
   sendReviewRequestEmail,
 } from "./email"
-import { getAdminDestinationPage, listAdminDestinationPages, listPlaceIdentityOptions, listReusableDestinationContent, saveAdminDestinationPage, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
+import { bulkPublishPlaceDrafts, getAdminDestinationPage, listAdminDestinationPages, listPlaceIdentityOptions, listReusableDestinationContent, reviewAdminDestinationPage, saveAdminDestinationPage, type BulkPublishSelection, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
 import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
@@ -213,6 +213,27 @@ export async function publishAdminDestinationPageAction(pageId: string, override
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }
   return result
+}
+
+export async function reviewBulkPlacePublishAction(pageIds: string[]) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const reviews = await Promise.all([...new Set(pageIds)].map((pageId) => reviewAdminDestinationPage(pageId)))
+  return { ok: true as const, reviews }
+}
+
+export async function bulkPublishPlaceDraftsAction(selections: BulkPublishSelection[]) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const report = await bulkPublishPlaceDrafts(selections)
+  if (report.some((item) => item.status === "published")) {
+    invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
+    revalidatePath("/", "layout")
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/destinations", "layout")
+    revalidatePath("/sitemap.xml")
+    revalidatePath("/admin/destination-pages")
+  }
+  return { ok: true as const, report }
 }
 
 export async function restoreAdminDestinationPageAction(pageId: string) {
