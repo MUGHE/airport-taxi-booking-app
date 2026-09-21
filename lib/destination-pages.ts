@@ -133,14 +133,18 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
 
 export async function createDraftPlacePagePresentation(page: AdminDestinationPage): Promise<PlacePagePresentation> {
   const content = page.draft.content
+  const supportedAirports = page.relatedDestinations.filter((item) => item.kind === "supported_airport")
+  const terminals = await getPublishedPrimaryTerminals(supportedAirports.map((item) => item.pageId))
   return {
+    sourcePlaceId: page.id,
+    sourcePlaceSlug: page.slug,
     displayName: page.displayName,
     heading: content.hero.heading || page.draft.h1,
     intro: content.hero.body,
     heroImage: content.hero.image,
     sections: content.sections,
     finalCta: content.finalCta,
-    supportedAirports: page.relatedDestinations.filter((item) => item.kind === "supported_airport").map((item) => ({ id: item.id ?? item.pageId, displayName: item.displayName, slug: item.slug, description: item.description, bookingAvailable: item.bookingAvailable !== false })),
+    supportedAirports: supportedAirports.map((item) => { const terminal = terminals.get(item.pageId); return { id: item.pageId, displayName: item.displayName, slug: item.slug, description: item.description, bookingAvailable: item.bookingAvailable !== false && Boolean(terminal), primaryTerminal: terminal ? { name: terminal.display_name, latitude: Number(terminal.latitude), longitude: Number(terminal.longitude) } : undefined } }),
     nearbyPlaces: page.relatedDestinations.filter((item) => item.kind === "nearby_place").map((item) => ({ id: item.id ?? item.pageId, displayName: item.displayName, slug: item.slug, description: item.description })),
     serviceFacts: content.serviceFacts,
     globalFaqs: content.globalFaqs,
@@ -405,15 +409,19 @@ async function loadPublishedPlacePage(slug: string): Promise<PublicPlacePageRead
     const { data: snapshot, error: snapshotError } = await supabase.from("destination_page_snapshots").select("id, snapshot_kind, seo_title, meta_description, h1, content").eq("id", row.current_published_snapshot_id).eq("page_id", row.id).eq("snapshot_kind", "published").maybeSingle()
     if (snapshotError || !snapshot) return { status: "unavailable" }
     const related = await listRelatedDestinations(row.id)
+    const supportedAirports = related.filter((item) => item.kind === "supported_airport")
+    const terminals = await getPublishedPrimaryTerminals(supportedAirports.map((item) => item.pageId))
     const content = normalizeDestinationContent(snapshot.content, snapshot.h1, "place")
     const presentation: PlacePagePresentation = {
+      sourcePlaceId: row.id,
+      sourcePlaceSlug: row.published_slug,
       displayName: row.display_name,
       heading: snapshot.h1,
       intro: content.hero.body,
       heroImage: content.hero.image,
       sections: content.sections,
       finalCta: content.finalCta,
-      supportedAirports: related.filter((item) => item.kind === "supported_airport").map((item) => ({ id: item.id, displayName: item.displayName, slug: item.slug, description: item.description, bookingAvailable: item.bookingAvailable })),
+      supportedAirports: supportedAirports.map((item) => { const terminal = terminals.get(item.pageId); return { id: item.pageId, displayName: item.displayName, slug: item.slug, description: item.description, bookingAvailable: item.bookingAvailable && Boolean(terminal), primaryTerminal: terminal ? { name: terminal.display_name, latitude: Number(terminal.latitude), longitude: Number(terminal.longitude) } : undefined } }),
       nearbyPlaces: related.filter((item) => item.kind === "nearby_place").map((item) => ({ id: item.id, displayName: item.displayName, slug: item.slug, description: item.description })),
       serviceFacts: content.serviceFacts,
       globalFaqs: content.globalFaqs,
