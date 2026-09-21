@@ -1,17 +1,26 @@
 import type { MetadataRoute } from "next"
 import { SITE_URL } from "@/lib/site"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
+import { listPublishedPlaceDirectory } from "@/lib/place-directory"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date()
   const airports = await listPublishedAirportDirectory()
+  const destinations = await listPublishedPlaceDirectory()
 
   return [
     { url: SITE_URL, lastModified, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/book`, lastModified, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE_URL}/airport-transfers`, lastModified, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE_URL}/destinations`, lastModified, changeFrequency: "monthly", priority: 0.8 },
     ...airports.map((airport) => ({
       url: `${SITE_URL}/airport-transfers/${airport.slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    ...destinations.places.map((place) => ({
+      url: `${SITE_URL}/destinations/${place.slug}`,
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.7,

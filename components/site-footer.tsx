@@ -48,6 +48,7 @@ export function SiteFooter() {
           <FooterCol title="Services" links={[
             { href: "/book", label: "Book a Ride" },
             { href: "/airport-transfers", label: "Airport Transfers" },
+            { href: "/destinations", label: "Destinations" },
             { href: "/#fleet", label: "Our Fleet" },
             { href: "/track", label: "Track Booking" },
           ]} />
