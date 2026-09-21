@@ -143,13 +143,13 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
   })
   const content = form.content ?? normalizeDestinationContent(undefined, form.h1 || policy.defaults.h1(form.displayName), pageType)
   const selectedContentSection = content.sections.find((section) => section.id === selectedContentId) ?? content.sections[0]
-  const publishBlockers = pageType === "airport" ? getPublishBlockers({
+  const publishBlockers = getPublishBlockers({
     ...form,
     seoTitle: form.seoTitle ?? "",
     metaDescription: form.metaDescription ?? "",
     h1: form.h1 ?? "",
     content,
-  }) : []
+  })
   const allPublishBlockers = [...publishBlockers, ...serverBlockers.filter((serverBlocker) => !publishBlockers.some((blocker) => blocker.code === serverBlocker.code))]
   const blockerCounts = allPublishBlockers.reduce<Partial<Record<EditorTab, number>>>((counts, blocker) => {
     const tab = blockerTab(blocker.code)

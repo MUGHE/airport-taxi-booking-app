@@ -587,16 +587,18 @@ export async function setAdminBookingAvailability(pageId: string, available: boo
 }
 
 async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
-  const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }] = await Promise.all([
-    supabase.from("destination_pages").select("id, slug, iata_code, lifecycle_state").eq("page_type", "airport").neq("lifecycle_state", "archived"),
+  const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }, { data: aliases, error: aliasError }, { data: localities, error: localityError }] = await Promise.all([
+    supabase.from("destination_pages").select("id, slug, iata_code, page_type, display_name, official_name, lifecycle_state").neq("lifecycle_state", "archived"),
     supabase.from("destination_page_snapshots").select("page_id, snapshot_kind, seo_title, meta_description, content").in("snapshot_kind", ["draft", "published"]),
+    supabase.from("destination_place_aliases").select("page_id, name"),
+    supabase.from("destination_covered_localities").select("page_id, name"),
   ])
-  if (pageError || snapshotError) throw pageError ?? snapshotError
-  const pageRows = (pages ?? []) as { id: string; slug: string; iata_code: string }[]
+  if (pageError || snapshotError || aliasError || localityError) throw pageError ?? snapshotError ?? aliasError ?? localityError
+  const pageRows = (pages ?? []) as { id: string; slug: string; iata_code?: string; page_type: DestinationPageType; display_name?: string; official_name?: string }[]
   const snapshotRows = (snapshots ?? []) as { page_id: string; snapshot_kind: "draft" | "published"; seo_title: string; meta_description: string; content: unknown }[]
   return pageRows.flatMap((page) => snapshotRows.filter((snapshot) => snapshot.page_id === page.id).map((snapshot) => {
-    const content = normalizeDestinationContent(snapshot.content, `${page.slug} Airport Taxi`)
-    return { id: page.id, slug: page.slug, iataCode: page.iata_code, seoTitle: snapshot.seo_title, metaDescription: snapshot.meta_description, content, heroImageAssetId: content.hero.image?.assetId }
+    const content = normalizeDestinationContent(snapshot.content, `${page.slug} Airport Taxi`, page.page_type)
+    return { id: page.id, slug: page.slug, pageType: page.page_type, iataCode: page.iata_code, displayName: page.display_name, officialName: page.official_name, aliases: (aliases ?? []).filter((alias) => alias.page_id === page.id).map((alias) => alias.name as string), coveredLocalities: (localities ?? []).filter((locality) => locality.page_id === page.id).map((locality) => locality.name as string), seoTitle: snapshot.seo_title, metaDescription: snapshot.meta_description, content, heroImageAssetId: content.hero.image?.assetId }
   }))
 }
 
@@ -606,7 +608,7 @@ export async function publishAdminDestinationPage(pageId: string, override?: Pub
   const page = await getAdminDestinationPage(pageId)
   if (!page) return { ok: false, error: "Airport Page not found." }
   const existingPages = await listQualityPages(supabase)
-  const readiness = { ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages }
+  const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages }
   const blockers = getPublishBlockers(readiness)
   if (blockers.length) return { ok: false, error: blockers.map((item) => item.message).join(" "), blockers }
   const warnings = getPublishWarnings(readiness)

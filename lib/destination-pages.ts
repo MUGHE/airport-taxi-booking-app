@@ -9,6 +9,8 @@ import { LEGACY_AIRPORT_REDIRECTS } from "@/lib/legacy-airport-redirects.mjs"
 import { readPublishedAirportFacts, type PublishedAirportFacts } from "@/lib/published-airport-facts"
 import { cacheSafePublishedAirportPage, getSafePublishedAirportPage } from "@/lib/public-airport-page-cache"
 import { getDestinationPagePolicy } from "@/lib/destination-page-policy"
+import type { PlacePagePresentation } from "@/lib/place-page-data"
+import { cacheSafePublishedPlacePage, getSafePublishedPlacePage } from "@/lib/public-place-page-cache"
 
 const airportPolicy = getDestinationPagePolicy("airport")
 
@@ -67,6 +69,16 @@ export type PublicAirportPageRead =
   | { status: "published" | "fallback"; page: PublishedAirportPage }
   | { status: "missing" | "unavailable" }
 
+export type PublishedPlacePage = {
+  presentation: PlacePagePresentation
+  metadata: { title: string; description: string; canonical: string; socialImage: { url: string; alt: string } }
+  bookingAvailable: boolean
+}
+
+export type PublicPlacePageRead =
+  | { status: "published" | "fallback"; page: PublishedPlacePage }
+  | { status: "missing" | "unavailable" }
+
 export type AirportPageSeo = {
   title: string
   description: string
@@ -116,6 +128,25 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
     vehicles: VEHICLE_CLASSES,
     relatedDestinations,
   })
+}
+
+export async function createDraftPlacePagePresentation(page: AdminDestinationPage): Promise<PlacePagePresentation> {
+  const content = page.draft.content
+  return {
+    displayName: page.displayName,
+    heading: content.hero.heading || page.draft.h1,
+    intro: content.hero.body,
+    heroImage: content.hero.image,
+    sections: content.sections,
+    finalCta: content.finalCta,
+    supportedAirports: page.relatedDestinations.filter((item) => item.kind === "supported_airport").map((item) => ({ id: item.id ?? item.pageId, displayName: item.displayName, slug: item.slug, description: item.description, bookingAvailable: item.bookingAvailable !== false })),
+    nearbyPlaces: page.relatedDestinations.filter((item) => item.kind === "nearby_place").map((item) => ({ id: item.id ?? item.pageId, displayName: item.displayName, slug: item.slug, description: item.description })),
+    serviceFacts: content.serviceFacts,
+    globalFaqs: content.globalFaqs,
+    localFaqs: content.placeFaqs,
+    reviews: content.reviews,
+    bookingAvailable: page.bookingAvailable,
+  }
 }
 
 function getSupabase() {
@@ -343,3 +374,49 @@ export async function getPublishedAirportPage(slug: string): Promise<PublishedAi
   const result = await readPublicAirportPage(slug)
   return result.status === "published" || result.status === "fallback" ? result.page : null
 }
+
+async function loadPublishedPlacePage(slug: string): Promise<PublicPlacePageRead> {
+  const supabase = getSupabase()
+  if (!supabase) return { status: "unavailable" }
+  try {
+    const { data: page, error: pageError } = await supabase.from("destination_pages").select("id, current_published_snapshot_id, published_slug, display_name, booking_available").eq("published_slug", slug).eq("page_type", "place").eq("lifecycle_state", "published").maybeSingle()
+    if (pageError) return { status: "unavailable" }
+    if (!page) return { status: "missing" }
+    const row = page as { id: string; current_published_snapshot_id: string | null; published_slug: string; display_name: string; booking_available: boolean }
+    if (!row.current_published_snapshot_id) return { status: "unavailable" }
+    const { data: snapshot, error: snapshotError } = await supabase.from("destination_page_snapshots").select("id, snapshot_kind, seo_title, meta_description, h1, content").eq("id", row.current_published_snapshot_id).eq("page_id", row.id).eq("snapshot_kind", "published").maybeSingle()
+    if (snapshotError || !snapshot) return { status: "unavailable" }
+    const related = await listRelatedDestinations(row.id)
+    const content = normalizeDestinationContent(snapshot.content, snapshot.h1, "place")
+    const presentation: PlacePagePresentation = {
+      displayName: row.display_name,
+      heading: snapshot.h1,
+      intro: content.hero.body,
+      heroImage: content.hero.image,
+      sections: content.sections,
+      finalCta: content.finalCta,
+      supportedAirports: related.filter((item) => item.kind === "supported_airport").map((item) => ({ id: item.id, displayName: item.displayName, slug: item.slug, description: item.description, bookingAvailable: item.bookingAvailable })),
+      nearbyPlaces: related.filter((item) => item.kind === "nearby_place").map((item) => ({ id: item.id, displayName: item.displayName, slug: item.slug, description: item.description })),
+      serviceFacts: content.serviceFacts,
+      globalFaqs: content.globalFaqs,
+      localFaqs: content.placeFaqs,
+      reviews: content.reviews,
+      bookingAvailable: row.booking_available,
+    }
+    const published = { presentation, metadata: { title: snapshot.seo_title, description: snapshot.meta_description, canonical: `${getDestinationPagePolicy("place").public.namespace}/${row.published_slug}`, socialImage: presentation.heroImage ? { url: presentation.heroImage.secureUrl, alt: presentation.heroImage.altText } : { url: "/placeholder.svg", alt: `${row.display_name} airport transfers` } }, bookingAvailable: row.booking_available }
+    cacheSafePublishedPlacePage(slug, published)
+    return { status: "published", page: published }
+  } catch {
+    const cached = getSafePublishedPlacePage(slug)
+    return cached ? { status: "fallback", page: cached } : { status: "unavailable" }
+  }
+}
+
+export const readPublicPlacePage = cache(async (slug: string): Promise<PublicPlacePageRead> => {
+  const result = await loadPublishedPlacePage(slug)
+  if (result.status === "unavailable") {
+    const cached = getSafePublishedPlacePage(slug)
+    if (cached) return { status: "fallback", page: cached }
+  }
+  return result
+})

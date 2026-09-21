@@ -2,12 +2,18 @@ import { SECTION_LABELS, type DestinationContentDocument, type DestinationImageR
 import type { AdminRelatedDestination, AdminTerminal } from "@/lib/admin-destination-pages"
 
 export type PublishReadinessInput = {
+  pageType?: "airport" | "place"
   id?: string
   slug: string
   officialName: string
   displayName: string
-  iataCode: string
-  serviceArea: string
+  iataCode?: string
+  serviceArea?: string
+  placeType?: string
+  placeGroupId?: string
+  primaryParentId?: string
+  aliases?: string[]
+  coveredLocalities?: { name: string; localityType: string }[]
   googlePlaceId: string
   address: string
   latitude: number
@@ -26,7 +32,12 @@ export type PublishWarning = { code: string; message: string; reason: string }
 export type ExistingQualityPage = {
   id: string
   slug: string
-  iataCode: string
+  pageType?: "airport" | "place"
+  iataCode?: string
+  displayName?: string
+  officialName?: string
+  aliases?: string[]
+  coveredLocalities?: string[]
   seoTitle?: string
   metaDescription?: string
   content?: DestinationContentDocument
@@ -48,10 +59,46 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
   const blockers: PublishBlocker[] = []
   const block = (code: string, message: string) => blockers.push({ code, message })
 
+  if (input.pageType === "place") {
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.slug.trim()) || input.slug.trim().endsWith("-airport-taxi")) block("invalid-slug", "Use a short lowercase Place Slug with words separated by hyphens.")
+    const identity = [input.displayName, input.officialName, ...(input.aliases ?? []), ...(input.coveredLocalities ?? []).map((item) => item.name)].map((value) => value.trim().toLowerCase()).filter(Boolean)
+    const duplicateIdentity = identity.find((value, index) => identity.indexOf(value) !== index)
+    const duplicatePage = input.existingPages?.find((page) => page.id !== input.id && page.pageType === "place" && [page.displayName, page.officialName, ...(page.aliases ?? []), ...(page.coveredLocalities ?? [])].some((value) => value?.trim().toLowerCase() && identity.includes(value.trim().toLowerCase())))
+    if (duplicateIdentity || duplicatePage) block("duplicate-identity", "The Place name, alias, or Covered Locality conflicts with another active Place.")
+    if (!hasText(input.officialName) || !hasText(input.displayName) || !hasText(input.placeType) || !hasText(input.placeGroupId)) block("incomplete-identity", "Official name, display name, Place type, and Place Group are required.")
+    if (input.primaryParentId === input.id) block("invalid-parent", "A Place cannot be its own Primary Parent.")
+    if (!hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A confirmed Google Place, address, and valid coordinates are required.")
+    if (!hasText(input.seoTitle)) block("missing-seo-title", "An SEO title is required.")
+    if (!hasText(input.metaDescription)) block("missing-meta-description", "A meta description is required.")
+    if (!hasText(input.h1)) block("missing-h1", "An H1 heading is required.")
+    if (!hasText(input.content.hero.heading) || !input.content.hero.body.some((item) => hasText(item.text))) block("missing-hero", "The hero needs a heading and introduction.")
+    if (!hasText(input.content.finalCta.heading) || !input.content.finalCta.body.some((item) => hasText(item.text))) block("missing-final-cta", "The final booking CTA needs a heading and description.")
+    const required = ["introduction", "airport_routes", "place_coverage", "travel_information", "faq"] as const
+    const sections = new Map(input.content.sections.map((section) => [section.type, section]))
+    for (const type of required) {
+      const section = sections.get(type)
+      if (!section || !section.visible || !hasContent(section)) block(`missing-${type}`, `${SECTION_LABELS[type]} is required and must contain content.`)
+    }
+    if (input.content.placeFaqs.filter((faq) => hasText(faq.question) && hasText(faq.answer)).length < 2) block("minimum-faqs", "At least two local FAQs with questions and answers are required.")
+    const supported = input.relatedDestinations.filter((item) => item.kind === "supported_airport")
+    if (!supported.length) block("missing-supported-airport", "Select at least one Supported Airport.")
+    if (!supported.some((item) => item.bookingAvailable !== false)) block("no-bookable-airport", "At least one Supported Airport must currently accept bookings.")
+    if (input.relatedDestinations.some((item) => item.kind === "supported_airport" && (!item.pageId || item.bookingAvailable === undefined))) block("invalid-relationships", "Every Supported Airport must be a Published Airport Page.")
+    if (input.relatedDestinations.some((item) => item.kind === "nearby_place" && (!item.pageId || item.pageId === input.id))) block("invalid-relationships", "Every Nearby Place must be a different Published Place Page.")
+    const images = [input.content.hero.image, ...input.content.sections.map((section) => section.image)].filter(Boolean)
+    if (images.some((image) => !imageIsComplete(image))) block("invalid-media", "Every used image needs a verified HTTPS asset and alternative text.")
+    for (const section of input.content.sections) for (const link of section.body.filter((item) => item.type === "link")) {
+      if (!link.href || (!link.href.startsWith("/") && !link.href.startsWith("https://"))) block("unsafe-link", "Links must use a known internal path or HTTPS.")
+      if (link.href?.startsWith("https://") && !hasText(link.label)) block("missing-link-label", "External links need a visible label.")
+      if (link.href?.startsWith("/") && !SAFE_INTERNAL_PATHS.has(link.href)) block("broken-internal-link", `The internal link ${link.href} is not a known site path.`)
+    }
+    return blockers
+  }
+
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*-airport-taxi$/.test(input.slug.trim())) block("invalid-slug", "Use a lowercase Airport Slug ending in -airport-taxi.")
   const duplicate = input.existingPages?.find((page) => page.id !== input.id && (page.slug === input.slug || page.iataCode === input.iataCode || (page.seoTitle && page.seoTitle.toLowerCase() === input.seoTitle.trim().toLowerCase())))
   if (duplicate) block("duplicate-value", `The Airport Slug, IATA code, or SEO title conflicts with ${duplicate.slug}.`)
-  if (!hasText(input.officialName) || !hasText(input.displayName) || !/^[A-Z]{3}$/.test(input.iataCode.trim())) block("incomplete-identity", "Official name, display name, and a three-letter IATA code are required.")
+  if (!hasText(input.officialName) || !hasText(input.displayName) || !/^[A-Z]{3}$/.test((input.iataCode ?? "").trim())) block("incomplete-identity", "Official name, display name, and a three-letter IATA code are required.")
   if (!hasText(input.serviceArea)) block("missing-service-area", "A service area is required.")
   if (!hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A Google Place, address, latitude, and longitude are required.")
   if (!input.terminals.length || input.terminals.some((terminal) => !hasText(terminal.displayName) || !hasText(terminal.address) || !Number.isFinite(terminal.latitude) || !Number.isFinite(terminal.longitude))) block("invalid-terminal", "Every Airport Terminal needs a name, address, and valid coordinates.")
