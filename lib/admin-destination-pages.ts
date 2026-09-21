@@ -562,6 +562,16 @@ export type PublishResult = { ok: true; slug: string } | { ok: false; error: str
 export type RestoreResult = { ok: true; page: AdminDestinationPage } | { ok: false; error: string }
 export type LifecycleResult = { ok: true } | { ok: false; error: string }
 
+export async function promoteCoveredLocalityToPlace(input: { parentPageId: string; localityId: string; slug: string; placeType: string; placeGroupId: string }): Promise<{ ok: true; pageId: string } | { ok: false; error: string }> {
+  const supabase = getSupabase()
+  if (!supabase) return { ok: false, error: "Destination Pages are not connected to the database." }
+  const { data, error } = await supabase.rpc("promote_covered_locality_to_place", {
+    p_parent_page_id: input.parentPageId, p_locality_id: input.localityId, p_slug: input.slug,
+    p_place_type: input.placeType, p_place_group_id: input.placeGroupId, p_promoted_by: "admin",
+  })
+  return error || !data ? { ok: false, error: error?.message ?? "The Covered Locality could not be promoted." } : { ok: true, pageId: data as string }
+}
+
 export async function deleteAdminDestinationDraft(pageId: string): Promise<LifecycleResult> {
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
@@ -572,11 +582,14 @@ export async function deleteAdminDestinationDraft(pageId: string): Promise<Lifec
 export async function archiveAdminDestinationPage(pageId: string, replacementSlug: string): Promise<LifecycleResult> {
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
-  const target = replacementSlug.trim() || "airport-transfers"
+  const page = await getAdminDestinationPage(pageId)
+  if (!page) return { ok: false, error: "Destination Page not found." }
+  const fallback = page.pageType === "place" ? "destinations" : "airport-transfers"
+  const target = replacementSlug.trim() || fallback
   const { error } = await supabase.rpc("archive_destination_page", { p_page_id: pageId, p_replacement_slug: target, p_archived_by: "admin" })
   if (!error) return { ok: true }
-  if (error.message.includes("Replacement destination")) return { ok: false, error: "Choose a Published Airport Page as the replacement." }
-  return { ok: false, error: error.message.includes("Published Page") ? "Only a Published Page can be archived." : "The Airport Page could not be archived." }
+  if (error.message.includes("Replacement destination")) return { ok: false, error: `Choose a Published ${page.pageType === "place" ? "Place" : "Airport"} Page as the replacement.` }
+  return { ok: false, error: error.message.includes("Published Page") ? "Only a Published Page can be archived." : `The ${page.pageType === "place" ? "Place" : "Airport"} Page could not be archived.` }
 }
 
 export async function setAdminBookingAvailability(pageId: string, available: boolean): Promise<LifecycleResult> {
@@ -606,7 +619,7 @@ export async function publishAdminDestinationPage(pageId: string, override?: Pub
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
   const page = await getAdminDestinationPage(pageId)
-  if (!page) return { ok: false, error: "Airport Page not found." }
+  if (!page) return { ok: false, error: "Destination Page not found." }
   const existingPages = await listQualityPages(supabase)
   const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages }
   const blockers = getPublishBlockers(readiness)

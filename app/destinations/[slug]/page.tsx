@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, permanentRedirect } from "next/navigation"
 import { PlacePageRenderer } from "@/components/place-page/place-page-renderer"
 import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
-import { readPublicPlacePage } from "@/lib/destination-pages"
+import { getPublishedPlaceRedirect, readPublicPlacePage } from "@/lib/destination-pages"
 
 export const dynamic = "force-dynamic"
 
@@ -14,6 +14,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
+  const redirectSlug = await getPublishedPlaceRedirect(slug)
+  if (redirectSlug === "destinations") permanentRedirect("/destinations")
+  if (redirectSlug) permanentRedirect(`/destinations/${redirectSlug}`)
   const result = await readPublicPlacePage(slug)
   if (result.status === "published" || result.status === "fallback") return <PlacePageRenderer page={result.page.presentation} canonicalPath={result.page.metadata.canonical} />
   if (result.status === "unavailable") return <PublicPageServiceError pageType="place" retryHref={`/destinations/${slug}`} />

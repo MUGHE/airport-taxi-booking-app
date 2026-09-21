@@ -13,6 +13,7 @@ import type { PlacePagePresentation } from "@/lib/place-page-data"
 import { cacheSafePublishedPlacePage, getSafePublishedPlacePage } from "@/lib/public-place-page-cache"
 
 const airportPolicy = getDestinationPagePolicy("airport")
+const placePolicy = getDestinationPagePolicy("place")
 
 type DestinationPageRow = {
   id: string
@@ -196,6 +197,23 @@ export async function getPublishedAirportRedirect(slug: string): Promise<string 
   } catch {
     return legacyTarget ?? null
   }
+}
+
+export async function getPublishedPlaceRedirect(slug: string): Promise<string | null> {
+  const supabase = getSupabase()
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase.from("destination_page_redirects").select("source_slug, target_slug").eq("source_slug", slug).maybeSingle()
+    if (error || !data) return null
+    const redirect = data as DestinationRedirectRow
+    if (redirect.source_slug === redirect.target_slug || redirect.target_slug === placePolicy.archiveFallback) return redirect.target_slug === placePolicy.archiveFallback ? redirect.target_slug : null
+    const [{ data: targetPage, error: targetError }, { data: chainedRedirect, error: chainError }] = await Promise.all([
+      supabase.from("destination_pages").select("id").eq("published_slug", redirect.target_slug).eq("page_type", "place").eq("lifecycle_state", "published").maybeSingle(),
+      supabase.from("destination_page_redirects").select("source_slug").eq("source_slug", redirect.target_slug).maybeSingle(),
+    ])
+    if (targetError || chainError || !targetPage || chainedRedirect) return null
+    return redirect.target_slug
+  } catch { return null }
 }
 
 export async function getDestinationPageLifecycle(slug: string): Promise<DestinationPageLifecycle | null> {

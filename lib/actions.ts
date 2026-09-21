@@ -55,8 +55,9 @@ import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, 
 import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
 import { setAirportFeatured } from "./airport-directory"
-import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability } from "./admin-destination-pages"
+import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability, promoteCoveredLocalityToPlace } from "./admin-destination-pages"
 import { invalidateSafePublishedAirportPageCache } from "./public-airport-page-cache"
+import { invalidateSafePublishedPlacePageCache } from "./public-place-page-cache"
 
 
 export interface LoginResult {
@@ -153,6 +154,7 @@ export async function setAirportFeaturedAction(pageId: string, featured: boolean
   const result = await setAirportFeatured(pageId, featured)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath("/admin/destination-pages")
@@ -166,6 +168,7 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
   const result = await saveAdminDestinationPage(input)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/admin/destination-pages")
     revalidatePath("/admin/destination-pages/new")
     revalidatePath(`/admin/destination-pages/${result.page.id}`)
@@ -178,9 +181,12 @@ export async function publishAdminDestinationPageAction(pageId: string, override
   const result = await publishAdminDestinationPage(pageId, override)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${result.slug}`)
+    revalidatePath("/destinations", "layout")
+    revalidatePath(`/destinations/${result.slug}`)
     revalidatePath("/sitemap.xml")
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
@@ -193,6 +199,7 @@ export async function restoreAdminDestinationPageAction(pageId: string) {
   const result = await restoreAdminDestinationPage(pageId)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }
@@ -204,6 +211,7 @@ export async function deleteAdminDestinationDraftAction(pageId: string) {
   const result = await deleteAdminDestinationDraft(pageId)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }
@@ -215,8 +223,10 @@ export async function archiveAdminDestinationPageAction(pageId: string, replacem
   const result = await archiveAdminDestinationPage(pageId, replacementSlug)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/destinations", "layout")
     revalidatePath("/sitemap.xml")
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
@@ -229,12 +239,20 @@ export async function setAdminBookingAvailabilityAction(pageId: string, availabl
   const result = await setAdminBookingAvailability(pageId, available)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
+    invalidateSafePublishedPlacePageCache()
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${pageId}`)
+    revalidatePath("/destinations", "layout")
+    revalidatePath(`/destinations/${pageId}`)
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
   }
   return result
+}
+
+export async function promoteCoveredLocalityToPlaceAction(input: Parameters<typeof promoteCoveredLocalityToPlace>[0]) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  return promoteCoveredLocalityToPlace(input)
 }
 
 export async function getCloudinaryAssetsAction(kind?: CloudinaryImageKind) {
