@@ -18,6 +18,7 @@ export default async function AdminDestinationPagesPage() {
           <p className="mt-1 text-sm text-muted-foreground">Find and manage Airport Page and Place Page drafts and published pages.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href="/admin/destination-pages/import" />}>Import Place Drafts</Button>
           <Button variant="outline" render={<Link href="/admin/destination-pages/new?type=airport" />}>Create Airport Page</Button>
           <Button render={<Link href="/admin/destination-pages/new?type=place" />}>Create Place Page</Button>
         </div>

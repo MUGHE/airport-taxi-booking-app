@@ -302,7 +302,6 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
     if (input.coveredLocalities.some((item) => !item.name.trim() || !item.localityType.trim())) return "Every Covered Locality needs a name and locality type."
     const contentError = validateDestinationContent(input.content, input.h1?.trim() || getDestinationPagePolicy(input.pageType).defaults.h1(input.displayName.trim()), input.pageType)
     if (contentError) return contentError
-    if ((input.content?.placeFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length ?? 0) < 2) return "Add at least two complete local FAQs before saving this Place Draft."
     return null
   }
   const terminals = input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal")
