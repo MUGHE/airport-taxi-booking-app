@@ -5,6 +5,7 @@ import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { AdminDestinationPage } from "@/lib/admin-destination-pages"
+import { getDestinationPagePolicy } from "@/lib/destination-page-policy"
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
@@ -25,7 +26,7 @@ export function DestinationPagesList({ pages }: { pages: AdminDestinationPage[] 
       <div className="grid gap-2 rounded-xl border border-border bg-card p-4 md:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
         <Input aria-label="Search Destination Pages" placeholder="Search airport name or slug" value={query} onChange={(event) => setQuery(event.target.value)} />
         <select aria-label="Filter by page type" className="h-8 rounded-lg border border-input bg-background px-2 text-sm" value={type} onChange={(event) => setType(event.target.value)}>
-          <option value="all">All page types</option><option value="airport">Airport Page</option><option value="city_town">City and Town Page</option>
+          <option value="all">All page types</option><option value="airport">Airport Page</option><option value="place">Place Page</option>
         </select>
         <select aria-label="Filter by status" className="h-8 rounded-lg border border-input bg-background px-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="all">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option>
@@ -44,7 +45,7 @@ export function DestinationPagesList({ pages }: { pages: AdminDestinationPage[] 
             {filtered.map((page) => <tr key={page.id} className="hover:bg-muted/30">
               <td className="px-4 py-3 font-medium"><Link className="hover:underline" href={`/admin/destination-pages/${page.id}`}>{page.displayName}</Link></td>
               <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{page.slug}</td>
-              <td className="px-4 py-3">{page.pageType === "airport" ? "Airport Page" : "City and Town Page"}</td>
+              <td className="px-4 py-3">{getDestinationPagePolicy(page.pageType).label}</td>
               <td className="px-4 py-3"><Badge variant={page.lifecycleState === "published" ? "default" : "secondary"}>{page.lifecycleState}</Badge></td>
               <td className="px-4 py-3">{page.featured ? "Yes" : "No"}</td>
               <td className="px-4 py-3">{page.hasUnpublishedChanges ? <Badge variant="destructive">Yes</Badge> : "No"}</td>

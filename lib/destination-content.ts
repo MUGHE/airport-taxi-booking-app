@@ -1,4 +1,6 @@
-export const DESTINATION_CONTENT_SCHEMA_VERSION = 1
+import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
+
+export const DESTINATION_CONTENT_SCHEMA_VERSION = 2
 
 export const DESTINATION_SECTION_TYPES = [
   "introduction",
@@ -6,6 +8,7 @@ export const DESTINATION_SECTION_TYPES = [
   "reviews",
   "fleet_pricing",
   "airport_routes",
+  "place_coverage",
   "airport_guide",
   "city_routes",
   "ferry_cruise",
@@ -69,17 +72,8 @@ export type DestinationContentDocument = {
   reviews: import("@/lib/reusable-content").VerifiedReview[]
 }
 
-const REQUIRED_SECTION_TYPES = new Set<DestinationSectionType>([
-  "introduction",
-  "benefits",
-  "fleet_pricing",
-  "airport_guide",
-  "faq",
-  "map",
-])
-
-export function isRequiredDestinationSectionType(type: DestinationSectionType): boolean {
-  return REQUIRED_SECTION_TYPES.has(type)
+export function isRequiredDestinationSectionType(type: DestinationSectionType, pageType: DestinationPageType = "airport"): boolean {
+  return getDestinationPagePolicy(pageType).content.requiredSectionTypes.includes(type)
 }
 
 export function isSafeDestinationContentLink(value: unknown): value is string {
@@ -92,6 +86,7 @@ export const SECTION_LABELS: Record<DestinationSectionType, string> = {
   reviews: "Verified reviews",
   fleet_pricing: "Fleet & pricing",
   airport_routes: "Airport routes",
+  place_coverage: "Coverage & pickup information",
   airport_guide: "Airport Guide",
   city_routes: "Popular city routes",
   ferry_cruise: "Ferry & cruise information",
@@ -106,23 +101,24 @@ function makeBlock(text = ""): RichTextBlock[] {
   return text ? [{ type: "paragraph", text }] : []
 }
 
-export function createDestinationSection(type: DestinationSectionType, id = `${type}-${Date.now()}`): DestinationSection {
+export function createDestinationSection(type: DestinationSectionType, id = `${type}-${Date.now()}`, pageType: DestinationPageType = "airport"): DestinationSection {
   return {
     id,
     type,
     visible: true,
-    required: isRequiredDestinationSectionType(type),
+    required: isRequiredDestinationSectionType(type, pageType),
     title: SECTION_LABELS[type],
     body: [],
     fields: type === "airport_guide" ? { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } : {},
   }
 }
 
-export function createDefaultDestinationContent(heading: string): DestinationContentDocument {
+export function createDefaultDestinationContent(heading: string, pageType: DestinationPageType = "airport"): DestinationContentDocument {
+  const policy = getDestinationPagePolicy(pageType)
   return {
     schemaVersion: DESTINATION_CONTENT_SCHEMA_VERSION,
     hero: { heading, body: [] },
-    sections: (["introduction", "benefits", "fleet_pricing", "airport_guide", "faq", "map"] as DestinationSectionType[]).map((type) => createDestinationSection(type, `${type}-required`)),
+    sections: policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType)),
     finalCta: { heading: "Ready to book your airport transfer?", body: makeBlock("Get a fixed price for your journey in minutes.") },
     serviceFacts: [], globalFaqs: [], airportFaqs: [], reviews: [],
   }
@@ -222,8 +218,8 @@ export function tiptapDocumentToBlocks(document: TiptapDocument): RichTextBlock[
   })
 }
 
-export function normalizeDestinationContent(value: unknown, fallbackHeading: string): DestinationContentDocument {
-  const fallback = createDefaultDestinationContent(fallbackHeading)
+export function normalizeDestinationContent(value: unknown, fallbackHeading: string, pageType: DestinationPageType = "airport"): DestinationContentDocument {
+  const fallback = createDefaultDestinationContent(fallbackHeading, pageType)
   if (!value || typeof value !== "object") return fallback
   const input = value as Record<string, unknown>
   const rawSections = Array.isArray(input.sections) ? input.sections : []
@@ -236,7 +232,7 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
       id: safeText(raw.id).trim() || `${sectionType}-${index + 1}`,
       type: sectionType,
       visible: raw.visible !== false,
-      required: isRequiredDestinationSectionType(sectionType),
+      required: isRequiredDestinationSectionType(sectionType, pageType),
       title: safeText(raw.title).trim() || SECTION_LABELS[sectionType],
       body: normalizeBlocks(raw.body),
       bodyDocument: normalizeTiptapDocument(raw.bodyDocument),
@@ -262,14 +258,14 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
   }) : []
   const legacyContent = (type: DestinationSectionType, texts: string[]) => {
     if (!texts.length || byType.has(type)) return
-    sections.push({ ...createDestinationSection(type, `${type}-legacy`), body: texts.map((text) => ({ type: "paragraph" as const, text })) })
+    sections.push({ ...createDestinationSection(type, `${type}-legacy`, pageType), body: texts.map((text) => ({ type: "paragraph" as const, text })) })
     byType.add(type)
   }
   legacyContent("introduction", legacyIntro)
   legacyContent("benefits", legacyBenefits)
   legacyContent("faq", legacyFaqs)
-  for (const requiredType of REQUIRED_SECTION_TYPES) {
-    if (!byType.has(requiredType)) sections.push(createDestinationSection(requiredType, `${requiredType}-required`))
+  for (const requiredType of getDestinationPagePolicy(pageType).content.requiredSectionTypes) {
+    if (!byType.has(requiredType)) sections.push(createDestinationSection(requiredType, `${requiredType}-required`, pageType))
   }
   const hero = input.hero && typeof input.hero === "object" ? input.hero as Record<string, unknown> : {}
   const finalCta = input.finalCta && typeof input.finalCta === "object" ? input.finalCta as Record<string, unknown> : {}
