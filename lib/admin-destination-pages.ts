@@ -3,6 +3,7 @@ import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, valida
 import { DEFAULT_GLOBAL_FAQS, DEFAULT_SERVICE_FACTS, DEFAULT_VERIFIED_REVIEWS, type GlobalFaq, type ServiceFact, type VerifiedReview } from "@/lib/reusable-content"
 import { listRelatedDestinations } from "@/lib/related-destinations"
 import { getPublishBlockers, getPublishWarnings, getWarningSetHash, type ExistingQualityPage, type PublishWarning } from "@/lib/publish-readiness"
+import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
@@ -11,7 +12,7 @@ const DUPLICATE_IATA_ERROR = "That IATA code is already in use. Check the airpor
 
 export type AdminDestinationPage = {
   id: string
-  pageType: "airport" | "city_town"
+  pageType: DestinationPageType
   lifecycleState: "draft" | "published" | "archived"
   bookingAvailable: boolean
   featured: boolean
@@ -71,7 +72,7 @@ export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "p
 
 type PageRow = {
   id: string
-  page_type: "airport" | "city_town"
+  page_type: DestinationPageType
   lifecycle_state: "draft" | "published" | "archived"
   booking_available: boolean
   featured: boolean
@@ -170,6 +171,7 @@ function toTerminal(row: TerminalRow): AdminTerminal {
 }
 
 function toPage(row: PageRow, draft: SnapshotRow | undefined, published: SnapshotRow | undefined, terminals: TerminalRow[], relatedDestinations: AdminRelatedDestination[] = []): AdminDestinationPage {
+  const policy = getDestinationPagePolicy(row.page_type)
   return {
     id: row.id,
     pageType: row.page_type,
@@ -188,10 +190,10 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     longitude: row.longitude == null ? 0 : Number(row.longitude),
     updatedAt: row.updated_at,
     draft: {
-      seoTitle: draft?.seo_title ?? `${row.display_name} Airport Taxi & Transfers`,
-      metaDescription: draft?.meta_description ?? `Fixed-price taxi transfers to and from ${row.display_name} Airport.`,
-    h1: draft?.h1 ?? `${row.display_name} Airport Taxi & Transfers`,
-    content: normalizeDestinationContent(draft?.content, draft?.h1 ?? `${row.display_name} Airport Taxi & Transfers`),
+      seoTitle: draft?.seo_title ?? policy.defaults.seoTitle(row.display_name ?? ""),
+      metaDescription: draft?.meta_description ?? policy.defaults.metaDescription(row.display_name ?? ""),
+    h1: draft?.h1 ?? policy.defaults.h1(row.display_name ?? ""),
+    content: normalizeDestinationContent(draft?.content, draft?.h1 ?? policy.defaults.h1(row.display_name ?? ""), row.page_type),
     },
     terminals: terminals.sort((a, b) => a.sort_order - b.sort_order).map(toTerminal),
     relatedDestinations,
@@ -243,8 +245,9 @@ export async function getAdminDestinationPage(id: string): Promise<AdminDestinat
 }
 
 function validationError(input: SaveAdminDestinationPageInput): string | null {
+  const policy = getDestinationPagePolicy("airport")
   if (input.iataCode.trim() && !/^[A-Z]{3}$/.test(input.iataCode.trim())) return "IATA code must be exactly three uppercase letters."
-  if (input.slug.trim() && !/^[a-z0-9]+(?:-[a-z0-9]+)*-airport-taxi$/.test(input.slug.trim())) return "Use a lowercase slug ending in -airport-taxi."
+  if (input.slug.trim() && !policy.slug.isValid(input.slug.trim())) return "Use a lowercase slug ending in -airport-taxi."
   const terminals = input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal")
   if (terminals.filter((terminal) => terminal.isPrimary).length > 1) return "Select only one primary Airport Terminal."
   for (const terminal of terminals) {

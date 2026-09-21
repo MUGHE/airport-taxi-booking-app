@@ -8,6 +8,9 @@ import { getPublishedPrimaryTerminals, listRelatedDestinations } from "@/lib/rel
 import { LEGACY_AIRPORT_REDIRECTS } from "@/lib/legacy-airport-redirects.mjs"
 import { readPublishedAirportFacts, type PublishedAirportFacts } from "@/lib/published-airport-facts"
 import { cacheSafePublishedAirportPage, getSafePublishedAirportPage } from "@/lib/public-airport-page-cache"
+import { getDestinationPagePolicy } from "@/lib/destination-page-policy"
+
+const airportPolicy = getDestinationPagePolicy("airport")
 
 type DestinationPageRow = {
   id: string
@@ -151,7 +154,7 @@ export async function getPublishedAirportRedirect(slug: string): Promise<string 
 
     const redirect = data as DestinationRedirectRow
     if (redirect.source_slug === redirect.target_slug) return null
-    if (redirect.target_slug === "airport-transfers") return redirect.target_slug
+    if (redirect.target_slug === airportPolicy.archiveFallback) return redirect.target_slug
 
     const [{ data: targetPage, error: targetError }, { data: chainedRedirect, error: chainError }] = await Promise.all([
       supabase.from("destination_pages").select("id").eq("published_slug", redirect.target_slug).eq("page_type", "airport").eq("lifecycle_state", "published").maybeSingle(),
@@ -303,10 +306,10 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       metadata: {
         title: snapshotRow.seo_title,
         description: snapshotRow.meta_description,
-        canonical: `/airport-transfers/${pageRow.published_slug}`,
+        canonical: `${airportPolicy.public.namespace}/${pageRow.published_slug}`,
         socialImage: heroImage
           ? { url: heroImage.secureUrl, alt: heroImage.altText }
-          : { url: `/airport-transfers/${pageRow.published_slug.replace(/-airport-taxi$/, "")}.webp`, alt: `${airport.displayName} Airport transfer service` },
+          : { url: `${airportPolicy.public.namespace}/${pageRow.published_slug.replace(/-airport-taxi$/, "")}.webp`, alt: `${airport.displayName} Airport transfer service` },
         airport,
       },
       bookingAvailable: pageRow.booking_available,
