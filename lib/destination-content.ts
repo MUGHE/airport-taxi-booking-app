@@ -1,6 +1,6 @@
 import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
 
-export const DESTINATION_CONTENT_SCHEMA_VERSION = 2
+export const DESTINATION_CONTENT_SCHEMA_VERSION = 3
 
 export const DESTINATION_SECTION_TYPES = [
   "introduction",
@@ -49,7 +49,10 @@ export type DestinationSection = {
   bodyDocument?: TiptapDocument
   fields: Record<string, string>
   image?: DestinationImageReference
+  sourceNotes: SourceNote[]
 }
+
+export type SourceNote = { sourceName: string; sourceUrl: string; checkedDate: string }
 
 export type DestinationImageReference = {
   assetId: string
@@ -69,6 +72,7 @@ export type DestinationContentDocument = {
   serviceFacts: import("@/lib/reusable-content").ServiceFact[]
   globalFaqs: import("@/lib/reusable-content").GlobalFaq[]
   airportFaqs: import("@/lib/reusable-content").GlobalFaq[]
+  placeFaqs: import("@/lib/reusable-content").GlobalFaq[]
   reviews: import("@/lib/reusable-content").VerifiedReview[]
 }
 
@@ -97,6 +101,16 @@ export const SECTION_LABELS: Record<DestinationSectionType, string> = {
   related_destinations: "Related Routes",
 }
 
+function sectionLabel(type: DestinationSectionType, pageType: DestinationPageType): string {
+  if (pageType !== "place") return SECTION_LABELS[type]
+  if (type === "airport_routes") return "Supported Airports"
+  if (type === "travel_information") return "Local travel information"
+  if (type === "faq") return "Local FAQs"
+  if (type === "map") return "Place map"
+  if (type === "related_destinations") return "Nearby Places"
+  return SECTION_LABELS[type]
+}
+
 function makeBlock(text = ""): RichTextBlock[] {
   return text ? [{ type: "paragraph", text }] : []
 }
@@ -107,9 +121,10 @@ export function createDestinationSection(type: DestinationSectionType, id = `${t
     type,
     visible: true,
     required: isRequiredDestinationSectionType(type, pageType),
-    title: SECTION_LABELS[type],
+    title: sectionLabel(type, pageType),
     body: [],
     fields: type === "airport_guide" ? { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } : {},
+    sourceNotes: [],
   }
 }
 
@@ -120,7 +135,7 @@ export function createDefaultDestinationContent(heading: string, pageType: Desti
     hero: { heading, body: [] },
     sections: policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType)),
     finalCta: { heading: "Ready to book your airport transfer?", body: makeBlock("Get a fixed price for your journey in minutes.") },
-    serviceFacts: [], globalFaqs: [], airportFaqs: [], reviews: [],
+    serviceFacts: [], globalFaqs: [], airportFaqs: [], placeFaqs: [], reviews: [],
   }
 }
 
@@ -238,6 +253,14 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
       bodyDocument: normalizeTiptapDocument(raw.bodyDocument),
       fields: raw.fields && typeof raw.fields === "object" ? Object.fromEntries(Object.entries(raw.fields).map(([key, field]) => [key, safeText(field)])) : {},
       image: raw.image && typeof raw.image === "object" ? normalizeImageReference(raw.image) : undefined,
+      sourceNotes: Array.isArray(raw.sourceNotes) ? raw.sourceNotes.flatMap((item) => {
+        if (!item || typeof item !== "object") return []
+        const note = item as Record<string, unknown>
+        const sourceName = safeText(note.sourceName).trim()
+        const sourceUrl = safeText(note.sourceUrl).trim()
+        const checkedDate = safeText(note.checkedDate).trim()
+        return sourceName || sourceUrl || checkedDate ? [{ sourceName, sourceUrl, checkedDate }] : []
+      }) : [],
     }]
   })
   const byType = new Set(sections.map((section) => section.type))
@@ -277,6 +300,7 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
     serviceFacts: normalizeReusableItems(input.serviceFacts, "fact"),
     globalFaqs: normalizeReusableItems(input.globalFaqs, "faq"),
     airportFaqs: normalizeReusableItems(input.airportFaqs, "faq"),
+    placeFaqs: normalizeReusableItems(input.placeFaqs, "faq"),
     reviews: normalizeReusableItems(input.reviews, "review"),
   }
 }
@@ -300,8 +324,8 @@ function normalizeImageReference(value: object): DestinationImageReference | und
   return { assetId: image.assetId as string, publicId: image.publicId as string, secureUrl: image.secureUrl as string, width: image.width as number, height: image.height as number, format: image.format as string, altText: image.altText as string }
 }
 
-export function validateDestinationContent(value: unknown, fallbackHeading: string): string | null {
-  const content = normalizeDestinationContent(value, fallbackHeading)
+export function validateDestinationContent(value: unknown, fallbackHeading: string, pageType: DestinationPageType = "airport"): string | null {
+  const content = normalizeDestinationContent(value, fallbackHeading, pageType)
   if (!content.hero.heading.trim()) return "Hero heading is required."
   if (!content.finalCta.heading.trim()) return "Final booking CTA heading is required."
   const ids = new Set<string>()
@@ -309,6 +333,10 @@ export function validateDestinationContent(value: unknown, fallbackHeading: stri
     if (ids.has(section.id)) return "Each content section needs a unique identifier."
     ids.add(section.id)
     if (section.required && !section.visible) return `${SECTION_LABELS[section.type]} is required and cannot be hidden.`
+    for (const note of section.sourceNotes) {
+      if (!note.sourceName || !note.sourceUrl || !note.checkedDate) return "Every Source Note needs a source name, HTTPS URL, and checked date."
+      if (!note.sourceUrl.startsWith("https://") || !/^\d{4}-\d{2}-\d{2}$/.test(note.checkedDate)) return "Every Source Note needs a source name, HTTPS URL, and checked date."
+    }
     for (const block of section.body) {
       if (block.type === "link" && block.href && !block.href.startsWith("/") && !block.href.startsWith("https://")) return "Links must use a known internal path or HTTPS."
     }

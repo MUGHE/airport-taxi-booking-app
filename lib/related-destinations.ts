@@ -12,6 +12,9 @@ export type RelatedDestination = {
   reverseImage?: DestinationImageReference
   reverseHeading?: string
   reverseDescription?: string
+  kind: "related_route" | "supported_airport" | "nearby_place"
+  sortOrder: number
+  bookingAvailable: boolean
 }
 
 type RelationshipRow = {
@@ -24,9 +27,11 @@ type RelationshipRow = {
   b_heading: string
   b_description: string
   b_image: unknown
+  relationship_kind?: "related_route" | "supported_airport" | "nearby_place"
+  place_display_order?: number
 }
 
-type PageRow = { id: string; display_name: string; slug: string }
+type PageRow = { id: string; display_name: string; slug: string; booking_available: boolean }
 type TerminalRow = { page_id: string; display_name: string; latitude: number; longitude: number; is_primary: boolean; sort_order: number }
 
 function getSupabase() {
@@ -42,16 +47,16 @@ function image(value: unknown): DestinationImageReference | undefined {
   return item as unknown as DestinationImageReference
 }
 
-export type RelatedDestinationCandidate = { id: string; displayName: string; slug: string }
+export type RelatedDestinationCandidate = { id: string; displayName: string; slug: string; pageType: "airport" | "place"; bookingAvailable: boolean; primaryParentId: string; latitude: number | null; longitude: number | null }
 
 export async function listPublishedDestinationCandidates(excludePageId?: string): Promise<RelatedDestinationCandidate[]> {
   const supabase = getSupabase()
   if (!supabase) return []
-  const query = supabase.from("destination_pages").select("id, display_name, slug").eq("page_type", "airport").eq("lifecycle_state", "published").order("display_name")
+  const query = supabase.from("destination_pages").select("id, display_name, slug, page_type, booking_available, primary_parent_id, latitude, longitude").eq("lifecycle_state", "published").order("display_name")
   if (excludePageId) query.neq("id", excludePageId)
   const { data, error } = await query
   if (error) return []
-  return (data ?? []).map((item) => ({ id: item.id as string, displayName: item.display_name as string, slug: item.slug as string }))
+  return (data ?? []).map((item) => ({ id: item.id as string, displayName: item.display_name as string, slug: item.slug as string, pageType: item.page_type as "airport" | "place", bookingAvailable: item.booking_available as boolean, primaryParentId: (item.primary_parent_id as string | null) ?? "", latitude: item.latitude == null ? null : Number(item.latitude), longitude: item.longitude == null ? null : Number(item.longitude) }))
 }
 
 export async function listRelatedDestinations(pageId: string): Promise<RelatedDestination[]> {
@@ -61,7 +66,7 @@ export async function listRelatedDestinations(pageId: string): Promise<RelatedDe
   if (error || !relationships?.length) return []
   const rows = relationships as RelationshipRow[]
   const ids = [...new Set(rows.flatMap((row) => [row.page_a_id, row.page_b_id]))]
-  const { data: pages, error: pageError } = await supabase.from("destination_pages").select("id, display_name, slug").in("id", ids).eq("lifecycle_state", "published")
+  const { data: pages, error: pageError } = await supabase.from("destination_pages").select("id, display_name, slug, booking_available").in("id", ids).eq("lifecycle_state", "published")
   if (pageError || !pages) return []
   const pagesById = new Map((pages as PageRow[]).map((page) => [page.id, page]))
   return rows.flatMap((row) => {
@@ -69,8 +74,9 @@ export async function listRelatedDestinations(pageId: string): Promise<RelatedDe
     const relatedId = currentIsA ? row.page_b_id : row.page_a_id
     const relatedPage = pagesById.get(relatedId)
     if (!relatedPage) return []
-    return [{ id: row.id, pageId: relatedId, displayName: relatedPage.display_name, slug: relatedPage.slug, heading: currentIsA ? row.a_heading : row.b_heading, description: currentIsA ? row.a_description : row.b_description, image: image(currentIsA ? row.a_image : row.b_image), reverseHeading: currentIsA ? row.b_heading : row.a_heading, reverseDescription: currentIsA ? row.b_description : row.a_description, reverseImage: image(currentIsA ? row.b_image : row.a_image) }]
-  })
+    const kind = row.relationship_kind ?? "related_route"
+    return [{ id: row.id, pageId: relatedId, displayName: relatedPage.display_name, slug: relatedPage.slug, heading: currentIsA ? row.a_heading : row.b_heading, description: currentIsA ? row.a_description : row.b_description, image: image(currentIsA ? row.a_image : row.b_image), reverseHeading: currentIsA ? row.b_heading : row.a_heading, reverseDescription: currentIsA ? row.b_description : row.a_description, reverseImage: image(currentIsA ? row.b_image : row.a_image), kind, sortOrder: row.place_display_order ?? 0, bookingAvailable: relatedPage.booking_available }]
+  }).sort((left, right) => left.sortOrder - right.sortOrder)
 }
 
 export async function getPublishedPrimaryTerminals(pageIds: string[]) {
