@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { archiveAdminDestinationPageAction, deleteAdminDestinationDraftAction, publishAdminDestinationPageAction, restoreAdminDestinationPageAction, saveAdminDestinationPageAction, setAdminBookingAvailabilityAction, setAirportFeaturedAction } from "@/lib/actions"
+import { archiveAdminDestinationPageAction, deleteAdminDestinationDraftAction, publishAdminDestinationPageAction, restoreAdminDestinationPageAction, reviewGooglePlaceAction, saveAdminDestinationPageAction, setAdminBookingAvailabilityAction, setAirportFeaturedAction } from "@/lib/actions"
 import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picker"
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, isRequiredDestinationSectionType, normalizeDestinationContent, tiptapDocumentToBlocks, type DestinationContentDocument, type DestinationSectionType } from "@/lib/destination-content"
-import type { AdminDestinationPage, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
+import type { AdminDestinationPage, AdminParentPlace, AdminPlaceGroup, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
 import type { ReusableDestinationContent } from "@/lib/admin-destination-pages"
 import { getPublishBlockers, type PublishBlocker, type PublishWarning } from "@/lib/publish-readiness"
-import { destinationPageEditorSchema, type DestinationPageEditorValues } from "@/lib/destination-page-form-schema"
+import { createDestinationPageEditorSchema, type DestinationPageEditorValues } from "@/lib/destination-page-form-schema"
+import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
 import { FullPreviewButton } from "@/components/admin/full-preview-button"
 import { RichTextEditor } from "@/components/admin/rich-text-editor"
 import { SITE_URL } from "@/lib/site"
@@ -62,14 +63,15 @@ function EditorPanel({ title, description, children }: { title: string; descript
   </section>
 }
 
-function initialForm(initialPage?: AdminDestinationPage): SaveAdminDestinationPageInput {
+function initialForm(pageType: DestinationPageType, initialPage?: AdminDestinationPage): SaveAdminDestinationPageInput {
   if (initialPage) return {
     id: initialPage.id, slug: initialPage.slug, officialName: initialPage.officialName, displayName: initialPage.displayName,
-    iataCode: initialPage.iataCode, serviceArea: initialPage.serviceArea, googlePlaceId: initialPage.googlePlaceId,
+    pageType: initialPage.pageType, iataCode: initialPage.iataCode, serviceArea: initialPage.serviceArea, placeType: initialPage.placeType, placeGroupId: initialPage.placeGroupId, primaryParentId: initialPage.primaryParentId, aliases: initialPage.aliases, coveredLocalities: initialPage.coveredLocalities, googlePlaceId: initialPage.googlePlaceId,
     address: initialPage.address, latitude: initialPage.latitude, longitude: initialPage.longitude, terminals: initialPage.terminals, relatedDestinations: initialPage.relatedDestinations,
     seoTitle: initialPage.draft.seoTitle, metaDescription: initialPage.draft.metaDescription, h1: initialPage.draft.h1, content: initialPage.draft.content,
   }
-  return { slug: "", officialName: "", displayName: "", iataCode: "", serviceArea: "", googlePlaceId: "", address: "", latitude: 0, longitude: 0, terminals: [emptyTerminal()], relatedDestinations: [], content: normalizeDestinationContent(undefined, "Airport Taxi & Transfers") }
+  const policy = getDestinationPagePolicy(pageType)
+  return { pageType, slug: "", officialName: "", displayName: "", iataCode: "", serviceArea: "", placeType: "", placeGroupId: "", primaryParentId: "", aliases: [], coveredLocalities: [], googlePlaceId: "", address: "", latitude: 0, longitude: 0, terminals: pageType === "airport" ? [emptyTerminal()] : [], relatedDestinations: [], content: normalizeDestinationContent(undefined, policy.defaults.h1(""), pageType) }
 }
 
 function bodyText(section: { body: { text: string }[] }): string { return section.body.map((block) => block.text).join("\n") }
@@ -88,10 +90,11 @@ function editorValues(form: SaveAdminDestinationPageInput): DestinationPageEdito
   }
 }
 
-export function DestinationPageEditor({ initialPage, relatedCandidates, reusableContent }: { initialPage?: AdminDestinationPage; relatedCandidates: { id: string; displayName: string; slug: string }[]; reusableContent: ReusableDestinationContent }) {
-  const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(initialPage))
+export function DestinationPageEditor({ pageType, initialPage, relatedCandidates, reusableContent, placeIdentityOptions }: { pageType: DestinationPageType; initialPage?: AdminDestinationPage; relatedCandidates: { id: string; displayName: string; slug: string }[]; reusableContent: ReusableDestinationContent; placeIdentityOptions: { groups: AdminPlaceGroup[]; parents: AdminParentPlace[] } }) {
+  const policy = getDestinationPagePolicy(pageType)
+  const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(pageType, initialPage))
   const [activeTab, setActiveTab] = useState<EditorTab>("basic-info")
-  const [selectedContentId, setSelectedContentId] = useState(() => initialForm(initialPage).content?.sections[0]?.id ?? "final-cta")
+  const [selectedContentId, setSelectedContentId] = useState(() => initialForm(pageType, initialPage).content?.sections[0]?.id ?? "final-cta")
   const [newSectionType, setNewSectionType] = useState<DestinationSectionType | "">("")
   const [dirty, setDirty] = useState(false)
   const [featured, setFeatured] = useState(initialPage?.featured ?? false)
@@ -101,28 +104,30 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
   const [pendingWarningSetHash, setPendingWarningSetHash] = useState("")
   const [serverBlockers, setServerBlockers] = useState<PublishBlocker[]>([])
   const [saveState, setSaveState] = useState<DraftSaveState>(initialPage ? "saved" : "idle")
+  const [placeReview, setPlaceReview] = useState<"idle" | "reviewing" | "valid" | "invalid">("idle")
   const editVersion = useRef(0)
   const [isPending, startTransition] = useTransition()
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<DestinationPageEditorValues>({
-    defaultValues: editorValues(initialForm(initialPage)),
-    resolver: zodResolver(destinationPageEditorSchema),
+    defaultValues: editorValues(initialForm(pageType, initialPage)),
+    resolver: zodResolver(createDestinationPageEditorSchema(pageType)),
     mode: "onBlur",
   })
-  const content = form.content ?? normalizeDestinationContent(undefined, form.h1 || `${form.displayName || "Airport"} Airport Taxi & Transfers`)
+  const content = form.content ?? normalizeDestinationContent(undefined, form.h1 || policy.defaults.h1(form.displayName), pageType)
   const selectedContentSection = content.sections.find((section) => section.id === selectedContentId) ?? content.sections[0]
-  const publishBlockers = getPublishBlockers({
+  const publishBlockers = pageType === "airport" ? getPublishBlockers({
     ...form,
     seoTitle: form.seoTitle ?? "",
     metaDescription: form.metaDescription ?? "",
     h1: form.h1 ?? "",
     content,
-  })
+  }) : []
   const allPublishBlockers = [...publishBlockers, ...serverBlockers.filter((serverBlocker) => !publishBlockers.some((blocker) => blocker.code === serverBlocker.code))]
   const blockerCounts = allPublishBlockers.reduce<Partial<Record<EditorTab, number>>>((counts, blocker) => {
     const tab = blockerTab(blocker.code)
     counts[tab] = (counts[tab] ?? 0) + 1
     return counts
   }, {})
+  const availableSectionTypes = DESTINATION_SECTION_TYPES.filter((type) => pageType === "airport" || type !== "airport_guide")
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => { if (dirty) { event.preventDefault(); event.returnValue = "" } }
@@ -145,7 +150,17 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
     updateContent({ ...content, airportFaqs })
   }
   const completedAirportFaqCount = content.airportFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length
-  function selectPlace(place: PlaceSelection) { setValue("googlePlaceId", place.placeId, { shouldValidate: true }); setValue("address", place.address, { shouldValidate: true }); setValue("latitude", place.lat, { shouldValidate: true }); setValue("longitude", place.lng, { shouldValidate: true }); update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
+  function selectPlace(place: PlaceSelection) { setPlaceReview("idle"); setValue("googlePlaceId", place.placeId, { shouldValidate: true }); setValue("address", place.address, { shouldValidate: true }); setValue("latitude", place.lat, { shouldValidate: true }); setValue("longitude", place.lng, { shouldValidate: true }); update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
+  function reviewSelectedPlace() {
+    if (!form.googlePlaceId) return
+    setPlaceReview("reviewing")
+    startTransition(async () => {
+      const result = await reviewGooglePlaceAction(form.googlePlaceId)
+      setPlaceReview(result.ok ? "valid" : "invalid")
+      if (result.ok) toast.success("Google Place confirmed.")
+      else toast.error(result.error)
+    })
+  }
   function updateTerminal(index: number, key: keyof AdminTerminal, value: string | boolean) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, [key]: key === "latitude" || key === "longitude" ? Number(value) : value } : terminal)) }
   function selectTerminalPlace(index: number, place: PlaceSelection) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, address: place.address, latitude: place.lat, longitude: place.lng } : terminal)) }
   function clearTerminalPlace(index: number) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, address: "", latitude: NaN, longitude: NaN } : terminal)) }
@@ -296,25 +311,25 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
       <form onSubmit={handleSubmit(submit, (invalid) => {
         const field = Object.keys(invalid)[0]
         setActiveTab(validationTab(field))
-        const message = field ? ({ slug: "Add an Airport Slug in SEO.", googlePlaceId: "Select the airport from Google Places in Location.", address: "Select the airport address from Google Places.", latitude: "Select a valid airport location from Google Places.", longitude: "Select a valid airport location from Google Places." } as Record<string, string>)[field] : undefined
+        const message = field ? ({ slug: `Add a ${policy.slug.label} in SEO.`, googlePlaceId: `Select the ${pageType === "place" ? "place" : "airport"} from Google Places in Location.`, address: "Select an address from Google Places.", latitude: "Select a valid location from Google Places.", longitude: "Select a valid location from Google Places." } as Record<string, string>)[field] : undefined
         toast.error(message ?? "Complete the highlighted fields before saving this Draft.")
       })}>
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as EditorTab)}>
           <div className="sticky top-2 z-20 rounded-xl border border-border bg-background/95 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-xl font-semibold tracking-tight">{form.displayName || (initialPage ? "Edit Airport Page" : "Create Airport Page")}</h2><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium capitalize">{initialPage?.lifecycleState ?? "draft"}</span></div>
+                <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-xl font-semibold tracking-tight">{form.displayName || (initialPage ? `Edit ${policy.label}` : `Create ${policy.label}`)}</h2><span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium capitalize">{initialPage?.lifecycleState ?? "draft"}</span></div>
                 <p className="mt-1 text-sm text-muted-foreground">{saveState === "saving" ? "Saving Draft…" : saveState === "error" ? "Draft save failed · Retry" : dirty ? "Unsaved changes" : saveState === "saved" ? "Draft saved" : "Changes not saved"}{dirty && form.id ? " · Full Preview shows the last saved Draft" : ""}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <FullPreviewButton pageId={form.id} dirty={dirty} />
                 <Button type="submit" variant="outline" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save draft</Button>
-                <Button type="button" disabled={!form.id || isPending || dirty} onClick={publish}>Publish</Button>
+                {pageType === "airport" && <Button type="button" disabled={!form.id || isPending || dirty} onClick={publish}>Publish</Button>}
               </div>
             </div>
             <div className="overflow-x-auto border-t border-border px-2 sm:px-4">
-              <TabsList variant="line" aria-label="Airport Page editor sections" className="h-auto min-w-max justify-start py-1">
-                {EDITOR_TABS.map((tab) => {
+              <TabsList variant="line" aria-label={`${policy.label} editor sections`} className="h-auto min-w-max justify-start py-1">
+                {EDITOR_TABS.filter((tab) => pageType === "airport" || tab.value !== "related").map((tab) => {
                   const count = tab.value === "publish" ? allPublishBlockers.length : blockerCounts[tab.value] ?? 0
                   return <TabsTrigger key={tab.value} value={tab.value} className="h-11 min-w-fit px-3">
                     {tab.label}
@@ -329,38 +344,43 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
 
           <div className="mt-6">
             <TabsContent value="basic-info">
-              <EditorPanel title="Basic information" description="Start with the customer-facing page title and the airport's core identity.">
+              <EditorPanel title="Basic information" description={`Start with the customer-facing page title and the ${pageType === "place" ? "place's" : "airport's"} core identity.`}>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Controller control={control} name="displayName" render={({ field }) => <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="display-name">Page title</Label><Input id="display-name" {...field} value={form.displayName} onChange={(event) => { field.onChange(event); update("displayName", event.target.value) }} placeholder="Heathrow Airport" />{errors.displayName?.message ? <p role="alert" className="text-sm text-destructive">{errors.displayName.message}</p> : <p className="text-xs text-muted-foreground">The short, customer-facing airport name.</p>}</div>} />
-                  <div className="space-y-1.5"><Label>Page type</Label><Input value="Airport Page" readOnly /></div>
+                  <Controller control={control} name="displayName" render={({ field }) => <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="display-name">Page title</Label><Input id="display-name" {...field} value={form.displayName} onChange={(event) => { field.onChange(event); update("displayName", event.target.value) }} placeholder={pageType === "place" ? "Camden" : "Heathrow Airport"} />{errors.displayName?.message ? <p role="alert" className="text-sm text-destructive">{errors.displayName.message}</p> : <p className="text-xs text-muted-foreground">The short, customer-facing {pageType === "place" ? "Place name" : "Airport name"}.</p>}</div>} />
+                  <div className="space-y-1.5"><Label>Page type</Label><Input value={policy.label} readOnly /></div>
                   <Controller control={control} name="officialName" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="official-name">Official name</Label><Input id="official-name" {...field} value={form.officialName} onChange={(event) => { field.onChange(event); update("officialName", event.target.value) }} />{errors.officialName?.message && <p role="alert" className="text-sm text-destructive">{errors.officialName.message}</p>}</div>} />
-                  <Controller control={control} name="iataCode" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="iata">IATA code</Label><Input id="iata" maxLength={3} {...field} value={form.iataCode} onChange={(event) => { const value = event.target.value.toUpperCase(); field.onChange(value); update("iataCode", value) }} placeholder="LHR" />{errors.iataCode?.message && <p role="alert" className="text-sm text-destructive">{errors.iataCode.message}</p>}</div>} />
-                  <Controller control={control} name="serviceArea" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="service-area">Service area</Label><Input id="service-area" {...field} value={form.serviceArea} onChange={(event) => { field.onChange(event); update("serviceArea", event.target.value) }} placeholder="London and surrounding areas" />{errors.serviceArea?.message && <p role="alert" className="text-sm text-destructive">{errors.serviceArea.message}</p>}</div>} />
+                  {pageType === "airport" ? <><Controller control={control} name="iataCode" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="iata">IATA code</Label><Input id="iata" maxLength={3} {...field} value={form.iataCode} onChange={(event) => { const value = event.target.value.toUpperCase(); field.onChange(value); update("iataCode", value) }} placeholder="LHR" />{errors.iataCode?.message && <p role="alert" className="text-sm text-destructive">{errors.iataCode.message}</p>}</div>} /><Controller control={control} name="serviceArea" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="service-area">Service area</Label><Input id="service-area" {...field} value={form.serviceArea} onChange={(event) => { field.onChange(event); update("serviceArea", event.target.value) }} placeholder="London and surrounding areas" />{errors.serviceArea?.message && <p role="alert" className="text-sm text-destructive">{errors.serviceArea.message}</p>}</div>} /></> : <>
+                    <div className="space-y-1.5"><Label htmlFor="place-type">Place type</Label><select id="place-type" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm" value={form.placeType} onChange={(event) => update("placeType", event.target.value)}><option value="">Choose a place type</option>{["city", "town", "london_borough", "neighbourhood", "village"].map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select></div>
+                    <div className="space-y-1.5"><Label htmlFor="place-group">Place Group</Label><select id="place-group" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm" value={form.placeGroupId} onChange={(event) => update("placeGroupId", event.target.value)}><option value="">Choose a Place Group</option>{placeIdentityOptions.groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select><p className="text-xs text-muted-foreground">An internal grouping. It does not create a public page.</p></div>
+                    <div className="space-y-1.5"><Label htmlFor="primary-parent">Primary Parent (optional)</Label><select id="primary-parent" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm" value={form.primaryParentId} onChange={(event) => update("primaryParentId", event.target.value)}><option value="">No Primary Parent</option>{placeIdentityOptions.parents.filter((parent) => parent.id !== form.id).map((parent) => <option key={parent.id} value={parent.id}>{parent.displayName}</option>)}</select></div>
+                    <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="place-aliases">Aliases</Label><Input id="place-aliases" value={form.aliases.join(", ")} onChange={(event) => update("aliases", event.target.value.split(",").map((value) => value.trim()).filter(Boolean))} placeholder="Camden Town, NW1" /><p className="text-xs text-muted-foreground">Separate searchable alternative names with commas.</p></div>
+                    <div className="space-y-3 sm:col-span-2"><div className="flex items-center justify-between"><Label>Covered Localities</Label><Button type="button" variant="outline" size="sm" onClick={() => update("coveredLocalities", [...form.coveredLocalities, { name: "", localityType: "neighbourhood", notes: "" }])}><Plus className="size-4" /> Add locality</Button></div>{form.coveredLocalities.map((locality, index) => <div key={locality.id ?? index} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[1fr_180px_1fr_auto]"><Input aria-label={`Covered Locality ${index + 1} name`} value={locality.name} onChange={(event) => update("coveredLocalities", form.coveredLocalities.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="King's Cross" /><Input aria-label={`Covered Locality ${index + 1} type`} value={locality.localityType} onChange={(event) => update("coveredLocalities", form.coveredLocalities.map((item, itemIndex) => itemIndex === index ? { ...item, localityType: event.target.value } : item))} placeholder="Neighbourhood" /><Input aria-label={`Covered Locality ${index + 1} notes`} value={locality.notes} onChange={(event) => update("coveredLocalities", form.coveredLocalities.map((item, itemIndex) => itemIndex === index ? { ...item, notes: event.target.value } : item))} placeholder="Private notes (optional)" /><Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove Covered Locality ${index + 1}`} onClick={() => update("coveredLocalities", form.coveredLocalities.filter((_, itemIndex) => itemIndex !== index))}><Trash2 /></Button></div>)}</div>
+                  </>}
                 </div>
               </EditorPanel>
             </TabsContent>
 
             <TabsContent value="seo">
               <EditorPanel title="Search and page headings" description="Set the public URL and the text shown in search results.">
-                <Controller control={control} name="slug" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="slug">Airport Slug</Label><Input id="slug" {...field} value={form.slug} onChange={(event) => { const value = event.target.value.toLowerCase(); field.onChange(value); update("slug", value) }} placeholder="heathrow-airport-taxi" />{errors.slug?.message ? <p role="alert" className="text-sm text-destructive">{errors.slug.message}</p> : <p className="text-xs text-muted-foreground">Lowercase words separated by hyphens and ending in -airport-taxi.</p>}</div>} />
+                <Controller control={control} name="slug" render={({ field }) => <div className="space-y-1.5"><Label htmlFor="slug">{policy.slug.label}</Label><Input id="slug" {...field} value={form.slug} onChange={(event) => { const value = event.target.value.toLowerCase(); field.onChange(value); update("slug", value) }} placeholder={pageType === "place" ? "camden" : "heathrow-airport-taxi"} />{errors.slug?.message ? <p role="alert" className="text-sm text-destructive">{errors.slug.message}</p> : <p className="text-xs text-muted-foreground">{pageType === "place" ? "Use the shortest clear place name, in lowercase words separated by hyphens." : "Lowercase words separated by hyphens and ending in -airport-taxi."}</p>}</div>} />
                 <div className="space-y-1.5"><Label htmlFor="seo-title">SEO title</Label><Input id="seo-title" value={form.seoTitle ?? ""} onChange={(event) => update("seoTitle", event.target.value)} /></div>
                 <div className="space-y-1.5"><Label htmlFor="meta-description">Meta description</Label><textarea id="meta-description" className="min-h-24 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50" value={form.metaDescription ?? ""} onChange={(event) => update("metaDescription", event.target.value)} /></div>
                 <div className="space-y-1.5"><Label htmlFor="page-h1">H1 page heading</Label><Input id="page-h1" value={form.h1 ?? ""} onChange={(event) => update("h1", event.target.value)} /></div>
-                <div className="rounded-xl border border-border bg-background p-4" aria-labelledby="search-result-preview-heading"><h4 id="search-result-preview-heading" className="text-sm font-medium text-muted-foreground">Search-result preview</h4><p className="mt-3 truncate text-sm text-emerald-700">{SITE_URL}/airport-transfers/{form.slug || "your-airport-taxi"}</p><p className="mt-1 text-xl text-blue-700">{form.seoTitle || "Your SEO title"}</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{form.metaDescription || "Your meta description will appear here."}</p></div>
+                <div className="rounded-xl border border-border bg-background p-4" aria-labelledby="search-result-preview-heading"><h4 id="search-result-preview-heading" className="text-sm font-medium text-muted-foreground">Search-result preview</h4><p className="mt-3 truncate text-sm text-emerald-700">{SITE_URL}{policy.public.namespace}/{form.slug || (pageType === "place" ? "your-place" : "your-airport-taxi")}</p><p className="mt-1 text-xl text-blue-700">{form.seoTitle || "Your SEO title"}</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{form.metaDescription || "Your meta description will appear here."}</p></div>
               </EditorPanel>
             </TabsContent>
 
             <TabsContent value="location" className="space-y-6">
-              <EditorPanel title="Airport location" description="Select the main airport result from Google Places.">
-                <DestinationPicker defaultValue={form.address} onSelect={selectPlace} placeholder="Search for the airport in Google Places" />
+              <EditorPanel title={`${pageType === "place" ? "Place" : "Airport"} location`} description={`Explicitly select and confirm the ${pageType === "place" ? "place" : "main airport"} result from Google Places. An incomplete Draft may be saved without it.`}>
+                <DestinationPicker defaultValue={form.address} onSelect={selectPlace} onClear={() => { update("googlePlaceId", ""); update("address", ""); update("latitude", 0); update("longitude", 0) }} placeholder={`Search for the ${pageType === "place" ? "place" : "airport"} in Google Places`} />
                 {errors.googlePlaceId?.message && <p role="alert" className="text-sm text-destructive">{errors.googlePlaceId.message}</p>}
                 {errors.address?.message && <p role="alert" className="text-sm text-destructive">{errors.address.message}</p>}
-                {form.googlePlaceId && <div className="rounded-lg bg-secondary/60 p-3 text-sm"><p className="font-medium">Selected location</p><p>{form.address}</p><p className="mt-1 text-xs text-muted-foreground">Google Place ID: {form.googlePlaceId} · Latitude {form.latitude} · Longitude {form.longitude}</p></div>}
+                {form.googlePlaceId && <div className="rounded-lg bg-secondary/60 p-3 text-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">Selected location</p><p>{form.address}</p><p className="mt-1 text-xs text-muted-foreground">Google Place ID: {form.googlePlaceId} · Latitude {form.latitude} · Longitude {form.longitude}</p></div><Button type="button" variant="outline" size="sm" disabled={placeReview === "reviewing" || isPending} onClick={reviewSelectedPlace}>{placeReview === "reviewing" && <Loader2 className="size-4 animate-spin" />}{placeReview === "valid" ? "Confirmed" : "Review Google Place"}</Button></div>{placeReview === "invalid" && <p role="alert" className="mt-2 text-destructive">Select the current Google result, then review it again.</p>}</div>}
               </EditorPanel>
-              <EditorPanel title="Airport Terminals" description="Add pickup locations and select exactly one primary terminal.">
+              {pageType === "airport" && <EditorPanel title="Airport Terminals" description="Add pickup locations and select exactly one primary terminal.">
                 <div className="flex justify-end"><Button type="button" variant="outline" size="sm" onClick={() => update("terminals", [...form.terminals, { ...emptyTerminal(), isPrimary: false, sortOrder: form.terminals.length }])}><Plus className="size-4" /> Add terminal</Button></div>
                 <div className="space-y-3">{form.terminals.map((terminal, index) => <div key={terminal.id ?? index} className="rounded-lg border border-border p-4"><div className="mb-3 flex items-center justify-between gap-2"><p className="font-medium">Terminal {index + 1}</p><div className="flex items-center gap-1"><Button type="button" variant="ghost" size="icon-xs" aria-label={`Move terminal ${index + 1} up`} disabled={index === 0} onClick={() => moveTerminal(index, -1)}><ArrowUp /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label={`Move terminal ${index + 1} down`} disabled={index === form.terminals.length - 1} onClick={() => moveTerminal(index, 1)}><ArrowDown /></Button><Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove terminal ${index + 1}`} disabled={form.terminals.length === 1} onClick={() => update("terminals", form.terminals.filter((_, terminalIndex) => terminalIndex !== index))}><Trash2 /></Button></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor={`terminal-name-${index}`}>Name</Label><Input id={`terminal-name-${index}`} value={terminal.displayName} onChange={(event) => updateTerminal(index, "displayName", event.target.value)} /></div><div className="space-y-1.5"><Label>Address</Label><DestinationPicker defaultValue={terminal.address} placeholder="Search terminal address" onSelect={(place) => selectTerminalPlace(index, place)} onClear={() => clearTerminalPlace(index)} /></div></div><p className="mt-2 text-xs text-muted-foreground">Coordinates are filled automatically after selecting the Google Places result.</p><label className="mt-3 flex items-center gap-2 text-sm"><input type="radio" name="primary-terminal" checked={terminal.isPrimary} onChange={() => update("terminals", form.terminals.map((item, terminalIndex) => ({ ...item, isPrimary: terminalIndex === index })))} /> Primary Airport Terminal</label></div>)}</div>
-              </EditorPanel>
+              </EditorPanel>}
             </TabsContent>
 
             <TabsContent value="hero">
@@ -385,15 +405,15 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
                       </div>
                     })}
                     <button type="button" className={`w-full rounded-lg border border-dashed p-3 text-left hover:bg-secondary/40 ${selectedContentId === "final-cta" ? "border-primary bg-primary/5" : "border-border"}`} aria-current={selectedContentId === "final-cta" ? "true" : undefined} onClick={() => setSelectedContentId("final-cta")}><span className="block font-medium">Final booking CTA</span><span className="text-xs text-muted-foreground">Fixed last</span></button>
-                    <div className="space-y-2 border-t border-border pt-3"><select aria-label="New section type" className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm" value={newSectionType} onChange={(event) => setNewSectionType(event.target.value as DestinationSectionType | "")}><option value="">Choose a section</option>{DESTINATION_SECTION_TYPES.filter((type) => !content.sections.some((section) => section.type === type)).map((type) => <option key={type} value={type}>{SECTION_LABELS[type]}</option>)}</select><Button type="button" variant="outline" className="w-full" disabled={!newSectionType} onClick={() => { if (!newSectionType) return; addSection(newSectionType); setNewSectionType("") }}><Plus className="size-4" /> Add Content Section</Button></div>
+                    <div className="space-y-2 border-t border-border pt-3"><select aria-label="New section type" className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm" value={newSectionType} onChange={(event) => setNewSectionType(event.target.value as DestinationSectionType | "")}><option value="">Choose a section</option>{availableSectionTypes.filter((type) => !content.sections.some((section) => section.type === type)).map((type) => <option key={type} value={type}>{SECTION_LABELS[type]}</option>)}</select><Button type="button" variant="outline" className="w-full" disabled={!newSectionType} onClick={() => { if (!newSectionType) return; addSection(newSectionType); setNewSectionType("") }}><Plus className="size-4" /> Add Content Section</Button></div>
                   </div>
 
                   <div className="rounded-xl border border-border bg-background p-4 sm:p-5">
                     {selectedContentId === "final-cta" ? <div className="space-y-4"><div><h4 className="font-semibold">Final booking CTA</h4><p className="text-sm text-muted-foreground">The closing booking prompt shown after page content.</p></div><div className="space-y-1.5"><Label htmlFor="final-cta-heading">Heading</Label><Input id="final-cta-heading" value={content.finalCta.heading} onChange={(event) => updateContent({ ...content, finalCta: { ...content.finalCta, heading: event.target.value } })} /></div><div className="space-y-1.5"><Label>Description</Label><RichTextEditor value={content.finalCta.bodyDocument ?? content.finalCta.body} onChange={(bodyDocument) => updateContent({ ...content, finalCta: { ...content.finalCta, body: tiptapDocumentToBlocks(bodyDocument), bodyDocument } })} /></div></div> : selectedContentSection ? <div className="space-y-4">
                       <div><h4 className="font-semibold">{selectedContentSection.title}</h4><p className="text-sm text-muted-foreground">{selectedContentSection.required ? "Required Content Section" : "Optional Content Section"}{!selectedContentSection.visible && " · Hidden from the public page"}</p></div>
-                      <div className="space-y-1.5"><Label htmlFor={`section-type-${selectedContentSection.id}`}>Section type</Label><select id={`section-type-${selectedContentSection.id}`} className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm disabled:cursor-not-allowed disabled:bg-muted" value={selectedContentSection.type} disabled={selectedContentSection.required} title={selectedContentSection.required ? "Required Content Sections keep their assigned type" : undefined} onChange={(event) => { const type = event.target.value as DestinationSectionType; const index = content.sections.findIndex((section) => section.id === selectedContentSection.id); updateSection(index, { type, title: SECTION_LABELS[type], required: isRequiredDestinationSectionType(type) }) }}><option value={selectedContentSection.type}>{SECTION_LABELS[selectedContentSection.type]}</option>{DESTINATION_SECTION_TYPES.filter((type) => type !== selectedContentSection.type && !content.sections.some((section) => section.type === type)).map((type) => <option key={type} value={type}>{SECTION_LABELS[type]}</option>)}</select>{selectedContentSection.required && <p className="text-xs text-muted-foreground">Required Content Sections cannot change type.</p>}</div>
+                      <div className="space-y-1.5"><Label htmlFor={`section-type-${selectedContentSection.id}`}>Section type</Label><select id={`section-type-${selectedContentSection.id}`} className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm disabled:cursor-not-allowed disabled:bg-muted" value={selectedContentSection.type} disabled={selectedContentSection.required} title={selectedContentSection.required ? "Required Content Sections keep their assigned type" : undefined} onChange={(event) => { const type = event.target.value as DestinationSectionType; const index = content.sections.findIndex((section) => section.id === selectedContentSection.id); updateSection(index, { type, title: SECTION_LABELS[type], required: pageType === "airport" ? isRequiredDestinationSectionType(type) : isRequiredDestinationSectionType(type, pageType) }) }}><option value={selectedContentSection.type}>{SECTION_LABELS[selectedContentSection.type]}</option>{availableSectionTypes.filter((type) => type !== selectedContentSection.type && !content.sections.some((section) => section.type === type)).map((type) => <option key={type} value={type}>{SECTION_LABELS[type]}</option>)}</select>{selectedContentSection.required && <p className="text-xs text-muted-foreground">Required Content Sections cannot change type.</p>}</div>
                       <div className="space-y-1.5"><Label>Content</Label><RichTextEditor value={selectedContentSection.bodyDocument ?? selectedContentSection.body} onChange={(bodyDocument) => { const index = content.sections.findIndex((section) => section.id === selectedContentSection.id); updateSection(index, { bodyDocument, body: tiptapDocumentToBlocks(bodyDocument) }) }} /><p className="text-xs text-muted-foreground">Headings, paragraphs, bold text, lists and safe links are supported.</p></div>
-                      {selectedContentSection.type === "airport_guide" && <div className="grid gap-3 sm:grid-cols-2">{Object.entries(selectedContentSection.fields).map(([key, value]) => <div key={key} className="space-y-1.5"><Label htmlFor={`guide-${selectedContentSection.id}-${key}`}>{key === "sourceNotes" ? "Editorial source/verification notes (private)" : key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())}</Label><textarea id={`guide-${selectedContentSection.id}-${key}`} className="min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm" value={value} onChange={(event) => { const index = content.sections.findIndex((section) => section.id === selectedContentSection.id); updateSection(index, { fields: { ...selectedContentSection.fields, [key]: event.target.value } }) }} /></div>)}</div>}
+                      {pageType === "airport" && selectedContentSection.type === "airport_guide" && <div className="grid gap-3 sm:grid-cols-2">{Object.entries(selectedContentSection.fields).map(([key, value]) => <div key={key} className="space-y-1.5"><Label htmlFor={`guide-${selectedContentSection.id}-${key}`}>{key === "sourceNotes" ? "Editorial source/verification notes (private)" : key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())}</Label><textarea id={`guide-${selectedContentSection.id}-${key}`} className="min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm" value={value} onChange={(event) => { const index = content.sections.findIndex((section) => section.id === selectedContentSection.id); updateSection(index, { fields: { ...selectedContentSection.fields, [key]: event.target.value } }) }} /></div>)}</div>}
                       <CloudinaryImagePicker kind="content" value={selectedContentSection.image} onChange={(image) => { const index = content.sections.findIndex((section) => section.id === selectedContentSection.id); updateSection(index, { image }) }} />
                     </div> : <p className="text-sm text-muted-foreground">Add a Content Section to begin.</p>}
                   </div>
@@ -411,13 +431,13 @@ export function DestinationPageEditor({ initialPage, relatedCandidates, reusable
               </EditorPanel>
             </TabsContent>
 
-            <TabsContent value="related">
+              {pageType === "airport" && <TabsContent value="related">
               <EditorPanel title="Related Routes" description="Connect this Airport Page to another Published Airport Page. Each direction keeps its own wording and image.">
                 {!form.id && <p className="rounded-lg bg-secondary px-3 py-2 text-sm">Save this page as a Draft first, then add Related Routes.</p>}
                 {form.id && <select aria-label="Published Related Route" className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm" defaultValue="" onChange={(event) => { addRelatedDestination(event.target.value); event.target.value = "" }}><option value="">Add a Published Airport Page</option>{relatedCandidates.filter((candidate) => !form.relatedDestinations.some((item) => item.pageId === candidate.id)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.displayName} · {candidate.slug}</option>)}</select>}
                 <div className="space-y-4">{form.relatedDestinations.map((related, index) => <div key={related.pageId} className="rounded-lg border border-border p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-medium">{related.displayName}</p><p className="text-xs text-muted-foreground">{related.slug}</p></div><Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove Related Route ${related.displayName}`} onClick={() => update("relatedDestinations", form.relatedDestinations.filter((_, itemIndex) => itemIndex !== index))}><Trash2 /></Button></div><div className="mt-3 grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label>Heading on this page</Label><Input value={related.heading} onChange={(event) => updateRelated(index, { heading: event.target.value })} /></div><div className="space-y-1.5"><Label>Description on this page</Label><textarea className="min-h-20 w-full rounded-lg border border-input px-2.5 py-2 text-sm" value={related.description} onChange={(event) => updateRelated(index, { description: event.target.value })} /></div><div className="space-y-1.5"><Label>Heading on Related Route page</Label><Input value={related.reverseHeading} onChange={(event) => updateRelated(index, { reverseHeading: event.target.value })} /></div><div className="space-y-1.5"><Label>Description on Related Route page</Label><textarea className="min-h-20 w-full rounded-lg border border-input px-2.5 py-2 text-sm" value={related.reverseDescription} onChange={(event) => updateRelated(index, { reverseDescription: event.target.value })} /></div></div><div className="mt-5 grid gap-5 border-t border-border pt-5 lg:grid-cols-2"><div><p className="mb-3 font-medium">Image on this page</p><CloudinaryImagePicker kind="content" value={related.image} onChange={(image) => updateRelated(index, { image })} /></div><div><p className="mb-3 font-medium">Image on the Related Route page</p><CloudinaryImagePicker kind="content" value={related.reverseImage} onChange={(image) => updateRelated(index, { reverseImage: image })} /></div></div></div>)}</div>
               </EditorPanel>
-            </TabsContent>
+              </TabsContent>}
 
             <TabsContent value="publish" className="space-y-6">
               <EditorPanel title="Publish readiness" description="Fix every blocking item before making this Draft public.">

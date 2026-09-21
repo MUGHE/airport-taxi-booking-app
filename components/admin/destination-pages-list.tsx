@@ -15,11 +15,12 @@ export function DestinationPagesList({ pages }: { pages: AdminDestinationPage[] 
   const [query, setQuery] = useState("")
   const [type, setType] = useState("all")
   const [status, setStatus] = useState("all")
-  const [featured, setFeatured] = useState("all")
+  const [attention, setAttention] = useState("all")
   const filtered = useMemo(() => pages.filter((page) => {
     const textMatch = `${page.displayName} ${page.officialName} ${page.slug}`.toLowerCase().includes(query.toLowerCase().trim())
-    return textMatch && (type === "all" || page.pageType === type) && (status === "all" || page.lifecycleState === status) && (featured === "all" || String(page.featured) === featured)
-  }), [featured, pages, query, status, type])
+    const needsAttention = page.lifecycleState === "draft" || page.hasUnpublishedChanges
+    return textMatch && (type === "all" || page.pageType === type) && (status === "all" || page.lifecycleState === status) && (attention === "all" || String(needsAttention) === attention)
+  }), [attention, pages, query, status, type])
 
   return (
     <div className="space-y-4">
@@ -31,8 +32,8 @@ export function DestinationPagesList({ pages }: { pages: AdminDestinationPage[] 
         <select aria-label="Filter by status" className="h-8 rounded-lg border border-input bg-background px-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="all">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option>
         </select>
-        <select aria-label="Filter by featured state" className="h-8 rounded-lg border border-input bg-background px-2 text-sm" value={featured} onChange={(event) => setFeatured(event.target.value)}>
-          <option value="all">Featured: all</option><option value="true">Featured</option><option value="false">Not featured</option>
+        <select aria-label="Filter by attention state" className="h-8 rounded-lg border border-input bg-background px-2 text-sm" value={attention} onChange={(event) => setAttention(event.target.value)}>
+          <option value="all">Attention: all</option><option value="true">Needs attention</option><option value="false">No saved changes</option>
         </select>
       </div>
 
