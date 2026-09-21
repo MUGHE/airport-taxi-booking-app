@@ -16,7 +16,7 @@ export type BreadcrumbItem = {
  * and can show a breadcrumb rich result in search. Not meant for the homepage
  * itself, which has no parent to show.
  */
-export function Breadcrumbs({ items, className }: { items: BreadcrumbItem[]; className?: string }) {
+export function Breadcrumbs({ items, className, includeStructuredData = true }: { items: BreadcrumbItem[]; className?: string; includeStructuredData?: boolean }) {
   const schema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -53,10 +53,10 @@ export function Breadcrumbs({ items, className }: { items: BreadcrumbItem[]; cla
           })}
         </ol>
       </nav>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
-      />
+      {includeStructuredData && <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
+        />}
     </>
   )
 }

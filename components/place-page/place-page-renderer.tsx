@@ -17,7 +17,7 @@ export function PlacePageRenderer({ page, canonicalPath, showFooter = true }: { 
   const visibleSections = page.sections.filter((section) => section.visible)
   return <div className="airport-page flex min-h-screen flex-col"><SiteHeader /><main className="flex-1">
     <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy">
-      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Destinations", href: "/destinations" }, { label: page.displayName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
+      <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Destinations", href: "/destinations" }, { label: page.displayName, href: canonicalPath }]} includeStructuredData={false} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
       {page.heroImage && <div className="mb-6 max-h-72 overflow-hidden rounded-2xl"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} /></div>}
       <h1>{page.heading}</h1><Blocks blocks={page.intro} />
       <PlaceQuoteForm place={page.displayName} sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} airports={page.supportedAirports} />
