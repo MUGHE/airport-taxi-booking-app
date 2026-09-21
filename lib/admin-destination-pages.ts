@@ -3,6 +3,7 @@ import { DESTINATION_CONTENT_SCHEMA_VERSION, normalizeDestinationContent, valida
 import { DEFAULT_GLOBAL_FAQS, DEFAULT_SERVICE_FACTS, DEFAULT_VERIFIED_REVIEWS, type GlobalFaq, type ServiceFact, type VerifiedReview } from "@/lib/reusable-content"
 import { listRelatedDestinations } from "@/lib/related-destinations"
 import { getPublishBlockers, getPublishWarnings, getWarningSetHash, type ExistingQualityPage, type PublishWarning } from "@/lib/publish-readiness"
+import { airportPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
@@ -11,7 +12,7 @@ const DUPLICATE_IATA_ERROR = "That IATA code is already in use. Check the airpor
 
 export type AdminDestinationPage = {
   id: string
-  pageType: "airport" | "city_town"
+  pageType: DestinationPageType
   lifecycleState: "draft" | "published" | "archived"
   bookingAvailable: boolean
   featured: boolean
@@ -71,7 +72,7 @@ export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "p
 
 type PageRow = {
   id: string
-  page_type: "airport" | "city_town"
+  page_type: DestinationPageType
   lifecycle_state: "draft" | "published" | "archived"
   booking_available: boolean
   featured: boolean
@@ -199,7 +200,7 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
 }
 
 async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<AdminDestinationPage[]> {
-  let pageQuery = supabase.from("destination_pages").select("*").eq("page_type", "airport").order("updated_at", { ascending: false })
+  let pageQuery = supabase.from("destination_pages").select("*").eq("page_type", airportPagePolicy.type).order("updated_at", { ascending: false })
   if (pageId) pageQuery = pageQuery.eq("id", pageId)
 
   const { data: pages, error: pageError } = await pageQuery
@@ -301,7 +302,7 @@ async function validateRelatedDestinations(supabase: SupabaseClient, input: Save
   if (!input.relatedDestinations.length) return null
   const ids = input.relatedDestinations.map((item) => item.pageId)
   if (new Set(ids).size !== ids.length) return "Each Related Route can be selected only once."
-  const { data, error } = await supabase.from("destination_pages").select("id").in("id", ids).eq("page_type", "airport").eq("lifecycle_state", "published")
+  const { data, error } = await supabase.from("destination_pages").select("id").in("id", ids).in("page_type", airportPagePolicy.relationships.targetPageTypes).eq("lifecycle_state", "published")
   if (error || (data ?? []).length !== ids.length) return "Related Routes must connect Published Airport Pages."
   return null
 }
@@ -358,12 +359,12 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
         ...pageValues,
         content_schema_version: DESTINATION_CONTENT_SCHEMA_VERSION,
         updated_at: new Date().toISOString(),
-      }).eq("id", pageId).eq("page_type", "airport")
+      }).eq("id", pageId).eq("page_type", airportPagePolicy.type)
       if (updateError) throw updateError
     } else {
       const hasLocation = Boolean(normalized.googlePlaceId && normalized.address)
       const { data, error: insertError } = await supabase.from("destination_pages").insert({
-        page_type: "airport",
+        page_type: airportPagePolicy.type,
         lifecycle_state: "draft",
         slug: normalized.slug || null,
         official_name: normalized.officialName || null,

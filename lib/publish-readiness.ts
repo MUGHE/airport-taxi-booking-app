@@ -1,5 +1,6 @@
-import { SECTION_LABELS, type DestinationContentDocument, type DestinationImageReference } from "@/lib/destination-content"
+import { SECTION_LABELS, type DestinationContentDocument, type DestinationImageReference, type DestinationSectionType } from "@/lib/destination-content"
 import type { AdminRelatedDestination, AdminTerminal } from "@/lib/admin-destination-pages"
+import { airportPagePolicy } from "@/lib/destination-page-policy"
 
 export type PublishReadinessInput = {
   id?: string
@@ -33,7 +34,7 @@ export type ExistingQualityPage = {
   heroImageAssetId?: string
 }
 
-const REQUIRED_SECTIONS = ["introduction", "benefits", "fleet_pricing", "airport_guide", "map"] as const
+const REQUIRED_SECTIONS = airportPagePolicy.content.requiredSections as readonly DestinationSectionType[]
 const SAFE_INTERNAL_PATHS = new Set(["/", "/book", "/airport-transfers", "/contact", "/help", "/about", "/privacy", "/terms"])
 
 function hasText(value: string | undefined): boolean { return Boolean(value?.trim()) }
@@ -48,7 +49,7 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
   const blockers: PublishBlocker[] = []
   const block = (code: string, message: string) => blockers.push({ code, message })
 
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*-airport-taxi$/.test(input.slug.trim())) block("invalid-slug", "Use a lowercase Airport Slug ending in -airport-taxi.")
+  if (!airportPagePolicy.slug.isValid(input.slug.trim())) block("invalid-slug", "Use a lowercase Airport Slug ending in -airport-taxi.")
   const duplicate = input.existingPages?.find((page) => page.id !== input.id && (page.slug === input.slug || page.iataCode === input.iataCode || (page.seoTitle && page.seoTitle.toLowerCase() === input.seoTitle.trim().toLowerCase())))
   if (duplicate) block("duplicate-value", `The Airport Slug, IATA code, or SEO title conflicts with ${duplicate.slug}.`)
   if (!hasText(input.officialName) || !hasText(input.displayName) || !/^[A-Z]{3}$/.test(input.iataCode.trim())) block("incomplete-identity", "Official name, display name, and a three-letter IATA code are required.")
