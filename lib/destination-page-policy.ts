@@ -5,7 +5,7 @@ export type DestinationPageType = (typeof DESTINATION_PAGE_TYPES)[number]
 
 type DestinationPagePolicy = {
   label: string
-  defaults: { seoTitle: (displayName: string) => string; metaDescription: (displayName: string) => string; h1: (displayName: string) => string }
+  defaults: { seoTitle: (displayName: string) => string; metaDescription: (displayName: string, supportedAirports?: string[]) => string; h1: (displayName: string) => string }
   identity: { editableFields: readonly string[]; requiredFields: readonly string[] }
   slug: { label: string; isValid: (slug: string) => boolean }
   content: { requiredSectionTypes: readonly DestinationSectionType[]; localFaqField: string }
@@ -30,7 +30,7 @@ const airport: DestinationPagePolicy = {
 
 const place: DestinationPagePolicy = {
   label: "Place Page",
-  defaults: { seoTitle: (name) => `${name} Airport Taxi | Fixed-Price Transfers`, metaDescription: (name) => `Fixed-price taxi transfers between ${name} and supported airports.`, h1: (name) => `${name} Airport Taxi` },
+  defaults: { seoTitle: (name) => `${name} Airport Taxi | Fixed-Price Transfers`, metaDescription: (name, airports = []) => airports.length ? `Fixed-price taxi transfers between ${name} and ${airports.join(", ")}.` : `Fixed-price taxi transfers between ${name} and supported airports.`, h1: (name) => `${name} Airport Taxi` },
   identity: { editableFields: ["officialName", "displayName", "placeType", "placeGroup", "parentPlace", "googlePlaceId", "address", "latitude", "longitude"], requiredFields: ["officialName", "displayName", "placeType", "placeGroup", "googlePlaceId", "address", "latitude", "longitude"] },
   slug: { label: "Place Slug", isValid: (slug) => PLACE_SLUG.test(slug) && !slug.endsWith("-airport-taxi") },
   content: { requiredSectionTypes: ["introduction", "airport_routes", "place_coverage", "travel_information", "faq"], localFaqField: "placeFaqs" },

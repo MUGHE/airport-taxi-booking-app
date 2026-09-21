@@ -5,6 +5,7 @@ import { listRelatedDestinations } from "@/lib/related-destinations"
 import { getPublishBlockers, getPublishWarnings, getWarningSetHash, type ExistingQualityPage, type PublishWarning } from "@/lib/publish-readiness"
 import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
 import { findPlaceIdentityConflict, normalizePlaceIdentity, wouldCreateParentCycle } from "@/lib/place-identity"
+import { validatePlaceRelationships } from "@/lib/place-page-rules"
 
 export type ReusableDestinationContent = { serviceFacts: ServiceFact[]; globalFaqs: GlobalFaq[]; reviews: VerifiedReview[] }
 
@@ -59,6 +60,9 @@ export type AdminRelatedDestination = {
   reverseDescription: string
   image?: DestinationImageReference
   reverseImage?: DestinationImageReference
+  kind?: "related_route" | "supported_airport" | "nearby_place"
+  sortOrder?: number
+  bookingAvailable?: boolean
 }
 
 export type AdminTerminal = {
@@ -252,7 +256,8 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
   ))
   for (const page of result) {
     const related = await listRelatedDestinations(page.id)
-    page.relatedDestinations = related.map((item) => ({ ...item, reverseHeading: item.reverseHeading ?? "", reverseDescription: item.reverseDescription ?? "" }))
+    const managedKinds = page.pageType === "place" ? new Set(["supported_airport", "nearby_place"]) : new Set(["related_route"])
+    page.relatedDestinations = related.filter((item) => managedKinds.has(item.kind)).map((item) => ({ ...item, reverseHeading: item.reverseHeading ?? "", reverseDescription: item.reverseDescription ?? "" }))
   }
   return result
 }
@@ -295,6 +300,9 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
     const conflict = findPlaceIdentityConflict({ names: [input.displayName, input.officialName], aliases: input.aliases, coveredLocalities: input.coveredLocalities.map((item) => item.name) })
     if (conflict) return `“${conflict}” is used more than once in this Place identity.`
     if (input.coveredLocalities.some((item) => !item.name.trim() || !item.localityType.trim())) return "Every Covered Locality needs a name and locality type."
+    const contentError = validateDestinationContent(input.content, input.h1?.trim() || getDestinationPagePolicy(input.pageType).defaults.h1(input.displayName.trim()), input.pageType)
+    if (contentError) return contentError
+    if ((input.content?.placeFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length ?? 0) < 2) return "Add at least two complete local FAQs before saving this Place Draft."
     return null
   }
   const terminals = input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal")
@@ -307,7 +315,7 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
   }
   if (input.relatedDestinations.some((item) => item.pageId === input.id)) return "An Airport Page cannot relate to itself."
   if (input.relatedDestinations.some((item) => !item.pageId || !item.heading.trim() || !item.description.trim() || !item.reverseHeading.trim() || !item.reverseDescription.trim())) return "Every Related Route needs both directional headings and descriptions."
-  const contentError = validateDestinationContent(input.content, input.h1?.trim() || `${input.displayName.trim()} Airport Taxi & Transfers`)
+  const contentError = validateDestinationContent(input.content, input.h1?.trim() || getDestinationPagePolicy(input.pageType).defaults.h1(input.displayName.trim()), input.pageType)
   if (contentError) return contentError
   return null
 }
@@ -352,11 +360,30 @@ async function validateSavedImages(supabase: SupabaseClient, content: Destinatio
 }
 
 async function validateRelatedDestinations(supabase: SupabaseClient, input: SaveAdminDestinationPageInput): Promise<string | null> {
-  if (!input.relatedDestinations.length) return null
+  if (!input.relatedDestinations.length && input.pageType === "airport") return null
   const ids = input.relatedDestinations.map((item) => item.pageId)
   if (new Set(ids).size !== ids.length) return "Each Related Route can be selected only once."
-  const { data, error } = await supabase.from("destination_pages").select("id").in("id", ids).eq("page_type", "airport").eq("lifecycle_state", "published")
-  if (error || (data ?? []).length !== ids.length) return "Related Routes must connect Published Airport Pages."
+  const { data, error } = ids.length ? await supabase.from("destination_pages").select("id, page_type, lifecycle_state").in("id", ids) : { data: [], error: null }
+  if (error || (data ?? []).length !== ids.length) return "Every relationship must connect an existing page."
+  const pages = new Map((data ?? []).map((page) => [page.id as string, page]))
+  if (input.relatedDestinations.some((item) => {
+    const page = pages.get(item.pageId)
+    const expectedType = item.kind === "nearby_place" ? "place" : "airport"
+    return !page || page.page_type !== expectedType || page.lifecycle_state !== "published"
+  })) return input.pageType === "place" ? "Supported Airports and Nearby Places must be Published Pages of the correct type." : "Related Routes must connect Published Airport Pages."
+  if (input.pageType === "place") {
+    const { count, error: countError } = await supabase.from("destination_pages").select("id", { count: "exact", head: true }).eq("page_type", "place").eq("lifecycle_state", "published").neq("id", input.id ?? "00000000-0000-0000-0000-000000000000")
+    if (countError) return "Nearby Place availability could not be checked."
+    const errors = validatePlaceRelationships({
+      supportedAirports: input.relatedDestinations.filter((item) => item.kind === "supported_airport").flatMap((item) => {
+        const page = pages.get(item.pageId)
+        return page ? [{ pageId: item.pageId, pageType: page.page_type as DestinationPageType, lifecycleState: page.lifecycle_state as "draft" | "published" | "archived", bookingAvailable: true }] : []
+      }),
+      nearbyPlaces: input.relatedDestinations.filter((item) => item.kind === "nearby_place").map((item) => item.pageId),
+      validNearbyCandidateCount: count ?? 0,
+    })
+    if (errors.length) return errors[0]
+  }
   return null
 }
 
@@ -496,7 +523,8 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       if (supportError) throw supportError
     }
 
-    const { error: deleteRelationshipsError } = await supabase.from("destination_page_relationships").delete().or(`page_a_id.eq.${pageId},page_b_id.eq.${pageId}`)
+    const managedKinds = normalized.pageType === "place" ? ["supported_airport", "nearby_place"] : ["related_route"]
+    const { error: deleteRelationshipsError } = await supabase.from("destination_page_relationships").delete().or(`page_a_id.eq.${pageId},page_b_id.eq.${pageId}`).in("relationship_kind", managedKinds)
     if (deleteRelationshipsError) throw deleteRelationshipsError
     for (const related of normalized.relatedDestinations) {
       const [pageA, pageB] = [pageId, related.pageId].sort()
@@ -510,6 +538,8 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
         b_heading: currentIsA ? related.reverseHeading : related.heading,
         b_description: currentIsA ? related.reverseDescription : related.description,
         b_image: currentIsA ? related.reverseImage ?? null : related.image ?? null,
+        relationship_kind: related.kind ?? "related_route",
+        place_display_order: related.sortOrder ?? 0,
       })
       if (relationshipError) throw relationshipError
     }

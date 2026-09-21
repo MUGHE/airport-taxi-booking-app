@@ -24,6 +24,7 @@ test("Destination Page policies keep Airport Page rules and reserve Place Page r
   expect(place.slug.isValid("city-of-london-airport-taxi")).toBe(false)
   expect(place.identity.requiredFields).not.toContain("iataCode")
   expect(place.defaults.h1("Camden")).toBe("Camden Airport Taxi")
+  expect(place.defaults.metaDescription("Camden", ["Heathrow Airport", "Gatwick Airport"])).toBe("Fixed-price taxi transfers between Camden and Heathrow Airport, Gatwick Airport.")
   expect(place.content.requiredSectionTypes).toEqual(expect.arrayContaining(["airport_routes", "place_coverage", "travel_information"]))
   expect(place.publishReadiness).toBe("place")
   expect(place.relationships).toBe("supported-airports")
@@ -34,7 +35,7 @@ test("Destination Page policies keep Airport Page rules and reserve Place Page r
   expect(place.archiveFallback).toBe("destinations")
 
   const placeContent = createDefaultDestinationContent("Camden Airport Taxi", "place")
-  expect(placeContent.schemaVersion).toBe(2)
+  expect(placeContent.schemaVersion).toBe(3)
   expect(placeContent.sections.map((section) => section.type)).toEqual(place.content.requiredSectionTypes)
   expect(placeContent.sections.map((section) => section.type)).not.toContain("airport_guide")
 })
