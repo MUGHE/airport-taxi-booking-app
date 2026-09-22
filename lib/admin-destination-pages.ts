@@ -13,6 +13,10 @@ const DUPLICATE_SLUG_ERROR = "That Airport Slug is already in use. Choose a diff
 const DUPLICATE_PLACE_SLUG_ERROR = "That Place Slug is already in use. Choose a different slug."
 const DUPLICATE_IATA_ERROR = "That IATA code is already in use. Check the airport code."
 
+function publishTrace(traceId: string | undefined, event: string, details: Record<string, unknown> = {}) {
+  if (traceId) console.info(`[Destination publish] ${traceId} ${event}`, details)
+}
+
 export type AdminDestinationPage = {
   id: string
   pageType: DestinationPageType
@@ -225,15 +229,20 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
   }
 }
 
-async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<AdminDestinationPage[]> {
+async function loadPageRows(supabase: SupabaseClient, pageId?: string, traceId?: string): Promise<AdminDestinationPage[]> {
+  const startedAt = Date.now()
+  publishTrace(traceId, "Loading Destination Page record.", { pageId })
   let pageQuery = supabase.from("destination_pages").select("*").order("updated_at", { ascending: false })
   if (pageId) pageQuery = pageQuery.eq("id", pageId)
 
   const { data: pages, error: pageError } = await pageQuery
   if (pageError) throw pageError
   if (!pages?.length) return []
+  publishTrace(traceId, "Destination Page record loaded.", { pageCount: pages.length, elapsedMs: Date.now() - startedAt })
 
   const ids = (pages as PageRow[]).map((page) => page.id)
+  const relatedDataStartedAt = Date.now()
+  publishTrace(traceId, "Loading Draft, terminal, alias, and locality records.", { pageCount: ids.length })
   const [{ data: snapshots, error: snapshotError }, { data: terminals, error: terminalError }, { data: aliases, error: aliasError }, { data: localities, error: localityError }] = await Promise.all([
     supabase.from("destination_page_snapshots").select("id, page_id, snapshot_kind, seo_title, meta_description, h1, content, created_at").in("page_id", ids),
     supabase.from("destination_page_terminals").select("id, page_id, display_name, address, latitude, longitude, sort_order, is_primary").in("page_id", ids).order("sort_order"),
@@ -244,6 +253,7 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
   if (terminalError) throw terminalError
   if (aliasError) throw aliasError
   if (localityError) throw localityError
+  publishTrace(traceId, "Draft, terminal, alias, and locality records loaded.", { snapshotCount: snapshots?.length ?? 0, terminalCount: terminals?.length ?? 0, aliasCount: aliases?.length ?? 0, localityCount: localities?.length ?? 0, elapsedMs: Date.now() - relatedDataStartedAt })
 
   const snapshotRows = (snapshots ?? []) as SnapshotRow[]
   const terminalRows = (terminals ?? []) as TerminalRow[]
@@ -257,7 +267,10 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
     (localities ?? []).filter((locality) => locality.page_id === page.id).map((locality) => ({ id: locality.id as string, name: locality.name as string, localityType: locality.locality_type as string, notes: (locality.notes as string | null) ?? "" })),
   ))
   for (const page of result) {
+    const relationshipStartedAt = Date.now()
+    publishTrace(traceId, "Loading related Destination Pages.", { pageId: page.id })
     const related = await listRelatedDestinations(page.id)
+    publishTrace(traceId, "Related Destination Pages loaded.", { relatedCount: related.length, elapsedMs: Date.now() - relationshipStartedAt })
     const managedKinds = page.pageType === "place" ? new Set(["supported_airport", "nearby_place"]) : new Set(["related_route"])
     page.relatedDestinations = related.filter((item) => managedKinds.has(item.kind)).map((item) => ({ ...item, reverseHeading: item.reverseHeading ?? "", reverseDescription: item.reverseDescription ?? "" }))
   }
@@ -611,7 +624,9 @@ export async function setAdminBookingAvailability(pageId: string, available: boo
   return error ? { ok: false, error: "Only a Published Page can change booking availability." } : { ok: true }
 }
 
-async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
+async function listQualityPages(supabase: SupabaseClient, traceId?: string): Promise<ExistingQualityPage[]> {
+  const startedAt = Date.now()
+  publishTrace(traceId, "Loading existing Pages for duplicate and quality checks.")
   const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }, { data: aliases, error: aliasError }, { data: localities, error: localityError }] = await Promise.all([
     supabase.from("destination_pages").select("id, slug, iata_code, page_type, display_name, official_name, lifecycle_state").neq("lifecycle_state", "archived"),
     supabase.from("destination_page_snapshots").select("page_id, snapshot_kind, seo_title, meta_description, content").in("snapshot_kind", ["draft", "published"]),
@@ -619,6 +634,7 @@ async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQuali
     supabase.from("destination_covered_localities").select("page_id, name"),
   ])
   if (pageError || snapshotError || aliasError || localityError) throw pageError ?? snapshotError ?? aliasError ?? localityError
+  publishTrace(traceId, "Existing Pages loaded for duplicate and quality checks.", { pageCount: pages?.length ?? 0, snapshotCount: snapshots?.length ?? 0, aliasCount: aliases?.length ?? 0, localityCount: localities?.length ?? 0, elapsedMs: Date.now() - startedAt })
   const pageRows = (pages ?? []) as { id: string; slug: string; iata_code?: string; page_type: DestinationPageType; display_name?: string; official_name?: string }[]
   const snapshotRows = (snapshots ?? []) as { page_id: string; snapshot_kind: "draft" | "published"; seo_title: string; meta_description: string; content: unknown }[]
   return pageRows.flatMap((page) => snapshotRows.filter((snapshot) => snapshot.page_id === page.id).map((snapshot) => {
@@ -627,22 +643,36 @@ async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQuali
   }))
 }
 
-async function getPublishReview(pageId: string): Promise<PublishReview> {
+async function getPublishReview(pageId: string, traceId?: string): Promise<PublishReview> {
+  publishTrace(traceId, "Final server review started.", { pageId })
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
-  const page = await getAdminDestinationPage(pageId)
+  const pageStartedAt = Date.now()
+  publishTrace(traceId, "Loading this Draft for final server review.")
+  const pages = await loadPageRows(supabase, pageId, traceId)
+  const page = pages[0] ?? null
   if (!page) return { ok: false, error: "Destination Page not found." }
-  const existingPages = await listQualityPages(supabase)
+  publishTrace(traceId, "This Draft loaded for final server review.", { pageType: page.pageType, slug: page.slug, elapsedMs: Date.now() - pageStartedAt })
+  const existingPages = await listQualityPages(supabase, traceId)
   const validNearbyCandidateCount = new Set(existingPages.filter((item) => item.pageType === "place" && item.id !== pageId).map((item) => item.id)).size
   const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages, validNearbyCandidateCount }
   const blockers = getPublishBlockers(readiness)
   const warnings = getPublishWarnings(readiness)
   const warningSetHash = getWarningSetHash(warnings)
+  const reusableContentStartedAt = Date.now()
+  publishTrace(traceId, "Checking selected shared content.")
   const reusableContentError = await validateReusableContent(page.draft.content)
+  publishTrace(traceId, "Selected shared content checked.", { valid: !reusableContentError, elapsedMs: Date.now() - reusableContentStartedAt })
   if (reusableContentError) blockers.push({ code: "invalid-reusable-content", message: reusableContentError })
+  const imageStartedAt = Date.now()
+  publishTrace(traceId, "Checking selected media assets.")
   const imageError = await validateSavedImages(supabase, page.draft.content, page.relatedDestinations.flatMap((item) => [item.image, item.reverseImage].filter((image): image is DestinationImageReference => Boolean(image))))
+  publishTrace(traceId, "Selected media assets checked.", { valid: !imageError, elapsedMs: Date.now() - imageStartedAt })
   if (imageError) blockers.push({ code: "invalid-media", message: imageError })
+  const relatedStartedAt = Date.now()
+  publishTrace(traceId, "Checking related Destination Pages.")
   const relatedError = await validateRelatedDestinations(supabase, { ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content })
+  publishTrace(traceId, "Related Destination Pages checked.", { valid: !relatedError, elapsedMs: Date.now() - relatedStartedAt })
   if (relatedError) blockers.push({ code: "invalid-relationships", message: relatedError })
   return { ok: true, pageId, pageType: page.pageType, displayName: page.displayName, slug: page.slug, draftUpdatedAt: page.draftUpdatedAt, blockers, warnings, warningSetHash }
 }
@@ -651,21 +681,40 @@ export async function reviewAdminDestinationPage(pageId: string): Promise<Publis
   return getPublishReview(pageId)
 }
 
-export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride): Promise<PublishResult> {
+export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride, traceId?: string): Promise<PublishResult> {
+  const trace = traceId ? `[Destination publish] ${traceId}` : "[Destination publish]"
+  console.info(`${trace} Database publish flow started.`, { pageId, warningOverride: Boolean(override) })
   const supabase = getSupabase()
-  if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
-  const review = await getPublishReview(pageId)
-  if (!review.ok) return review
-  if (review.blockers.length) return { ok: false, error: review.blockers.map((item) => item.message).join(" "), blockers: review.blockers }
-  if (override?.expectedDraftUpdatedAt && override.expectedDraftUpdatedAt !== review.draftUpdatedAt) return { ok: false, error: "This Draft changed after it was reviewed. Refresh the list and review it again." }
+  if (!supabase || !pageId) {
+    console.error(`${trace} Database publish flow stopped: database connection or page ID is missing.`)
+    return { ok: false, error: "Destination Pages are not connected to the database." }
+  }
+  const review = await getPublishReview(pageId, traceId)
+  if (!review.ok) {
+    console.error(`${trace} Server review failed.`, { error: review.error })
+    return review
+  }
+  console.info(`${trace} Server review completed.`, { pageType: review.pageType, slug: review.slug, blockerCount: review.blockers.length, warningCount: review.warnings.length, draftUpdatedAt: review.draftUpdatedAt })
+  if (review.blockers.length) {
+    console.warn(`${trace} Database publish flow stopped: blockers found.`, review.blockers)
+    return { ok: false, error: review.blockers.map((item) => item.message).join(" "), blockers: review.blockers }
+  }
+  if (override?.expectedDraftUpdatedAt && override.expectedDraftUpdatedAt !== review.draftUpdatedAt) {
+    console.warn(`${trace} Database publish flow stopped: Draft changed after review.`)
+    return { ok: false, error: "This Draft changed after it was reviewed. Refresh the list and review it again." }
+  }
   if (review.warnings.length && (!override || override.warningSetHash !== review.warningSetHash || JSON.stringify(override.warnings) !== JSON.stringify(review.warnings))) {
+    console.info(`${trace} Database publish flow paused: warning acceptance is required.`, review.warnings)
     return { ok: false, error: override ? "The quality warnings changed. Review them before publishing." : "Review the quality warnings before publishing.", warnings: review.warnings, warningSetHash: review.warningSetHash }
   }
+  console.info(`${trace} Calling the database publish transaction.`)
   const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin", p_override: override ? { warningCodes: review.warnings.map((warning) => warning.code), warningReasons: review.warnings.map((warning) => warning.reason) } : {} })
   if (error) {
+    console.error(`${trace} Database publish transaction failed.`, { message: error.message })
     const message = error.message.toLowerCase().includes("duplicate") ? "That SEO title, Airport Slug, or IATA code conflicts with another Published Page." : "Publish failed. The previous public Published Snapshot is unchanged."
     return { ok: false, error: message }
   }
+  console.info(`${trace} Database publish transaction completed.`, { slug: (data as { slug: string }).slug })
   return { ok: true, slug: (data as { slug: string }).slug }
 }
 

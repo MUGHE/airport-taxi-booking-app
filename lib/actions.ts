@@ -176,10 +176,17 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
   return result
 }
 
-export async function publishAdminDestinationPageAction(pageId: string, override?: import("./admin-destination-pages").PublishOverride) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
-  const result = await publishAdminDestinationPage(pageId, override)
+export async function publishAdminDestinationPageAction(pageId: string, override?: import("./admin-destination-pages").PublishOverride, traceId?: string) {
+  const trace = traceId ? `[Destination publish] ${traceId}` : "[Destination publish]"
+  console.info(`${trace} Server Action started.`, { pageId, warningOverride: Boolean(override) })
+  if (!(await isAdminAuthenticated())) {
+    console.warn(`${trace} Server Action rejected: admin authentication failed.`)
+    return { ok: false as const, error: "Not authorized." }
+  }
+  const result = await publishAdminDestinationPage(pageId, override, traceId)
+  console.info(`${trace} Server Action completed.`, { ok: result.ok, slug: result.ok ? result.slug : undefined, blockerCount: result.ok ? 0 : result.blockers?.length ?? 0, warningCount: result.ok ? 0 : result.warnings?.length ?? 0 })
   if (result.ok) {
+    console.info(`${trace} Refreshing public and admin page caches.`)
     invalidateSafePublishedAirportPageCache()
     invalidateSafePublishedPlacePageCache()
     revalidatePath("/", "layout")
@@ -190,6 +197,7 @@ export async function publishAdminDestinationPageAction(pageId: string, override
     revalidatePath("/sitemap.xml")
     revalidatePath("/admin/destination-pages")
     revalidatePath(`/admin/destination-pages/${pageId}`)
+    console.info(`${trace} Cache refresh requested.`)
   }
   return result
 }

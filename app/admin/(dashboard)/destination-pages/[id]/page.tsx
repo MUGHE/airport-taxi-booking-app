@@ -10,5 +10,10 @@ export default async function EditDestinationPage({ params }: { params: Promise<
   const { id } = await params
   const page = await getAdminDestinationPageById(id)
   if (!page) notFound()
-  return <DestinationPageEditor pageType={page.pageType} initialPage={page} relatedCandidates={await getRelatedDestinationCandidatesAction(page.id)} reusableContent={await getReusableDestinationContentAction()} placeIdentityOptions={await getPlaceIdentityOptionsAction()} />
+  const [relatedCandidates, reusableContent, placeIdentityOptions] = await Promise.all([
+    getRelatedDestinationCandidatesAction(page.id),
+    getReusableDestinationContentAction(),
+    getPlaceIdentityOptionsAction(),
+  ])
+  return <DestinationPageEditor pageType={page.pageType} initialPage={page} relatedCandidates={relatedCandidates} reusableContent={reusableContent} placeIdentityOptions={placeIdentityOptions} />
 }

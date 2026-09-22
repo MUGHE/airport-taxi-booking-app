@@ -36,8 +36,13 @@ test("Place quality review warns about a missing hero, stale sources, and too fe
   expect(getPublishWarnings(input).map((item) => item.code)).not.toContain("fewer-nearby-places")
 })
 
-test("an invalid Google Place review is a blocker", () => {
+test("quality review completes when two Pages end with the same words", () => {
   const input = validPlace()
-  input.googlePlaceReviewStatus = "invalid"
-  expect(getPublishBlockers(input).map((item) => item.code)).toContain("unreviewed-google-place")
+  input.existingPages = [{ id: "other-camden", slug: "other-camden", content: input.content }]
+
+  expect(getPublishWarnings(input).map((item) => item.code)).toContain("repeated-prose")
+})
+
+test("a selected Google Place does not need an extra review", () => {
+  expect(getPublishBlockers(validPlace())).toEqual([])
 })

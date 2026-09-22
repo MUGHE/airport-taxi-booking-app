@@ -26,7 +26,6 @@ export type PublishReadinessInput = {
   content: DestinationContentDocument
   existingPages?: ExistingQualityPage[]
   validNearbyCandidateCount?: number
-  googlePlaceReviewStatus?: "valid" | "invalid" | "unreviewed"
 }
 
 export type PublishBlocker = { code: string; message: string }
@@ -69,8 +68,7 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
     if (duplicateIdentity || duplicatePage) block("duplicate-identity", "The Place name, alias, or Covered Locality conflicts with another active Place.")
     if (!hasText(input.officialName) || !hasText(input.displayName) || !hasText(input.placeType) || !hasText(input.placeGroupId)) block("incomplete-identity", "Official name, display name, Place type, and Place Group are required.")
     if (input.primaryParentId === input.id) block("invalid-parent", "A Place cannot be its own Primary Parent.")
-    if (!hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A confirmed Google Place, address, and valid coordinates are required.")
-    if (input.googlePlaceReviewStatus && input.googlePlaceReviewStatus !== "valid") block("unreviewed-google-place", "Review the selected Google Place again before publishing.")
+    if (!hasText(input.googlePlaceId) || !hasText(input.address) || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) block("incomplete-location", "A Google Place, address, and valid coordinates are required.")
     if (!hasText(input.seoTitle)) block("missing-seo-title", "An SEO title is required.")
     if (!hasText(input.metaDescription)) block("missing-meta-description", "A meta description is required.")
     if (!hasText(input.h1)) block("missing-h1", "An H1 heading is required.")
@@ -166,7 +164,7 @@ function repeatedWordCount(left: string, right: string): number {
   for (let start = 0; start < leftWords.length; start++) {
     for (let otherStart = 0; otherStart < rightWords.length; otherStart++) {
       let length = 0
-      while (leftWords[start + length] === rightWords[otherStart + length]) length++
+      while (start + length < leftWords.length && otherStart + length < rightWords.length && leftWords[start + length] === rightWords[otherStart + length]) length++
       longest = Math.max(longest, length)
     }
   }

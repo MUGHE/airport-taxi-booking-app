@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { archiveAdminDestinationPageAction, deleteAdminDestinationDraftAction, publishAdminDestinationPageAction, restoreAdminDestinationPageAction, reviewGooglePlaceAction, saveAdminDestinationPageAction, setAdminBookingAvailabilityAction, setAirportFeaturedAction } from "@/lib/actions"
+import { archiveAdminDestinationPageAction, deleteAdminDestinationDraftAction, publishAdminDestinationPageAction, restoreAdminDestinationPageAction, saveAdminDestinationPageAction, setAdminBookingAvailabilityAction, setAirportFeaturedAction } from "@/lib/actions"
 import { CloudinaryImagePicker } from "@/components/admin/cloudinary-image-picker"
 import { DESTINATION_SECTION_TYPES, SECTION_LABELS, createDestinationSection, isRequiredDestinationSectionType, normalizeDestinationContent, tiptapDocumentToBlocks, type DestinationContentDocument, type DestinationSectionType } from "@/lib/destination-content"
 import type { AdminDestinationPage, AdminParentPlace, AdminPlaceGroup, AdminRelatedDestination, AdminTerminal, SaveAdminDestinationPageInput } from "@/lib/admin-destination-pages"
@@ -24,6 +24,7 @@ import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destin
 import { FullPreviewButton } from "@/components/admin/full-preview-button"
 import { RichTextEditor } from "@/components/admin/rich-text-editor"
 import { SITE_URL } from "@/lib/site"
+import { blockerTab, type EditorTab } from "@/lib/destination-editor-navigation"
 
 const emptyTerminal = (): AdminTerminal => ({ displayName: "Main Terminal", address: "", latitude: 0, longitude: 0, sortOrder: 0, isPrimary: true })
 
@@ -38,19 +39,7 @@ const EDITOR_TABS = [
   { value: "publish", label: "Publish" },
 ] as const
 
-type EditorTab = (typeof EDITOR_TABS)[number]["value"]
 type DraftSaveState = "idle" | "saving" | "saved" | "error"
-
-function blockerTab(code: string): EditorTab {
-  if (["invalid-slug", "duplicate-value", "missing-seo-title", "missing-meta-description", "missing-h1"].includes(code)) return "seo"
-  if (["incomplete-location", "invalid-terminal", "missing-primary-terminal", "unreviewed-google-place"].includes(code)) return "location"
-  if (code === "missing-service-area") return "basic-info"
-  if (code === "missing-hero") return "hero"
-  if (code === "minimum-faqs") return "faq-trust"
-  if (["minimum-related-pages", "invalid-relationships"].includes(code)) return "related"
-  if (code.startsWith("missing-") || ["invalid-media", "unsafe-link", "missing-link-label", "broken-internal-link"].includes(code)) return "content"
-  return "basic-info"
-}
 
 function validationTab(field: string): EditorTab {
   if (["slug"].includes(field)) return "seo"
@@ -133,9 +122,21 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
   const [pendingWarningSetHash, setPendingWarningSetHash] = useState("")
   const [serverBlockers, setServerBlockers] = useState<PublishBlocker[]>([])
   const [saveState, setSaveState] = useState<DraftSaveState>(initialPage ? "saved" : "idle")
-  const [placeReview, setPlaceReview] = useState<"idle" | "reviewing" | "valid" | "invalid">("idle")
   const editVersion = useRef(0)
-  const [isPending, startTransition] = useTransition()
+  const publishTraceId = useRef<string | null>(null)
+  const [, startTransition] = useTransition()
+  const [pendingAction, setPendingAction] = useState<"save" | "publish" | "other" | null>(null)
+  const isPending = pendingAction !== null
+  function runPending(action: () => Promise<void>, actionName: "save" | "publish" | "other" = "other") {
+    setPendingAction(actionName)
+    startTransition(async () => {
+      try {
+        await action()
+      } finally {
+        startTransition(() => setPendingAction(null))
+      }
+    })
+  }
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<DestinationPageEditorValues>({
     defaultValues: editorValues(initialForm(pageType, initialPage)),
     resolver: zodResolver(createDestinationPageEditorSchema(pageType)),
@@ -150,7 +151,6 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
     h1: form.h1 ?? "",
     content,
     validNearbyCandidateCount: new Set(relatedCandidates.filter((candidate) => candidate.pageType === "place").map((candidate) => candidate.id)).size,
-    googlePlaceReviewStatus: pageType === "place" ? (placeReview === "valid" ? "valid" : placeReview === "invalid" ? "invalid" : "unreviewed") : undefined,
   })
   const allPublishBlockers = [...publishBlockers, ...serverBlockers.filter((serverBlocker) => !publishBlockers.some((blocker) => blocker.code === serverBlocker.code))]
   const blockerCounts = allPublishBlockers.reduce<Partial<Record<EditorTab, number>>>((counts, blocker) => {
@@ -184,17 +184,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
   const localFaqs = pageType === "place" ? content.placeFaqs : content.airportFaqs
   const minimumLocalFaqs = pageType === "place" ? 2 : 3
   const completedLocalFaqCount = localFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length
-  function selectPlace(place: PlaceSelection) { setPlaceReview("idle"); setValue("googlePlaceId", place.placeId, { shouldValidate: true }); setValue("address", place.address, { shouldValidate: true }); setValue("latitude", place.lat, { shouldValidate: true }); setValue("longitude", place.lng, { shouldValidate: true }); update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
-  function reviewSelectedPlace() {
-    if (!form.googlePlaceId) return
-    setPlaceReview("reviewing")
-    startTransition(async () => {
-      const result = await reviewGooglePlaceAction(form.googlePlaceId)
-      setPlaceReview(result.ok ? "valid" : "invalid")
-      if (result.ok) toast.success("Google Place confirmed.")
-      else toast.error(result.error)
-    })
-  }
+  function selectPlace(place: PlaceSelection) { setValue("googlePlaceId", place.placeId, { shouldValidate: true }); setValue("address", place.address, { shouldValidate: true }); setValue("latitude", place.lat, { shouldValidate: true }); setValue("longitude", place.lng, { shouldValidate: true }); update("googlePlaceId", place.placeId); update("address", place.address); update("latitude", place.lat); update("longitude", place.lng) }
   function updateTerminal(index: number, key: keyof AdminTerminal, value: string | boolean) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, [key]: key === "latitude" || key === "longitude" ? Number(value) : value } : terminal)) }
   function selectTerminalPlace(index: number, place: PlaceSelection) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, address: place.address, latitude: place.lat, longitude: place.lng } : terminal)) }
   function clearTerminalPlace(index: number) { update("terminals", form.terminals.map((terminal, i) => i === index ? { ...terminal, address: "", latitude: NaN, longitude: NaN } : terminal)) }
@@ -233,7 +223,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
   function saveDraft(input: SaveAdminDestinationPageInput) {
     const requestedVersion = editVersion.current
     setSaveState("saving")
-    startTransition(async () => {
+    void runPending(async () => {
       const result = await saveAdminDestinationPageAction(input)
       if (!result.ok) { setSaveState("error"); toast.error(result.error); return }
       setForm((current) => current.id ? current : { ...current, id: result.page.id })
@@ -243,7 +233,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
         setSaveState("saved")
       } else setSaveState("idle")
       toast.success("Draft saved.")
-    })
+    }, "save")
   }
 
   function submit(values: DestinationPageEditorValues) {
@@ -251,27 +241,44 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
   }
 
   function publish() {
-    if (!form.id) { toast.error("Save the Draft before publishing."); return }
-    if (allPublishBlockers.length) { setActiveTab("publish"); toast.error("Complete the items that need attention before publishing."); return }
-    startTransition(async () => {
-      const result = await publishAdminDestinationPageAction(form.id!)
-      if (!result.ok) {
-        if (result.blockers?.length) {
-          setServerBlockers(result.blockers)
-          setActiveTab("publish")
-          toast.error(result.error)
-          return
+    const traceId = crypto.randomUUID()
+    publishTraceId.current = traceId
+    console.group(`[Destination publish] ${traceId}`)
+    console.info("Publish clicked", { pageId: form.id, slug: form.slug, pageType, dirty, localBlockerCount: allPublishBlockers.length })
+    if (!form.id) { console.warn("Publish stopped: Draft has not been saved."); console.groupEnd(); toast.error("Save the Draft before publishing."); return }
+    if (allPublishBlockers.length) { console.warn("Publish stopped: local blockers found.", allPublishBlockers); console.groupEnd(); setActiveTab("publish"); toast.error("Complete the items that need attention before publishing."); return }
+    void runPending(async () => {
+      try {
+        console.info("Sending publish request to the server.")
+        const result = await publishAdminDestinationPageAction(form.id!, undefined, traceId)
+        console.info("Server publish response received.", { ok: result.ok, blockerCount: result.ok ? 0 : result.blockers?.length ?? 0, warningCount: result.ok ? 0 : result.warnings?.length ?? 0 })
+        if (!result.ok) {
+          if (result.blockers?.length) {
+            console.warn("Publish stopped: server blockers found.", result.blockers)
+            setServerBlockers(result.blockers)
+            setActiveTab("publish")
+            toast.error(result.error)
+            return
+          }
+          if (result.warnings?.length && result.warningSetHash) {
+            console.info("Publish paused: waiting for warning acceptance.", result.warnings)
+            setPendingWarnings(result.warnings)
+            setPendingWarningSetHash(result.warningSetHash)
+            setActiveTab("publish")
+            return
+          }
+          console.error("Publish failed.", result.error)
+          toast.error(result.error); return
         }
-        if (result.warnings?.length && result.warningSetHash) {
-          setPendingWarnings(result.warnings)
-          setPendingWarningSetHash(result.warningSetHash)
-          setActiveTab("publish")
-          return
-        }
-        toast.error(result.error); return
+        console.info("Publish completed successfully.", { slug: result.slug })
+        setDirty(false); toast.success("Published successfully.")
+      } catch (error) {
+        console.error("Publish request threw an unexpected error.", error)
+        toast.error("Publish failed. Check the browser console and server logs.")
+      } finally {
+        console.groupEnd()
       }
-      setDirty(false); toast.success("Published successfully.")
-    })
+    }, "publish")
   }
 
   function cancelWarningOverride() {
@@ -281,29 +288,48 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
 
   function confirmWarningOverride() {
     if (!form.id || !pendingWarnings.length) return
-    startTransition(async () => {
-      const result = await publishAdminDestinationPageAction(form.id!, { warningSetHash: pendingWarningSetHash, warnings: pendingWarnings })
-      if (!result.ok) {
-        if (result.blockers?.length) {
-          setServerBlockers(result.blockers)
-          setActiveTab("publish")
-          toast.error(result.error)
+    const traceId = publishTraceId.current ?? crypto.randomUUID()
+    publishTraceId.current = traceId
+    console.group(`[Destination publish] ${traceId} (warning acceptance)`)
+    console.info("Warnings accepted by admin.", { pageId: form.id, slug: form.slug, warningCodes: pendingWarnings.map((warning) => warning.code) })
+    void runPending(async () => {
+      try {
+        console.info("Sending warning override to the server.")
+        const result = await publishAdminDestinationPageAction(form.id!, { warningSetHash: pendingWarningSetHash, warnings: pendingWarnings }, traceId)
+        console.info("Server publish response received.", { ok: result.ok, blockerCount: result.ok ? 0 : result.blockers?.length ?? 0, warningCount: result.ok ? 0 : result.warnings?.length ?? 0 })
+        if (!result.ok) {
+          if (result.blockers?.length) {
+            console.warn("Publish stopped: server blockers found.", result.blockers)
+            setServerBlockers(result.blockers)
+            setActiveTab("publish")
+            toast.error(result.error)
+            return
+          }
+          if (result.warnings?.length && result.warningSetHash) {
+            console.warn("Warning set changed; admin must review it again.", result.warnings)
+            setPendingWarnings(result.warnings)
+            setPendingWarningSetHash(result.warningSetHash)
+          } else {
+            console.error("Publish failed.", result.error)
+            toast.error(result.error)
+          }
           return
         }
-        if (result.warnings?.length && result.warningSetHash) {
-          setPendingWarnings(result.warnings)
-          setPendingWarningSetHash(result.warningSetHash)
-        } else toast.error(result.error)
-        return
+        console.info("Publish completed successfully after warning acceptance.", { slug: result.slug })
+        cancelWarningOverride()
+        setDirty(false); toast.success("Published successfully.")
+      } catch (error) {
+        console.error("Publish request threw an unexpected error.", error)
+        toast.error("Publish failed. Check the browser console and server logs.")
+      } finally {
+        console.groupEnd()
       }
-      cancelWarningOverride()
-      setDirty(false); toast.success("Published successfully.")
-    })
+    }, "publish")
   }
 
   function restore() {
     if (!form.id || dirty) return
-    startTransition(async () => {
+    void runPending(async () => {
       const result = await restoreAdminDestinationPageAction(form.id!)
       if (!result.ok) { toast.error(result.error); return }
       setForm((current) => ({ ...current, ...result.page, ...editorValues(result.page), content: result.page.draft.content }))
@@ -315,7 +341,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
 
   function toggleFeatured(nextFeatured: boolean) {
     if (!form.id || dirty || initialPage?.lifecycleState !== "published") return
-    startTransition(async () => {
+    void runPending(async () => {
       const result = await setAirportFeaturedAction(form.id!, nextFeatured)
       if (!result.ok) { toast.error(result.error); return }
       setFeatured(nextFeatured)
@@ -325,7 +351,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
 
   function toggleBookingAvailability(nextAvailable: boolean) {
     if (!form.id || dirty || initialPage?.lifecycleState !== "published") return
-    startTransition(async () => {
+    void runPending(async () => {
       const result = await setAdminBookingAvailabilityAction(form.id!, nextAvailable)
       if (!result.ok) { toast.error(result.error); return }
       setBookingAvailable(nextAvailable)
@@ -335,7 +361,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
 
   function deleteDraft() {
     if (!form.id || initialPage?.lifecycleState !== "draft" || !window.confirm("Permanently delete this never-published Draft? This cannot be undone.")) return
-    startTransition(async () => {
+    void runPending(async () => {
       const result = await deleteAdminDestinationDraftAction(form.id!)
       if (!result.ok) { toast.error(result.error); return }
       window.location.href = "/admin/destination-pages"
@@ -344,7 +370,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
 
   function archive() {
     if (!form.id || initialPage?.lifecycleState !== "published" || !window.confirm("Archive this Published Page? Its current URL will permanently redirect to the selected replacement.")) return
-    startTransition(async () => {
+    void runPending(async () => {
       const result = await archiveAdminDestinationPageAction(form.id!, replacementSlug)
       if (!result.ok) { toast.error(result.error); return }
       window.location.href = "/admin/destination-pages"
@@ -369,8 +395,8 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <FullPreviewButton pageId={form.id} dirty={dirty} />
-                <Button type="submit" variant="outline" disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />} Save draft</Button>
-                <Button type="button" disabled={!form.id || isPending || dirty} onClick={publish}>Publish</Button>
+                <Button type="submit" variant="outline" disabled={isPending}>{pendingAction === "save" && <Loader2 className="size-4 animate-spin" />} {pendingAction === "save" ? "Saving draft…" : "Save draft"}</Button>
+                <Button type="button" disabled={!form.id || isPending || dirty} aria-busy={pendingAction === "publish"} title={isPending && pendingAction !== "publish" ? "Another action is still in progress." : undefined} onClick={publish}>{pendingAction === "publish" && <Loader2 className="size-4 animate-spin" />} {pendingAction === "publish" ? "Publishing…" : "Publish"}</Button>
               </div>
             </div>
             <div className="overflow-x-auto border-t border-border px-2 sm:px-4">
@@ -421,7 +447,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
                 <DestinationPicker defaultValue={form.address} onSelect={selectPlace} onClear={() => { update("googlePlaceId", ""); update("address", ""); update("latitude", 0); update("longitude", 0) }} placeholder={`Search for the ${pageType === "place" ? "place" : "airport"} in Google Places`} />
                 {errors.googlePlaceId?.message && <p role="alert" className="text-sm text-destructive">{errors.googlePlaceId.message}</p>}
                 {errors.address?.message && <p role="alert" className="text-sm text-destructive">{errors.address.message}</p>}
-                {form.googlePlaceId && <div className="rounded-lg bg-secondary/60 p-3 text-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-medium">Selected location</p><p>{form.address}</p><p className="mt-1 text-xs text-muted-foreground">Google Place ID: {form.googlePlaceId} · Latitude {form.latitude} · Longitude {form.longitude}</p></div><Button type="button" variant="outline" size="sm" disabled={placeReview === "reviewing" || isPending} onClick={reviewSelectedPlace}>{placeReview === "reviewing" && <Loader2 className="size-4 animate-spin" />}{placeReview === "valid" ? "Confirmed" : "Review Google Place"}</Button></div>{placeReview === "invalid" && <p role="alert" className="mt-2 text-destructive">Select the current Google result, then review it again.</p>}</div>}
+                {form.googlePlaceId && <div className="rounded-lg bg-secondary/60 p-3 text-sm"><p className="font-medium">Selected location</p><p>{form.address}</p><p className="mt-1 text-xs text-muted-foreground">Google Place ID: {form.googlePlaceId} · Latitude {form.latitude} · Longitude {form.longitude}</p></div>}
               </EditorPanel>
               {pageType === "airport" && <EditorPanel title="Airport Terminals" description="Add pickup locations and select exactly one primary terminal.">
                 <div className="flex justify-end"><Button type="button" variant="outline" size="sm" onClick={() => update("terminals", [...form.terminals, { ...emptyTerminal(), isPrimary: false, sortOrder: form.terminals.length }])}><Plus className="size-4" /> Add terminal</Button></div>
