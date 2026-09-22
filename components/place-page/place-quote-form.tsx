@@ -7,10 +7,11 @@ import { DestinationPicker, type PlaceSelection } from "@/components/destination
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import type { PlacePagePresentation } from "@/lib/place-page-data"
+import { trackPublicEvent } from "@/lib/analytics"
 
 type Direction = "to-airport" | "from-airport"
 
-export function PlaceQuoteForm({ place, sourcePlaceId, sourcePlaceSlug, airports }: { place: string; sourcePlaceId?: string; sourcePlaceSlug?: string; airports: PlacePagePresentation["supportedAirports"] }) {
+export function PlaceQuoteForm({ place, sourcePlaceId, sourcePlaceSlug, airports, analyticsEnabled = true }: { place: string; sourcePlaceId?: string; sourcePlaceSlug?: string; airports: PlacePagePresentation["supportedAirports"]; analyticsEnabled?: boolean }) {
   const router = useRouter()
   const usableAirports = useMemo(() => airports.filter((airport) => airport.bookingAvailable && airport.primaryTerminal), [airports])
   const [direction, setDirection] = useState<Direction>("to-airport")
@@ -23,6 +24,7 @@ export function PlaceQuoteForm({ place, sourcePlaceId, sourcePlaceSlug, airports
     if (!address || !airport?.primaryTerminal) return
 
     const terminal = airport.primaryTerminal
+    if (analyticsEnabled) trackPublicEvent({ name: "quote_started", sourcePlaceId, sourcePlaceSlug, airportId: airport.id, direction })
     const params = new URLSearchParams({
       direction,
       airportId: airport.id,
@@ -54,7 +56,7 @@ export function PlaceQuoteForm({ place, sourcePlaceId, sourcePlaceSlug, airports
         {([['to-airport', 'To airport'], ['from-airport', 'From airport']] as const).map(([value, label]) => <label key={value} className="flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5"><input type="radio" name="direction" value={value} checked={direction === value} onChange={() => { setDirection(value); setAddress(null) }} />{label}</label>)}
       </div>
     </fieldset>
-    <div className="mt-4 space-y-1.5"><Label htmlFor="place-airport">Airport</Label><select id="place-airport" value={airportId} onChange={(event) => { setAirportId(event.target.value); setAddress(null) }} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" aria-label="Choose airport">{airports.map((item) => <option key={item.id} value={item.id} disabled={!item.bookingAvailable || !item.primaryTerminal}>{item.displayName}{!item.bookingAvailable ? " — temporarily unavailable" : !item.primaryTerminal ? " — unavailable" : ""}</option>)}</select>{airport && <p className="text-xs text-muted-foreground"><PlaneTakeoff className="mr-1 inline size-3.5" aria-hidden="true" />Primary terminal: {airport.primaryTerminal?.name}</p>}</div>
+    <div className="mt-4 space-y-1.5"><Label htmlFor="place-airport">Airport</Label><select id="place-airport" value={airportId} onChange={(event) => { const nextAirportId = event.target.value; setAirportId(nextAirportId); setAddress(null); const nextAirport = usableAirports.find((item) => item.id === nextAirportId); if (analyticsEnabled && nextAirport) trackPublicEvent({ name: "supported_airport_selected", sourcePlaceId, sourcePlaceSlug, airportId: nextAirport.id, direction }) }} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" aria-label="Choose airport">{airports.map((item) => <option key={item.id} value={item.id} disabled={!item.bookingAvailable || !item.primaryTerminal}>{item.displayName}{!item.bookingAvailable ? " — temporarily unavailable" : !item.primaryTerminal ? " — unavailable" : ""}</option>)}</select>{airport && <p className="text-xs text-muted-foreground"><PlaneTakeoff className="mr-1 inline size-3.5" aria-hidden="true" />Primary terminal: {airport.primaryTerminal?.name}</p>}</div>
     <div className="mt-4 space-y-1.5"><Label htmlFor="place-exact-address">{direction === "to-airport" ? "Exact pickup address or postcode" : "Exact drop-off address or postcode"}</Label><DestinationPicker defaultValue={address?.address} placeholder="Start typing an exact address or postcode" onSelect={setAddress} onClear={() => setAddress(null)} /></div>
     <Button type="submit" size="lg" className="mt-5 w-full" disabled={!address || !airport?.primaryTerminal}>Get a fixed price <ArrowRight className="size-4" /></Button>
     <p className="mt-3 text-center text-xs text-muted-foreground">We use the exact address you select to calculate your route.</p>

@@ -21,6 +21,7 @@ import type { BookingAddOn, CongestionZone, PaymentMethod, PromoDiscountType, Re
 import { cn } from "@/lib/utils"
 import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import { toast } from "sonner"
+import { trackPublicEvent } from "@/lib/analytics"
 
 const STEPS = ["Trip", "Vehicle", "Details", "Review"] as const
 // The action bar panel's own open transition. The promo cue waits this out before it plays, so
@@ -67,6 +68,8 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const router = useRouter()
   const params = useSearchParams()
   const direction = params.get("direction") === "to-airport" || params.get("direction") === "from-airport" ? params.get("direction") as "to-airport" | "from-airport" : "custom"
+  const sourcePlaceId = params.get("sourcePlaceId") || undefined
+  const sourcePlaceSlug = params.get("sourcePlaceSlug") || undefined
   const airport = airportFromParams(params)
   const exactPickup = fromParams(params, "pickup")
   const exactDropoff = fromParams(params, "dropoff")
@@ -217,15 +220,16 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
     if (wantsReturn && (!returnDate || !returnTime)) return toast.error("Choose a date and time for your return trip.")
     if (wantsReturn && !returnAddressSame && (!returnPickup || !returnDropoff)) return toast.error("Choose pickup and drop-off addresses for your return trip.")
     startTransition(async () => {
-      const res = await createBooking({ direction, airportId: airport?.placeId || "custom", destinationAddress: dropoff.address, destinationLat: dropoff.lat, destinationLng: dropoff.lng, pickupAddress: pickup.address, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffAddress: dropoff.address, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng, vehicleId, pickupDate, pickupTime, flightNumber: flightNumber.trim(), passengers, bags, customerName: customerName.trim(), email: email.trim(), phone: phone.trim(), notes: notes.trim(), addOnIds: selectedAddOnIds, stops, promoCode: appliedPromo?.code, paymentMethod })
+      const res = await createBooking({ direction, airportId: airport?.placeId || "custom", sourcePlaceId, sourcePlaceSlug, destinationAddress: dropoff.address, destinationLat: dropoff.lat, destinationLng: dropoff.lng, pickupAddress: pickup.address, pickupLat: pickup.lat, pickupLng: pickup.lng, dropoffAddress: dropoff.address, dropoffLat: dropoff.lat, dropoffLng: dropoff.lng, vehicleId, pickupDate, pickupTime, flightNumber: flightNumber.trim(), passengers, bags, customerName: customerName.trim(), email: email.trim(), phone: phone.trim(), notes: notes.trim(), addOnIds: selectedAddOnIds, stops, promoCode: appliedPromo?.code, paymentMethod })
       if (!res.ok || !res.reference) { toast.error(res.error || "Something went wrong. Please try again."); if (res.error?.includes("promo code")) removePromo(); return }
+      if (sourcePlaceId || sourcePlaceSlug) trackPublicEvent({ name: "booking_handoff", sourcePlaceId, sourcePlaceSlug, airportId: airport?.placeId || "custom", direction })
 
       if (wantsReturn && effectiveReturnPickup && effectiveReturnDropoff) {
         // "Same as above" simply swaps the outbound pickup/drop-off; otherwise the
         // customer-chosen return locations are used as-is. No add-ons or promo code
         // carry over — the return-trip discount (if any) is applied server-side instead.
         const returnDirection = direction === "to-airport" ? "from-airport" : direction === "from-airport" ? "to-airport" : "custom"
-        const returnRes = await createReturnBooking(res.reference, { direction: returnDirection, airportId: airport?.placeId || "custom", destinationAddress: effectiveReturnDropoff.address, destinationLat: effectiveReturnDropoff.lat, destinationLng: effectiveReturnDropoff.lng, pickupAddress: effectiveReturnPickup.address, pickupLat: effectiveReturnPickup.lat, pickupLng: effectiveReturnPickup.lng, dropoffAddress: effectiveReturnDropoff.address, dropoffLat: effectiveReturnDropoff.lat, dropoffLng: effectiveReturnDropoff.lng, vehicleId, pickupDate: returnDate, pickupTime: returnTime, flightNumber: "", passengers, bags, customerName: customerName.trim(), email: email.trim(), phone: phone.trim(), notes: "", addOnIds: [], stops: [], paymentMethod })
+        const returnRes = await createReturnBooking(res.reference, { direction: returnDirection, airportId: airport?.placeId || "custom", sourcePlaceId, sourcePlaceSlug, destinationAddress: effectiveReturnDropoff.address, destinationLat: effectiveReturnDropoff.lat, destinationLng: effectiveReturnDropoff.lng, pickupAddress: effectiveReturnPickup.address, pickupLat: effectiveReturnPickup.lat, pickupLng: effectiveReturnPickup.lng, dropoffAddress: effectiveReturnDropoff.address, dropoffLat: effectiveReturnDropoff.lat, dropoffLng: effectiveReturnDropoff.lng, vehicleId, pickupDate: returnDate, pickupTime: returnTime, flightNumber: "", passengers, bags, customerName: customerName.trim(), email: email.trim(), phone: phone.trim(), notes: "", addOnIds: [], stops: [], paymentMethod })
         if (!returnRes.ok) toast.error(returnRes.error || "Your booking is confirmed, but we couldn't add the return trip. Please book it separately.")
       }
 

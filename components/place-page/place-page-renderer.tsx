@@ -8,19 +8,20 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import type { PlacePagePresentation } from "@/lib/place-page-data"
 import { PlaceQuoteForm } from "@/components/place-page/place-quote-form"
+import { PlacePageAnalytics } from "@/components/place-page/place-page-analytics"
 
 function Blocks({ blocks }: { blocks: { text: string; type: string; href?: string; label?: string }[] }) {
   return <div className="space-y-3 text-muted-foreground">{blocks.map((block, index) => block.type === "link" && block.href ? <Link key={index} className="block font-semibold text-primary underline" href={block.href}>{block.label || block.text}</Link> : <p key={index} className={block.type === "bold" ? "font-semibold text-foreground" : "leading-7"}>{block.text}</p>)}</div>
 }
 
-export function PlacePageRenderer({ page, canonicalPath, showFooter = true }: { page: PlacePagePresentation; canonicalPath?: string; showFooter?: boolean }) {
+export function PlacePageRenderer({ page, canonicalPath, showFooter = true, analyticsEnabled = true, fallback = false }: { page: PlacePagePresentation; canonicalPath?: string; showFooter?: boolean; analyticsEnabled?: boolean; fallback?: boolean }) {
   const visibleSections = page.sections.filter((section) => section.visible)
-  return <div className="airport-page flex min-h-screen flex-col"><SiteHeader /><main className="flex-1">
+  return <div className="airport-page flex min-h-screen flex-col">{analyticsEnabled && <PlacePageAnalytics sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} fallback={fallback} />}<SiteHeader /><main className="flex-1">
     <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy">
       <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Destinations", href: "/destinations" }, { label: page.displayName, href: canonicalPath }]} includeStructuredData={false} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
       {page.heroImage && <div className="mb-6 max-h-72 overflow-hidden rounded-2xl"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} /></div>}
       <h1>{page.heading}</h1><Blocks blocks={page.intro} />
-      <PlaceQuoteForm place={page.displayName} sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} airports={page.supportedAirports} />
+      <PlaceQuoteForm place={page.displayName} sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} airports={page.supportedAirports} analyticsEnabled={analyticsEnabled} />
     </div></div></section>
     {visibleSections.map((section, index) => <section key={section.id} className="airport-story" data-preview-section={section.type}><div className="airport-container airport-story-grid"><div className="airport-story-copy"><div className="airport-chapter"><span>{String(index + 1).padStart(2, "0")}</span><span>{section.title}</span></div><h2>{section.title}</h2><Blocks blocks={section.body} />{Object.entries(section.fields).filter(([, value]) => value.trim() && !value.toLowerCase().includes("source")).length > 0 && <div className="mt-6 grid gap-3 sm:grid-cols-2">{Object.entries(section.fields).filter(([, value]) => value.trim() && !value.toLowerCase().includes("source")).map(([key, value]) => <div key={key} className="rounded-xl border p-4"><h3 className="font-semibold">{key.replace(/([A-Z])/g, " $1")}</h3><p className="mt-1 text-sm text-muted-foreground">{value}</p></div>)}</div>}</div>{section.image && <div className="airport-story-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /></div>}</div></section>)}
     <section className="airport-routes"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Supported Airports</p><h2>Book from {page.displayName}</h2></div></div><div className="airport-route-grid">{page.supportedAirports.map((airport) => <article key={airport.id} className="airport-route-card"><div className="airport-route-content"><PlaneTakeoff aria-hidden="true" /><h3><Link href={`/airport-transfers/${airport.slug}`}>{airport.displayName}</Link></h3><p>{airport.description}</p>{airport.bookingAvailable && airport.primaryTerminal ? <p className="mt-3 text-sm text-muted-foreground">Online booking is available.</p> : <p className="mt-3 text-sm text-muted-foreground">Online booking is temporarily unavailable. <Link className="underline" href="/contact">Contact our team</Link>.</p>}</div></article>)}</div></div></section>

@@ -36,7 +36,7 @@ export default async function PlacePage({ params }: { params: Promise<{ slug: st
   if (redirectSlug === "destinations") permanentRedirect("/destinations")
   if (redirectSlug) permanentRedirect(`/destinations/${redirectSlug}`)
   const result = await readPublicPlacePage(slug)
-  if (result.status === "published" || result.status === "fallback") return <><PlacePageStructuredData page={result.page} /><PlacePageRenderer page={result.page.presentation} canonicalPath={result.page.metadata.canonical} /></>
+  if (result.status === "published" || result.status === "fallback") return <><PlacePageStructuredData page={result.page} /><PlacePageRenderer page={result.page.presentation} canonicalPath={result.page.metadata.canonical} fallback={result.status === "fallback"} /></>
   if (result.status === "unavailable") return <PublicPageServiceError pageType="place" retryHref={`/destinations/${slug}`} />
   notFound()
 }

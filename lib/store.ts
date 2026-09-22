@@ -6,7 +6,7 @@ import { VEHICLE_CLASSES } from "./fleet"
 
 type BookingRow = {
   reference: string; status: BookingStatus; payment_status: Booking["paymentStatus"]; payment_method: Booking["paymentMethod"]
-  direction: Booking["direction"]; airport_id: string; destination_address: string
+  direction: Booking["direction"]; airport_id: string; source_place_id: string | null; source_place_slug: string | null; destination_address: string
   destination_lat: number; destination_lng: number; vehicle_id: string; pickup_date: string; pickup_time: string
   pickup_address: string | null; pickup_lat: number | null; pickup_lng: number | null
   dropoff_address: string | null; dropoff_lat: number | null; dropoff_lng: number | null
@@ -37,7 +37,7 @@ function toBooking(row: BookingRow): Booking {
     reference: row.reference, status: row.status, paymentStatus: row.payment_status,
     // Falls back to "card" for rows written before the payment_method column existed.
     paymentMethod: row.payment_method ?? "card", direction: row.direction,
-    airportId: row.airport_id, destinationAddress: row.destination_address,
+    airportId: row.airport_id, sourcePlaceId: row.source_place_id ?? undefined, sourcePlaceSlug: row.source_place_slug ?? undefined, destinationAddress: row.destination_address,
     destinationLat: Number(row.destination_lat), destinationLng: Number(row.destination_lng), vehicleId: row.vehicle_id,
     pickupAddress: row.pickup_address ?? undefined, pickupLat: row.pickup_lat ?? undefined, pickupLng: row.pickup_lng ?? undefined,
     dropoffAddress: row.dropoff_address ?? undefined, dropoffLat: row.dropoff_lat ?? undefined, dropoffLng: row.dropoff_lng ?? undefined,
@@ -61,7 +61,7 @@ function toReview(row: ReviewRow): Review {
 function toBookingRow(booking: Booking): BookingRow {
   return {
     reference: booking.reference, status: booking.status, payment_status: booking.paymentStatus, payment_method: booking.paymentMethod, direction: booking.direction,
-    airport_id: booking.airportId, destination_address: booking.destinationAddress,
+    airport_id: booking.airportId, source_place_id: booking.sourcePlaceId ?? null, source_place_slug: booking.sourcePlaceSlug ?? null, destination_address: booking.destinationAddress,
     destination_lat: booking.destinationLat, destination_lng: booking.destinationLng, vehicle_id: booking.vehicleId,
     pickup_address: booking.pickupAddress ?? null, pickup_lat: booking.pickupLat ?? null, pickup_lng: booking.pickupLng ?? null,
     dropoff_address: booking.dropoffAddress ?? null, dropoff_lat: booking.dropoffLat ?? null, dropoff_lng: booking.dropoffLng ?? null,
