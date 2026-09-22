@@ -86,6 +86,34 @@ test("admin can create an Airport Page draft and reload its identity and termina
   await expect(page.getByPlaceholder("Search terminal address")).toHaveValue(/Heathrow Airport/i)
 })
 
+test("admin can create a Place Page draft and reload it after saving", async ({ page }) => {
+  test.skip(
+    process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
+    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+  )
+
+  const suffix = Date.now().toString()
+  const displayName = `Browser Place ${suffix}`
+
+  await page.goto("/admin/login")
+  await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
+  await page.getByRole("button", { name: "Sign in" }).click()
+  await page.goto("/admin/destination-pages/new?type=place")
+
+  await page.getByLabel("Page title").fill(displayName)
+  await page.getByLabel("Official name").fill(`${displayName} Official`)
+  await page.getByLabel("Place type").selectOption("town")
+  await page.getByLabel("Place Group").selectOption({ index: 1 })
+  await page.getByRole("button", { name: "Save draft" }).click()
+  await expect(page.getByRole("status")).toHaveText("Draft saved.")
+  await expect(page).toHaveURL(/\/admin\/destination-pages\/[0-9a-f-]+$/)
+
+  await page.reload()
+  await expect(page.getByLabel("Page title")).toHaveValue(displayName)
+  await expect(page.getByLabel("Official name")).toHaveValue(`${displayName} Official`)
+  await expect(page.getByLabel("Place type")).toHaveValue("town")
+})
+
 test("admin can compose controlled sections and explicitly save them as a draft", async ({ page }) => {
   test.skip(
     process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,

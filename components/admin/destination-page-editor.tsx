@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react"
 import { ArrowDown, ArrowLeft, ArrowUp, Check, CircleAlert, Loader2, Plus, Trash2 } from "lucide-react"
 import { toast } from "react-toastify"
@@ -110,6 +111,7 @@ function PlaceRelationshipsEditor({ form, candidates, onAdd, onUpdate }: { form:
 
 export function DestinationPageEditor({ pageType, initialPage, relatedCandidates, reusableContent, placeIdentityOptions }: { pageType: DestinationPageType; initialPage?: AdminDestinationPage; relatedCandidates: RelatedDestinationCandidate[]; reusableContent: ReusableDestinationContent; placeIdentityOptions: { groups: AdminPlaceGroup[]; parents: AdminParentPlace[] } }) {
   const policy = getDestinationPagePolicy(pageType)
+  const router = useRouter()
   const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(pageType, initialPage))
   const [activeTab, setActiveTab] = useState<EditorTab>("basic-info")
   const [selectedContentId, setSelectedContentId] = useState(() => initialForm(pageType, initialPage).content?.sections[0]?.id ?? "final-cta")
@@ -226,6 +228,12 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
     void runPending(async () => {
       const result = await saveAdminDestinationPageAction(input)
       if (!result.ok) { setSaveState("error"); toast.error(result.error); return }
+      if (!form.id) {
+        setSaveState("saved")
+        toast.success("Draft saved.")
+        router.replace(`/admin/destination-pages/${result.page.id}`)
+        return
+      }
       setForm((current) => current.id ? current : { ...current, id: result.page.id })
       if (requestedVersion === editVersion.current) {
         reset(editorValues(result.page))
