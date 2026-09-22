@@ -58,7 +58,6 @@ import { setAirportFeatured } from "./airport-directory"
 import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability, promoteCoveredLocalityToPlace } from "./admin-destination-pages"
 import { invalidateSafePublishedAirportPageCache } from "./public-airport-page-cache"
 import { invalidateSafePublishedPlacePageCache } from "./public-place-page-cache"
-import { confirmPlaceImport, previewPlaceImport } from "./admin-place-import"
 
 
 export interface LoginResult {
@@ -129,26 +128,6 @@ export async function getRelatedDestinationCandidatesAction(pageId?: string) {
 export async function getPlaceIdentityOptionsAction() {
   if (!(await isAdminAuthenticated())) return { groups: [], parents: [] }
   return listPlaceIdentityOptions()
-}
-
-export async function previewPlaceImportAction(csv: string) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
-  try {
-    return { ok: true as const, preview: await previewPlaceImport(csv) }
-  } catch {
-    return { ok: false as const, error: "The Place import could not be checked." }
-  }
-}
-
-export async function confirmPlaceImportAction(csv: string, selectedRowNumbers: number[]) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
-  try {
-    const result = await confirmPlaceImport(csv, selectedRowNumbers)
-    revalidatePath("/admin/destination-pages")
-    return { ok: true as const, result }
-  } catch {
-    return { ok: false as const, error: "The Place import could not be completed." }
-  }
 }
 
 export async function reviewGooglePlaceAction(placeId: string) {
