@@ -108,6 +108,9 @@ export interface Booking {
   paymentMethod: PaymentMethod
   direction: TripDirection
   airportId: string
+  /** Nullable attribution from a public Place Page; never derived from route coordinates. */
+  sourcePlaceId?: string
+  sourcePlaceSlug?: string
   destinationAddress: string
   destinationLat: number
   destinationLng: number

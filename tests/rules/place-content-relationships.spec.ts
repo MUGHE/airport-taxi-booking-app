@@ -49,9 +49,9 @@ test("Nearby Places prefer the same Primary Parent, then distance", () => {
   expect(ordered.map((item) => item.id)).toEqual(["near-sibling", "far-sibling", "near-other"])
 })
 
-test("Nearby Place selection requires three to six unless fewer candidates exist", () => {
-  expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: [], validNearbyCandidateCount: 8 })).toContain("Select between three and six Nearby Places.")
-  expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: ["a", "b"], validNearbyCandidateCount: 8 })).toContain("Select between three and six Nearby Places.")
+test("Nearby Place selection allows fewer than three when quality review will handle it", () => {
+  expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: [], validNearbyCandidateCount: 8 })).not.toContain("Select between three and six Nearby Places.")
+  expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: ["a", "b"], validNearbyCandidateCount: 8 })).not.toContain("Select between three and six Nearby Places.")
   expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: ["a", "b"], validNearbyCandidateCount: 2 })).not.toContain("Select between three and six Nearby Places.")
-  expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: ["a", "b", "c", "d", "e", "f", "g"], validNearbyCandidateCount: 9 })).toContain("Select between three and six Nearby Places.")
+  expect(validatePlaceRelationships({ supportedAirports: [], nearbyPlaces: ["a", "b", "c", "d", "e", "f", "g"], validNearbyCandidateCount: 9 })).toContain("Select no more than six Nearby Places.")
 })

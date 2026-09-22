@@ -12,7 +12,10 @@ const nextConfig = {
   },
   images: {
     // images.unsplash.com hosts the placeholder photography for the /landing-page-new preview.
-    remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+    ],
   },
 }
 

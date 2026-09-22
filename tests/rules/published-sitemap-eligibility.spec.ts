@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { currentPublishedCanonicalSlug } from "@/lib/airport-directory"
+import { currentPublishedPlaceCanonicalSlug } from "@/lib/place-directory"
 import { readPublishedAirportFacts } from "@/lib/published-airport-facts"
 
 const publishedPage = {
@@ -14,6 +15,20 @@ test("only the current Published Page canonical slug is eligible for discovery",
   expect(currentPublishedCanonicalSlug({ ...publishedPage, lifecycle_state: "archived" })).toBeNull()
   expect(currentPublishedCanonicalSlug({ ...publishedPage, current_published_snapshot_id: null })).toBeNull()
   expect(currentPublishedCanonicalSlug({ ...publishedPage, published_slug: "" })).toBeNull()
+})
+
+test("only the current Published Place Page canonical slug is eligible for discovery", () => {
+  const place = {
+    lifecycle_state: "published" as const,
+    current_published_snapshot_id: "published-place-snapshot-id",
+    published_slug: "richmond",
+  }
+
+  expect(currentPublishedPlaceCanonicalSlug(place)).toBe("richmond")
+  expect(currentPublishedPlaceCanonicalSlug({ ...place, lifecycle_state: "draft" })).toBeNull()
+  expect(currentPublishedPlaceCanonicalSlug({ ...place, lifecycle_state: "archived" })).toBeNull()
+  expect(currentPublishedPlaceCanonicalSlug({ ...place, current_published_snapshot_id: null })).toBeNull()
+  expect(currentPublishedPlaceCanonicalSlug({ ...place, published_slug: null })).toBeNull()
 })
 
 test("a slug publication replaces the obsolete canonical sitemap entry", () => {

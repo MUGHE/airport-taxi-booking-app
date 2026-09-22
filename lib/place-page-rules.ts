@@ -37,8 +37,7 @@ export function validatePlaceRelationships(input: {
   if (input.supportedAirports.some((airport) => airport.pageType !== "airport" || airport.lifecycleState !== "published")) {
     errors.push("Supported Airports must be Published Airport Pages.")
   }
-  const minimumNearby = Math.min(3, input.validNearbyCandidateCount)
-  if (input.nearbyPlaces.length > 6 || input.nearbyPlaces.length < minimumNearby) errors.push("Select between three and six Nearby Places.")
+  if (input.nearbyPlaces.length > 6) errors.push("Select no more than six Nearby Places.")
   if (new Set(input.nearbyPlaces).size !== input.nearbyPlaces.length) errors.push("Each Nearby Place can be selected only once.")
   return errors
 }

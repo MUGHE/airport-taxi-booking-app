@@ -1,0 +1,33 @@
+"use client"
+
+import Link from "next/link"
+import { useMemo, useState } from "react"
+import type { PlaceDirectory } from "@/lib/place-directory"
+import { normalizePlaceDirectoryTerm, placeDirectorySearchText } from "@/lib/place-directory"
+import { trackPublicEvent } from "@/lib/analytics"
+
+export function PlaceDirectory({ directory }: { directory: PlaceDirectory }) {
+  const [query, setQuery] = useState("")
+  const [group, setGroup] = useState("all")
+  const [type, setType] = useState("all")
+  const [letter, setLetter] = useState("all")
+  const placeTypes = useMemo(() => ["all", ...Array.from(new Set(directory.places.map((place) => place.placeType.toLocaleLowerCase()))).sort()], [directory.places])
+  const filtered = useMemo(() => directory.places.filter((place) => {
+    const search = query.trim() === "" || placeDirectorySearchText(place).includes(normalizePlaceDirectoryTerm(query))
+    return search && (group === "all" || place.placeGroup === group) && (type === "all" || place.placeType.toLocaleLowerCase() === type) && (letter === "all" || place.displayName.toLocaleUpperCase().startsWith(letter))
+  }), [directory.places, group, letter, query, type])
+  const letters = Array.from(new Set(directory.places.map((place) => place.displayName[0]?.toUpperCase()).filter(Boolean))).sort()
+
+  return <section aria-labelledby="destination-directory-heading" className="mx-auto max-w-6xl px-4 py-16 lg:py-24">
+    <div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Places we serve</p><h1 id="destination-directory-heading" className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Find your destination</h1><p className="mt-4 text-pretty text-muted-foreground">Search a town, borough, neighbourhood, alias, or covered locality. Each result links to the Published Place Page that serves it.</p></div>
+    <div className="mt-10 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:grid-cols-3 sm:p-5">
+      <label className="text-sm font-medium sm:col-span-3">Search destinations<input aria-label="Search destinations" type="search" value={query} onChange={(event) => { const nextQuery = event.currentTarget.value; setQuery(nextQuery); trackPublicEvent({ name: "destination_directory_search", queryLength: nextQuery.trim().length, resultCount: directory.places.filter((place) => placeDirectorySearchText(place).includes(normalizePlaceDirectoryTerm(nextQuery))).length }) }} placeholder="Name, alias, or locality" className="mt-1.5 h-11 w-full rounded-lg border border-input bg-background px-3 outline-none focus-visible:ring-3 focus-visible:ring-ring/50" /></label>
+      <label className="text-sm font-medium">Place Group<select aria-label="Filter by Place Group" value={group} onChange={(event) => setGroup(event.currentTarget.value)} className="mt-1.5 h-11 w-full rounded-lg border border-input bg-background px-3"><option value="all">All groups</option>{directory.groups.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
+      <label className="text-sm font-medium">Place type<select aria-label="Filter by place type" value={type} onChange={(event) => setType(event.currentTarget.value)} className="mt-1.5 h-11 w-full rounded-lg border border-input bg-background px-3">{placeTypes.map((item) => <option key={item} value={item}>{item === "all" ? "All types" : item[0].toUpperCase() + item.slice(1)}</option>)}</select></label>
+      <div className="text-sm font-medium"><span className="block">Browse A–Z</span><div className="mt-1.5 flex flex-wrap gap-1"><button type="button" aria-pressed={letter === "all"} onClick={() => setLetter("all")} className="rounded px-2 py-1.5 text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring">All</button>{letters.map((item) => <button type="button" key={item} aria-label={`Browse ${item}`} aria-pressed={letter === item} onClick={() => setLetter(item)} className="rounded px-2 py-1.5 text-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{item}</button>)}</div></div>
+    </div>
+    {directory.places.some((place) => place.featured) && <section aria-labelledby="popular-destinations-heading" className="mt-12"><h2 id="popular-destinations-heading" className="text-2xl font-semibold">Popular places</h2><div className="mt-4 flex flex-wrap gap-2">{directory.places.filter((place) => place.featured).map((place) => <Link key={place.id} href={`/destinations/${place.slug}`} className="rounded-full border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring">{place.displayName}</Link>)}</div></section>}
+    <div className="mt-12 flex items-end justify-between gap-4"><div><h2 className="text-2xl font-semibold">All destinations</h2><p className="mt-1 text-sm text-muted-foreground" role="status">{filtered.length} {filtered.length === 1 ? "Published Place Page" : "Published Place Pages"}</p></div></div>
+    {filtered.length ? <div className="mt-5 space-y-10">{Array.from(new Set(filtered.map((place) => place.placeGroup))).map((groupName) => <section key={groupName} aria-labelledby={`place-group-${groupName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}><h3 id={`place-group-${groupName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`} className="text-xl font-semibold">{groupName}</h3><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{filtered.filter((place) => place.placeGroup === groupName).map((place) => <Link key={place.id} href={`/destinations/${place.slug}`} className="group rounded-2xl border border-border/70 bg-card p-5 outline-none transition hover:-translate-y-0.5 hover:border-primary/50 focus-visible:ring-3 focus-visible:ring-primary/25"><p className="text-xs font-semibold uppercase tracking-wide text-primary">{place.placeType}</p><h4 className="mt-2 text-xl font-semibold tracking-tight group-hover:text-primary">{place.displayName}</h4>{place.parentPlace && <p className="mt-2 text-sm text-muted-foreground">Part of {place.parentPlace}</p>}{(place.aliases.length > 0 || place.coveredLocalities.length > 0) && <p className="mt-3 text-sm text-muted-foreground">Also serving {place.coveredLocalities.slice(0, 2).join(", ") || place.aliases.slice(0, 2).join(", ")}</p>}<span className="mt-5 inline-block text-sm font-medium text-primary">View {place.displayName} transfers →</span></Link>)}</div></section>)}</div> : <p className="mt-5 rounded-xl border border-dashed border-border px-5 py-10 text-center text-muted-foreground" role="status">No Published Place Pages match your search. Try a broader place name or clear a filter.</p>}
+  </section>
+}

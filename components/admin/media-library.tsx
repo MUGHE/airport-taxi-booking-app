@@ -4,9 +4,11 @@ import { useState } from "react"
 import { Trash2 } from "lucide-react"
 import { deleteCloudinaryAssetAction } from "@/lib/actions"
 import type { CloudinaryAsset, CloudinaryAssetUsage } from "@/lib/cloudinary-assets"
+import { cloudinaryBlurUrl } from "@/lib/cloudinary-image-url"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ProgressiveImage } from "@/components/ui/progressive-image"
 
 type Props = { assets: CloudinaryAsset[]; usage: Record<string, CloudinaryAssetUsage> }
 
@@ -37,7 +39,15 @@ export function MediaLibrary({ assets: initialAssets, usage }: Props) {
         const assetUsage = usage[asset.id]
         const references = assetUsage ? Object.values(assetUsage).flat().length : 0
         return <Card key={asset.id}>
-          <div className="aspect-video bg-muted"><img src={asset.secureUrl} alt={asset.altText} className="size-full object-cover" /></div>
+          <ProgressiveImage
+            wrapperClassName="aspect-video bg-muted"
+            src={asset.secureUrl}
+            alt={asset.altText}
+            blurDataURL={cloudinaryBlurUrl(asset.secureUrl)}
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            placeholder="blur"
+            className="object-contain"
+          />
           <CardContent className="space-y-3 pt-4">
             <div className="flex items-start justify-between gap-2"><div><p className="break-all font-medium">{asset.publicId}</p><p className="text-xs text-muted-foreground">{asset.altText}</p></div><Badge variant={references ? "destructive" : "secondary"}>{references ? "Protected" : "Unused"}</Badge></div>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs"><dt className="text-muted-foreground">Dimensions</dt><dd>{asset.width} × {asset.height}</dd><dt className="text-muted-foreground">Format</dt><dd>{asset.format.toUpperCase()}</dd><dt className="text-muted-foreground">Source / owner</dt><dd>{asset.sourceOwner}</dd><dt className="text-muted-foreground">Licence</dt><dd>{asset.licenseNote}</dd><dt className="text-muted-foreground">Uploaded</dt><dd>{new Date(asset.uploadedAt).toLocaleDateString()}</dd><dt className="text-muted-foreground">Usage</dt><dd>{references ? `${references} snapshot reference${references === 1 ? "" : "s"}` : "None"}</dd></dl>

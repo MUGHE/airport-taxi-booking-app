@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { createDefaultDestinationContent } from "@/lib/destination-content"
-import { getPublishBlockers, type PublishReadinessInput } from "@/lib/publish-readiness"
+import { getPublishBlockers, getPublishWarnings, type PublishReadinessInput } from "@/lib/publish-readiness"
 
 function validPlace(): PublishReadinessInput {
   const content = createDefaultDestinationContent("Camden Airport Taxi", "place")
@@ -24,4 +24,25 @@ test("Place publication blocks missing bookable airports, local FAQs, and identi
   input.content.placeFaqs = []
   input.aliases = ["Camden", "camden"]
   expect(getPublishBlockers(input).map((item) => item.code)).toEqual(expect.arrayContaining(["no-bookable-airport", "minimum-faqs", "duplicate-identity"]))
+})
+
+test("Place quality review warns about a missing hero, stale sources, and too few nearby places", () => {
+  const input = validPlace()
+  input.validNearbyCandidateCount = 4
+  input.content.sections[0].sourceNotes = [{ sourceName: "Local council", sourceUrl: "https://example.com/source", checkedDate: "2020-01-01" }]
+  expect(getPublishWarnings(input).map((item) => item.code)).toEqual(expect.arrayContaining(["missing-unique-hero-image", "stale-source-note", "fewer-nearby-places"]))
+
+  input.validNearbyCandidateCount = 2
+  expect(getPublishWarnings(input).map((item) => item.code)).not.toContain("fewer-nearby-places")
+})
+
+test("quality review completes when two Pages end with the same words", () => {
+  const input = validPlace()
+  input.existingPages = [{ id: "other-camden", slug: "other-camden", content: input.content }]
+
+  expect(getPublishWarnings(input).map((item) => item.code)).toContain("repeated-prose")
+})
+
+test("a selected Google Place does not need an extra review", () => {
+  expect(getPublishBlockers(validPlace())).toEqual([])
 })

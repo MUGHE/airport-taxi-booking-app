@@ -13,6 +13,10 @@ const DUPLICATE_SLUG_ERROR = "That Airport Slug is already in use. Choose a diff
 const DUPLICATE_PLACE_SLUG_ERROR = "That Place Slug is already in use. Choose a different slug."
 const DUPLICATE_IATA_ERROR = "That IATA code is already in use. Check the airport code."
 
+function publishTrace(traceId: string | undefined, event: string, details: Record<string, unknown> = {}) {
+  if (traceId) console.info(`[Destination publish] ${traceId} ${event}`, details)
+}
+
 export type AdminDestinationPage = {
   id: string
   pageType: DestinationPageType
@@ -35,6 +39,7 @@ export type AdminDestinationPage = {
   latitude: number
   longitude: number
   updatedAt: string
+  draftUpdatedAt: string
   draft: {
     seoTitle: string
     metaDescription: string
@@ -75,7 +80,7 @@ export type AdminTerminal = {
   isPrimary: boolean
 }
 
-export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "terminals"> & {
+export type SaveAdminDestinationPageInput = Omit<AdminDestinationPage, "id" | "lifecycleState" | "bookingAvailable" | "featured" | "hasUnpublishedChanges" | "updatedAt" | "draft" | "draftUpdatedAt" | "terminals"> & {
   id?: string
   terminals: AdminTerminal[]
   relatedDestinations: AdminRelatedDestination[]
@@ -212,6 +217,7 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
     latitude: row.latitude == null ? 0 : Number(row.latitude),
     longitude: row.longitude == null ? 0 : Number(row.longitude),
     updatedAt: row.updated_at,
+    draftUpdatedAt: draft?.created_at ?? "",
     draft: {
       seoTitle: draft?.seo_title ?? policy.defaults.seoTitle(row.display_name ?? ""),
       metaDescription: draft?.meta_description ?? policy.defaults.metaDescription(row.display_name ?? ""),
@@ -223,15 +229,20 @@ function toPage(row: PageRow, draft: SnapshotRow | undefined, published: Snapsho
   }
 }
 
-async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<AdminDestinationPage[]> {
+async function loadPageRows(supabase: SupabaseClient, pageId?: string, traceId?: string): Promise<AdminDestinationPage[]> {
+  const startedAt = Date.now()
+  publishTrace(traceId, "Loading Destination Page record.", { pageId })
   let pageQuery = supabase.from("destination_pages").select("*").order("updated_at", { ascending: false })
   if (pageId) pageQuery = pageQuery.eq("id", pageId)
 
   const { data: pages, error: pageError } = await pageQuery
   if (pageError) throw pageError
   if (!pages?.length) return []
+  publishTrace(traceId, "Destination Page record loaded.", { pageCount: pages.length, elapsedMs: Date.now() - startedAt })
 
   const ids = (pages as PageRow[]).map((page) => page.id)
+  const relatedDataStartedAt = Date.now()
+  publishTrace(traceId, "Loading Draft, terminal, alias, and locality records.", { pageCount: ids.length })
   const [{ data: snapshots, error: snapshotError }, { data: terminals, error: terminalError }, { data: aliases, error: aliasError }, { data: localities, error: localityError }] = await Promise.all([
     supabase.from("destination_page_snapshots").select("id, page_id, snapshot_kind, seo_title, meta_description, h1, content, created_at").in("page_id", ids),
     supabase.from("destination_page_terminals").select("id, page_id, display_name, address, latitude, longitude, sort_order, is_primary").in("page_id", ids).order("sort_order"),
@@ -242,6 +253,7 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
   if (terminalError) throw terminalError
   if (aliasError) throw aliasError
   if (localityError) throw localityError
+  publishTrace(traceId, "Draft, terminal, alias, and locality records loaded.", { snapshotCount: snapshots?.length ?? 0, terminalCount: terminals?.length ?? 0, aliasCount: aliases?.length ?? 0, localityCount: localities?.length ?? 0, elapsedMs: Date.now() - relatedDataStartedAt })
 
   const snapshotRows = (snapshots ?? []) as SnapshotRow[]
   const terminalRows = (terminals ?? []) as TerminalRow[]
@@ -255,7 +267,10 @@ async function loadPageRows(supabase: SupabaseClient, pageId?: string): Promise<
     (localities ?? []).filter((locality) => locality.page_id === page.id).map((locality) => ({ id: locality.id as string, name: locality.name as string, localityType: locality.locality_type as string, notes: (locality.notes as string | null) ?? "" })),
   ))
   for (const page of result) {
+    const relationshipStartedAt = Date.now()
+    publishTrace(traceId, "Loading related Destination Pages.", { pageId: page.id })
     const related = await listRelatedDestinations(page.id)
+    publishTrace(traceId, "Related Destination Pages loaded.", { relatedCount: related.length, elapsedMs: Date.now() - relationshipStartedAt })
     const managedKinds = page.pageType === "place" ? new Set(["supported_airport", "nearby_place"]) : new Set(["related_route"])
     page.relatedDestinations = related.filter((item) => managedKinds.has(item.kind)).map((item) => ({ ...item, reverseHeading: item.reverseHeading ?? "", reverseDescription: item.reverseDescription ?? "" }))
   }
@@ -302,7 +317,6 @@ function validationError(input: SaveAdminDestinationPageInput): string | null {
     if (input.coveredLocalities.some((item) => !item.name.trim() || !item.localityType.trim())) return "Every Covered Locality needs a name and locality type."
     const contentError = validateDestinationContent(input.content, input.h1?.trim() || getDestinationPagePolicy(input.pageType).defaults.h1(input.displayName.trim()), input.pageType)
     if (contentError) return contentError
-    if ((input.content?.placeFaqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length ?? 0) < 2) return "Add at least two complete local FAQs before saving this Place Draft."
     return null
   }
   const terminals = input.terminals.filter((terminal) => terminal.address.trim() || terminal.displayName.trim() !== "Main Terminal")
@@ -557,10 +571,31 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
   }
 }
 
-export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[] }
+export type PublishOverride = { warningSetHash: string; warnings: PublishWarning[]; expectedDraftUpdatedAt?: string }
 export type PublishResult = { ok: true; slug: string } | { ok: false; error: string; blockers?: { code: string; message: string }[]; warnings?: PublishWarning[]; warningSetHash?: string }
+export type PublishReview = {
+  ok: true
+  pageId: string
+  pageType: DestinationPageType
+  displayName: string
+  slug: string
+  draftUpdatedAt: string
+  blockers: { code: string; message: string }[]
+  warnings: PublishWarning[]
+  warningSetHash: string
+} | { ok: false; error: string }
 export type RestoreResult = { ok: true; page: AdminDestinationPage } | { ok: false; error: string }
 export type LifecycleResult = { ok: true } | { ok: false; error: string }
+
+export async function promoteCoveredLocalityToPlace(input: { parentPageId: string; localityId: string; slug: string; placeType: string; placeGroupId: string }): Promise<{ ok: true; pageId: string } | { ok: false; error: string }> {
+  const supabase = getSupabase()
+  if (!supabase) return { ok: false, error: "Destination Pages are not connected to the database." }
+  const { data, error } = await supabase.rpc("promote_covered_locality_to_place", {
+    p_parent_page_id: input.parentPageId, p_locality_id: input.localityId, p_slug: input.slug,
+    p_place_type: input.placeType, p_place_group_id: input.placeGroupId, p_promoted_by: "admin",
+  })
+  return error || !data ? { ok: false, error: error?.message ?? "The Covered Locality could not be promoted." } : { ok: true, pageId: data as string }
+}
 
 export async function deleteAdminDestinationDraft(pageId: string): Promise<LifecycleResult> {
   const supabase = getSupabase()
@@ -572,11 +607,14 @@ export async function deleteAdminDestinationDraft(pageId: string): Promise<Lifec
 export async function archiveAdminDestinationPage(pageId: string, replacementSlug: string): Promise<LifecycleResult> {
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
-  const target = replacementSlug.trim() || "airport-transfers"
+  const page = await getAdminDestinationPage(pageId)
+  if (!page) return { ok: false, error: "Destination Page not found." }
+  const fallback = page.pageType === "place" ? "destinations" : "airport-transfers"
+  const target = replacementSlug.trim() || fallback
   const { error } = await supabase.rpc("archive_destination_page", { p_page_id: pageId, p_replacement_slug: target, p_archived_by: "admin" })
   if (!error) return { ok: true }
-  if (error.message.includes("Replacement destination")) return { ok: false, error: "Choose a Published Airport Page as the replacement." }
-  return { ok: false, error: error.message.includes("Published Page") ? "Only a Published Page can be archived." : "The Airport Page could not be archived." }
+  if (error.message.includes("Replacement destination")) return { ok: false, error: `Choose a Published ${page.pageType === "place" ? "Place" : "Airport"} Page as the replacement.` }
+  return { ok: false, error: error.message.includes("Published Page") ? "Only a Published Page can be archived." : `The ${page.pageType === "place" ? "Place" : "Airport"} Page could not be archived.` }
 }
 
 export async function setAdminBookingAvailability(pageId: string, available: boolean): Promise<LifecycleResult> {
@@ -586,7 +624,9 @@ export async function setAdminBookingAvailability(pageId: string, available: boo
   return error ? { ok: false, error: "Only a Published Page can change booking availability." } : { ok: true }
 }
 
-async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQualityPage[]> {
+async function listQualityPages(supabase: SupabaseClient, traceId?: string): Promise<ExistingQualityPage[]> {
+  const startedAt = Date.now()
+  publishTrace(traceId, "Loading existing Pages for duplicate and quality checks.")
   const [{ data: pages, error: pageError }, { data: snapshots, error: snapshotError }, { data: aliases, error: aliasError }, { data: localities, error: localityError }] = await Promise.all([
     supabase.from("destination_pages").select("id, slug, iata_code, page_type, display_name, official_name, lifecycle_state").neq("lifecycle_state", "archived"),
     supabase.from("destination_page_snapshots").select("page_id, snapshot_kind, seo_title, meta_description, content").in("snapshot_kind", ["draft", "published"]),
@@ -594,6 +634,7 @@ async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQuali
     supabase.from("destination_covered_localities").select("page_id, name"),
   ])
   if (pageError || snapshotError || aliasError || localityError) throw pageError ?? snapshotError ?? aliasError ?? localityError
+  publishTrace(traceId, "Existing Pages loaded for duplicate and quality checks.", { pageCount: pages?.length ?? 0, snapshotCount: snapshots?.length ?? 0, aliasCount: aliases?.length ?? 0, localityCount: localities?.length ?? 0, elapsedMs: Date.now() - startedAt })
   const pageRows = (pages ?? []) as { id: string; slug: string; iata_code?: string; page_type: DestinationPageType; display_name?: string; official_name?: string }[]
   const snapshotRows = (snapshots ?? []) as { page_id: string; snapshot_kind: "draft" | "published"; seo_title: string; meta_description: string; content: unknown }[]
   return pageRows.flatMap((page) => snapshotRows.filter((snapshot) => snapshot.page_id === page.id).map((snapshot) => {
@@ -602,32 +643,121 @@ async function listQualityPages(supabase: SupabaseClient): Promise<ExistingQuali
   }))
 }
 
-export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride): Promise<PublishResult> {
+async function getPublishReview(pageId: string, traceId?: string): Promise<PublishReview> {
+  publishTrace(traceId, "Final server review started.", { pageId })
   const supabase = getSupabase()
   if (!supabase || !pageId) return { ok: false, error: "Destination Pages are not connected to the database." }
-  const page = await getAdminDestinationPage(pageId)
-  if (!page) return { ok: false, error: "Airport Page not found." }
-  const existingPages = await listQualityPages(supabase)
-  const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages }
+  const pageStartedAt = Date.now()
+  publishTrace(traceId, "Loading this Draft for final server review.")
+  const pages = await loadPageRows(supabase, pageId, traceId)
+  const page = pages[0] ?? null
+  if (!page) return { ok: false, error: "Destination Page not found." }
+  publishTrace(traceId, "This Draft loaded for final server review.", { pageType: page.pageType, slug: page.slug, elapsedMs: Date.now() - pageStartedAt })
+  const existingPages = await listQualityPages(supabase, traceId)
+  const validNearbyCandidateCount = new Set(existingPages.filter((item) => item.pageType === "place" && item.id !== pageId).map((item) => item.id)).size
+  const readiness = { ...page, pageType: page.pageType, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content, existingPages, validNearbyCandidateCount }
   const blockers = getPublishBlockers(readiness)
-  if (blockers.length) return { ok: false, error: blockers.map((item) => item.message).join(" "), blockers }
   const warnings = getPublishWarnings(readiness)
   const warningSetHash = getWarningSetHash(warnings)
-  if (warnings.length && (!override || override.warningSetHash !== warningSetHash || JSON.stringify(override.warnings) !== JSON.stringify(warnings))) {
-    return { ok: false, error: override ? "The quality warnings changed. Review them before publishing." : "Review the quality warnings before publishing.", warnings, warningSetHash }
-  }
+  const reusableContentStartedAt = Date.now()
+  publishTrace(traceId, "Checking selected shared content.")
   const reusableContentError = await validateReusableContent(page.draft.content)
-  if (reusableContentError) return { ok: false, error: reusableContentError, blockers: [{ code: "invalid-reusable-content", message: reusableContentError }] }
+  publishTrace(traceId, "Selected shared content checked.", { valid: !reusableContentError, elapsedMs: Date.now() - reusableContentStartedAt })
+  if (reusableContentError) blockers.push({ code: "invalid-reusable-content", message: reusableContentError })
+  const imageStartedAt = Date.now()
+  publishTrace(traceId, "Checking selected media assets.")
   const imageError = await validateSavedImages(supabase, page.draft.content, page.relatedDestinations.flatMap((item) => [item.image, item.reverseImage].filter((image): image is DestinationImageReference => Boolean(image))))
-  if (imageError) return { ok: false, error: imageError, blockers: [{ code: "invalid-media", message: imageError }] }
+  publishTrace(traceId, "Selected media assets checked.", { valid: !imageError, elapsedMs: Date.now() - imageStartedAt })
+  if (imageError) blockers.push({ code: "invalid-media", message: imageError })
+  const relatedStartedAt = Date.now()
+  publishTrace(traceId, "Checking related Destination Pages.")
   const relatedError = await validateRelatedDestinations(supabase, { ...page, seoTitle: page.draft.seoTitle, metaDescription: page.draft.metaDescription, h1: page.draft.h1, content: page.draft.content })
-  if (relatedError) return { ok: false, error: relatedError, blockers: [{ code: "invalid-relationships", message: relatedError }] }
-  const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin", p_override: override ? { warningCodes: warnings.map((warning) => warning.code), warningReasons: warnings.map((warning) => warning.reason) } : {} })
+  publishTrace(traceId, "Related Destination Pages checked.", { valid: !relatedError, elapsedMs: Date.now() - relatedStartedAt })
+  if (relatedError) blockers.push({ code: "invalid-relationships", message: relatedError })
+  return { ok: true, pageId, pageType: page.pageType, displayName: page.displayName, slug: page.slug, draftUpdatedAt: page.draftUpdatedAt, blockers, warnings, warningSetHash }
+}
+
+export async function reviewAdminDestinationPage(pageId: string): Promise<PublishReview> {
+  return getPublishReview(pageId)
+}
+
+export async function publishAdminDestinationPage(pageId: string, override?: PublishOverride, traceId?: string): Promise<PublishResult> {
+  const trace = traceId ? `[Destination publish] ${traceId}` : "[Destination publish]"
+  console.info(`${trace} Database publish flow started.`, { pageId, warningOverride: Boolean(override) })
+  const supabase = getSupabase()
+  if (!supabase || !pageId) {
+    console.error(`${trace} Database publish flow stopped: database connection or page ID is missing.`)
+    return { ok: false, error: "Destination Pages are not connected to the database." }
+  }
+  const review = await getPublishReview(pageId, traceId)
+  if (!review.ok) {
+    console.error(`${trace} Server review failed.`, { error: review.error })
+    return review
+  }
+  console.info(`${trace} Server review completed.`, { pageType: review.pageType, slug: review.slug, blockerCount: review.blockers.length, warningCount: review.warnings.length, draftUpdatedAt: review.draftUpdatedAt })
+  if (review.blockers.length) {
+    console.warn(`${trace} Database publish flow stopped: blockers found.`, review.blockers)
+    return { ok: false, error: review.blockers.map((item) => item.message).join(" "), blockers: review.blockers }
+  }
+  if (override?.expectedDraftUpdatedAt && override.expectedDraftUpdatedAt !== review.draftUpdatedAt) {
+    console.warn(`${trace} Database publish flow stopped: Draft changed after review.`)
+    return { ok: false, error: "This Draft changed after it was reviewed. Refresh the list and review it again." }
+  }
+  if (review.warnings.length && (!override || override.warningSetHash !== review.warningSetHash || JSON.stringify(override.warnings) !== JSON.stringify(review.warnings))) {
+    console.info(`${trace} Database publish flow paused: warning acceptance is required.`, review.warnings)
+    return { ok: false, error: override ? "The quality warnings changed. Review them before publishing." : "Review the quality warnings before publishing.", warnings: review.warnings, warningSetHash: review.warningSetHash }
+  }
+  console.info(`${trace} Calling the database publish transaction.`)
+  const { data, error } = await supabase.rpc("publish_destination_page", { p_page_id: pageId, p_published_by: "admin", p_override: override ? { warningCodes: review.warnings.map((warning) => warning.code), warningReasons: review.warnings.map((warning) => warning.reason) } : {} })
   if (error) {
+    console.error(`${trace} Database publish transaction failed.`, { message: error.message })
     const message = error.message.toLowerCase().includes("duplicate") ? "That SEO title, Airport Slug, or IATA code conflicts with another Published Page." : "Publish failed. The previous public Published Snapshot is unchanged."
     return { ok: false, error: message }
   }
+  console.info(`${trace} Database publish transaction completed.`, { slug: (data as { slug: string }).slug })
   return { ok: true, slug: (data as { slug: string }).slug }
+}
+
+export type BulkPublishSelection = {
+  pageId: string
+  expectedDraftUpdatedAt: string
+  override?: PublishOverride
+}
+
+export type BulkPublishReportItem = {
+  pageId: string
+  displayName: string
+  slug: string
+  status: "published" | "skipped" | "failed"
+  reason: string
+  fixLink?: string
+}
+
+export async function bulkPublishPlaceDrafts(selections: BulkPublishSelection[]): Promise<BulkPublishReportItem[]> {
+  const uniqueSelections = [...new Map(selections.map((selection) => [selection.pageId, selection])).values()]
+  const report: BulkPublishReportItem[] = []
+  for (const selection of uniqueSelections) {
+    const page = await getAdminDestinationPage(selection.pageId)
+    const displayName = page?.displayName || "Unknown Place Page"
+    const slug = page?.slug || ""
+    const fixLink = `/admin/destination-pages/${selection.pageId}`
+    if (!page || page.pageType !== "place") {
+      report.push({ pageId: selection.pageId, displayName, slug, status: "skipped", reason: "Only Place Pages can be bulk published.", fixLink })
+      continue
+    }
+    if (page.lifecycleState === "archived" || (page.lifecycleState === "published" && !page.hasUnpublishedChanges)) {
+      report.push({ pageId: selection.pageId, displayName, slug, status: "skipped", reason: "This Place has no unpublished changes to publish.", fixLink })
+      continue
+    }
+    if (selection.expectedDraftUpdatedAt !== page.draftUpdatedAt) {
+      report.push({ pageId: selection.pageId, displayName, slug, status: "skipped", reason: "This Draft changed after selection. Review the newer Draft before publishing.", fixLink })
+      continue
+    }
+    const result = await publishAdminDestinationPage(selection.pageId, selection.override ? { ...selection.override, expectedDraftUpdatedAt: selection.expectedDraftUpdatedAt } : { warningSetHash: "", warnings: [], expectedDraftUpdatedAt: selection.expectedDraftUpdatedAt })
+    if (result.ok) report.push({ pageId: selection.pageId, displayName, slug: result.slug, status: "published", reason: "Published successfully." })
+    else report.push({ pageId: selection.pageId, displayName, slug, status: result.blockers?.length || result.warnings?.length ? "skipped" : "failed", reason: result.error, fixLink })
+  }
+  return report
 }
 
 export async function restoreAdminDestinationPage(pageId: string): Promise<RestoreResult> {
