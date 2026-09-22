@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "verify:airport-pages": "node --env-file-if-exists=.env.local scripts/verify-airport-page-cutover.mjs",
+    "verify:place-pilot": "node --env-file-if-exists=.env.local scripts/verify-place-pilot.mjs",
     "test:admin": "playwright test --project=admin --pass-with-no-tests",
     "test:public": "playwright test --config=playwright.public.config.ts",
     "test:rules": "playwright test --project=rules",
