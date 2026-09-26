@@ -124,8 +124,7 @@ function ReviewSection({ page, title = "Verified reviews" }: { page: AirportPage
 }
 
 function FaqSection({ page, title = "Frequently asked questions" }: { page: AirportPagePresentation; title?: string }) {
-  const airportFaqs = page.airportFaqs.length > 0 ? page.airportFaqs : page.faqs
-  return <section className="airport-faq" data-preview-section="faq"><div className="airport-container airport-faq-grid"><div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2>{title}</h2><p>Clear answers before you travel.</p><Link href="/contact">Still have a question? Talk to us <ArrowRight aria-hidden="true" /></Link></div><Accordion className="airport-faq-list" multiple>{[...page.globalFaqs, ...airportFaqs].map((faq, index) => <AccordionItem key={`${faq.question}-${index}`} value={`faq-${index}`}><AccordionTrigger>{faq.question}</AccordionTrigger><AccordionPanel>{faq.answer}</AccordionPanel></AccordionItem>)}</Accordion></div></section>
+  return <section className="airport-faq" data-preview-section="faq"><div className="airport-container airport-faq-grid"><div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2>{title}</h2><p>Clear answers before you travel.</p><Link href="/contact">Still have a question? Talk to us <ArrowRight aria-hidden="true" /></Link></div><Accordion className="airport-faq-list" multiple>{page.faqs.map((faq, index) => <AccordionItem key={`${faq.question}-${index}`} value={`faq-${index}`}><AccordionTrigger>{faq.question}</AccordionTrigger><AccordionPanel>{faq.answer}</AccordionPanel></AccordionItem>)}</Accordion></div></section>
 }
 
 function BenefitCards({ section }: { section: AirportPageContentSection }) {

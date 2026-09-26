@@ -249,7 +249,10 @@
 .airport-hero-intro .text-muted-foreground { color: rgba(255,255,255,.78); }
 .airport-rating { display: flex; gap: .65rem; align-items: center; margin-top: 2rem; color: rgba(255,255,255,.78); font-size: .78rem; font-weight: 650; }
 .airport-rating svg { width: 1rem; height: 1rem; color: #70baff; }
-.airport-quote-card { border: 1px solid rgba(255,255,255,.65); border-radius: 1.1rem; background: rgba(255,255,255,.97); box-shadow: 0 24px 60px rgba(0,0,0,.3); }
+.airport-quote-card { border: 1px solid rgba(255,255,255,.78); border-radius: 1.1rem; background: linear-gradient(145deg, rgba(255,255,255,.84), rgba(244,249,253,.68)); box-shadow: 0 24px 60px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.72); -webkit-backdrop-filter: blur(16px) saturate(125%); backdrop-filter: blur(16px) saturate(125%); }
+.airport-quote-card .bg-secondary { background: rgba(222,232,241,.72); }
+.airport-quote-card .bg-background { background: rgba(255,255,255,.58); }
+.airport-quote-card select:focus-visible, .airport-quote-card a:focus-visible { outline: 2px solid var(--airport-blue); outline-offset: 2px; }
 .airport-trust-rail { position: absolute; right: 0; bottom: 0; left: 0; border-top: 1px solid rgba(255,255,255,.16); background: rgba(4,23,41,.76); backdrop-filter: blur(16px); }
 .airport-trust-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
 .airport-trust-grid > div { display: flex; gap: .85rem; align-items: center; padding: 1.2rem 1.5rem; border-right: 1px solid rgba(255,255,255,.13); }

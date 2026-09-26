@@ -299,7 +299,9 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
     finalCta: { heading: safeText(finalCta.heading).trim() || fallback.finalCta.heading, body: normalizeBlocks(finalCta.body), bodyDocument: normalizeTiptapDocument(finalCta.bodyDocument) },
     serviceFacts: normalizeReusableItems(input.serviceFacts, "fact"),
     globalFaqs: normalizeReusableItems(input.globalFaqs, "faq"),
-    airportFaqs: normalizeReusableItems(input.airportFaqs, "faq"),
+    // Airport FAQs are centrally managed now. Keep the field for backwards-compatible
+    // snapshots, but do not carry page-specific airport FAQs forward.
+    airportFaqs: pageType === "airport" ? [] : normalizeReusableItems(input.airportFaqs, "faq"),
     placeFaqs: normalizeReusableItems(input.placeFaqs, "faq"),
     reviews: normalizeReusableItems(input.reviews, "review"),
   }
