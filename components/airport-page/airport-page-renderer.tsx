@@ -174,13 +174,13 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true }: 
                 <div className="airport-rating"><ShieldCheck aria-hidden="true" /><span>Professional airport transfers</span></div>
                 <h1>{page.heading}</h1>
                 {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
-                <AirportQuoteActions page={page} onDarkBackground />
               </div>
+              <AirportQuoteActions page={page} onDarkBackground />
             </div>
             <div className="airport-trust-rail"><div className="airport-container airport-trust-grid">{[[Banknote, "Fixed fares", "Know the price before you ride"], [PlaneTakeoff, "Flight tracking", "Pickup timed to your arrival"], [Headphones, "Human support", "Help whenever plans change"]].map(([Icon, title, description]) => { const FeatureIcon = Icon as typeof Banknote; return <div key={title as string}><FeatureIcon aria-hidden="true" /><span><strong>{title as string}</strong><small>{description as string}</small></span></div> })}</div></div>
           </section>
         ) : (
-          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy"><Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" /><h1>{page.heading}</h1>{page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}<AirportQuoteActions page={page} onDarkBackground /></div></div></section>
+          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy"><Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" /><h1>{page.heading}</h1>{page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}</div><AirportQuoteActions page={page} onDarkBackground /></div></section>
         )}
 
         {visibleSections.map((section, index) => <BuilderSection key={section.id} section={section} page={page} index={index} />)}
