@@ -1,8 +1,9 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Clock3, Mail, MapPin, Phone } from "lucide-react"
+import { ArrowRight, Clock3, Mail, MapPin, MessageCircle, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { CALL_LINK, CALL_NUMBER, EMAIL_LINK, CONTACT_EMAIL } from "@/lib/contact"
+import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_LEGAL_PHONE, COMPANY_REGISTRATION_NUMBER, COMPANY_TRADING_NAME } from "@/lib/company"
+import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 
 export function SiteFooter() {
   return (
@@ -11,7 +12,7 @@ export function SiteFooter() {
       <div className="pointer-events-none absolute bottom-[-12rem] left-[-8rem] size-80 rounded-full bg-[#0a8b8f]/10 blur-3xl" />
 
       <div className="relative mx-auto max-w-6xl px-4">
-        <div className="grid gap-8 border-b border-white/10 py-12 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:py-14">
+        <div className="grid gap-8 border-b border-white/10 py-12 lg:grid-cols-[.75fr_1.25fr] lg:items-center lg:py-14">
           <div>
             <Link href="/" className="inline-flex items-center gap-3">
               <span className="grid size-13 place-items-center rounded-full bg-white shadow-lg shadow-black/20">
@@ -27,13 +28,14 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <FooterContact href={CALL_LINK} icon={Phone} label="Call our team" value={CALL_NUMBER} />
             <FooterContact href={EMAIL_LINK} icon={Mail} label="Email support" value={CONTACT_EMAIL} />
+            <FooterContact href={WHATSAPP_LINK} icon={MessageCircle} label="WhatsApp us" value={`+${WHATSAPP_NUMBER.replace(/^\+/, "")}`} target="_blank" />
           </div>
         </div>
 
-        <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.25fr_1fr_1fr_1fr]">
+        <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.15fr_.9fr_.9fr_.9fr_1.2fr]">
           <div>
             <p className="text-xs font-bold uppercase tracking-[.18em] text-sky-300">Travel with confidence</p>
             <div className="mt-5 space-y-4 text-sm text-white/65">
@@ -63,6 +65,7 @@ export function SiteFooter() {
             { href: "/privacy", label: "Privacy" },
             { href: "/admin", label: "Admin Portal" },
           ]} />
+          <FooterCompanyDetails />
         </div>
 
         <div className="flex flex-col gap-3 border-t border-white/10 py-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
@@ -74,15 +77,14 @@ export function SiteFooter() {
   )
 }
 
-function FooterContact({ href, icon: Icon, label, value }: { href: string; icon: typeof Phone; label: string; value: string }) {
+function FooterContact({ href, icon: Icon, label, value, target }: { href: string; icon: typeof Phone; label: string; value: string; target?: string }) {
   return (
-    <a href={href} className="group flex min-w-0 items-center gap-3 border border-white/12 bg-white/5 p-4 transition-colors hover:border-sky-300/35 hover:bg-white/8">
+    <a href={href} target={target} rel={target ? "noopener noreferrer" : undefined} className="group flex min-w-0 items-center gap-3 border border-white/12 bg-white/5 p-4 transition-colors hover:border-sky-300/35 hover:bg-white/8">
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-sky-400/12 text-sky-300"><Icon aria-hidden="true" className="size-4" /></span>
       <span className="min-w-0">
-        <small className="block text-[10px] font-semibold uppercase tracking-[.12em] text-white/45">{label}</small>
-        <strong className="mt-1 block truncate text-sm font-semibold text-white/88">{value}</strong>
+        <small className="block whitespace-nowrap text-[10px] font-semibold uppercase tracking-[.12em] text-white/55">{label}</small>
+        <strong className="mt-1 block break-words text-sm font-semibold leading-5 text-white/90">{value}</strong>
       </span>
-      <ArrowRight aria-hidden="true" className="ml-auto size-4 shrink-0 text-white/35 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-300" />
     </a>
   )
 }
@@ -100,6 +102,36 @@ function FooterCol({ title, links }: { title: string; links: { href: string; lab
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+function FooterCompanyDetails() {
+  return (
+    <div>
+      <h3 className="text-xs font-bold uppercase tracking-[.16em] text-white">Company details</h3>
+      <dl className="mt-5 grid gap-3 text-sm">
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Organisation</dt>
+          <dd className="mt-1 text-white/70">{COMPANY_LEGAL_NAME}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Trading name</dt>
+          <dd className="mt-1 text-white/70">{COMPANY_TRADING_NAME}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Registered office</dt>
+          <dd className="mt-1 max-w-[18rem] leading-6 text-white/70">{COMPANY_ADDRESS}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Companies House</dt>
+          <dd className="mt-1 text-white/70">{COMPANY_REGISTRATION_NUMBER}</dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-white/40">Phone</dt>
+          <dd className="mt-1"><a className="text-white/70 transition-colors hover:text-sky-300" href={`tel:${COMPANY_LEGAL_PHONE.replace(/[^+\d]/g, "")}`}>{COMPANY_LEGAL_PHONE}</a></dd>
+        </div>
+      </dl>
     </div>
   )
 }

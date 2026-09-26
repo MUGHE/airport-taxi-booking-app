@@ -117,8 +117,6 @@ export function getPublishBlockers(input: PublishReadinessInput): PublishBlocker
     if (!section || !section.visible || !hasContent(section)) block(`missing-${type}`, `${SECTION_LABELS[type]} is required and must contain content.`)
   }
 
-  const validFaqs = input.content.airportFaqs.filter((faq) => hasText(faq.question) && hasText(faq.answer))
-  if (validFaqs.length < 3) block("minimum-faqs", "At least three airport-specific FAQs with questions and answers are required.")
   if (input.relatedDestinations.length < 3) block("minimum-related-pages", "At least three related Published Pages are required.")
   if (input.relatedDestinations.some((item) => !item.pageId || item.pageId === input.id || !hasText(item.heading) || !hasText(item.description) || !hasText(item.reverseHeading) || !hasText(item.reverseDescription))) block("invalid-relationships", "Every related Published Page needs valid two-way descriptions.")
 

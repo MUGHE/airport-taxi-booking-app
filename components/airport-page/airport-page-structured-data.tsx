@@ -41,6 +41,15 @@ export function AirportPageStructuredData({ seo }: { seo: AirportPageSeo }) {
       serviceType: "Airport taxi transfer",
       serviceLocation: { "@id": `${canonicalUrl}#airport` },
     },
+    {
+      "@type": "FAQPage",
+      "@id": `${canonicalUrl}#faq`,
+      mainEntity: seo.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
   ]
 
   return (

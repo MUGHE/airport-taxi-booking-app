@@ -11,6 +11,7 @@ import { cacheSafePublishedAirportPage, getSafePublishedAirportPage } from "@/li
 import { getDestinationPagePolicy } from "@/lib/destination-page-policy"
 import type { PlacePagePresentation } from "@/lib/place-page-data"
 import { cacheSafePublishedPlacePage, getSafePublishedPlacePage } from "@/lib/public-place-page-cache"
+import { listAirportFaqs } from "@/lib/airport-faqs"
 
 const airportPolicy = getDestinationPagePolicy("airport")
 const placePolicy = getDestinationPagePolicy("place")
@@ -86,6 +87,7 @@ export type AirportPageSeo = {
   canonical: string
   socialImage: { url: string; alt: string }
   airport: PublishedAirportFacts
+  faqs: { question: string; answer: string }[]
 }
 
 export async function createDraftAirportPagePresentation(page: AdminDestinationPage): Promise<AirportPagePresentation> {
@@ -99,6 +101,7 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
   }))
   const primary = terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]
   const relatedTerminals = await getPublishedPrimaryTerminals(page.relatedDestinations.map((item) => item.pageId))
+  const airportFaqs = await listAirportFaqs()
   const relatedDestinations = page.relatedDestinations.flatMap((item) => {
     const relatedTerminal = relatedTerminals.get(item.pageId)
     if (!primary || !relatedTerminal) return []
@@ -117,10 +120,10 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
         { title: "Fixed, all-inclusive fare", description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.", icon: "fare" },
         { title: "Flight tracking & meet & greet", description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.", icon: "flight" },
       ],
-      faqs: content.airportFaqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
+      faqs: airportFaqs,
       serviceFacts: content.serviceFacts,
       globalFaqs: content.globalFaqs,
-      airportFaqs: content.airportFaqs,
+      airportFaqs: [],
       reviews: content.reviews,
       sections: content.sections,
       heroImage: content.hero.image,
@@ -326,6 +329,9 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       isPrimary: terminal.is_primary,
     }))
     const content = publishedContentFromSnapshot(snapshotRow)
+    const airportFaqs = await listAirportFaqs()
+    content.faqs = airportFaqs
+    content.airportFaqs = []
     const legacyHeroAsset = (legacyHero as LegacySnapshotMediaRow | null)?.destination_media_assets
     content.heroImage = content.heroImage ?? (legacyHeroAsset ? {
       assetId: legacyHeroAsset.id,
@@ -364,6 +370,7 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
           ? { url: heroImage.secureUrl, alt: heroImage.altText }
           : { url: `${airportPolicy.public.namespace}/${pageRow.published_slug.replace(/-airport-taxi$/, "")}.webp`, alt: `${airport.displayName} Airport transfer service` },
         airport,
+        faqs: airportFaqs,
       },
       bookingAvailable: pageRow.booking_available,
     } }

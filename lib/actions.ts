@@ -58,6 +58,7 @@ import { setAirportFeatured } from "./airport-directory"
 import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability, promoteCoveredLocalityToPlace } from "./admin-destination-pages"
 import { invalidateSafePublishedAirportPageCache } from "./public-airport-page-cache"
 import { invalidateSafePublishedPlacePageCache } from "./public-place-page-cache"
+import { deleteAdminAirportFaq, listAdminAirportFaqs, saveAdminAirportFaq } from "./airport-faqs"
 
 
 export interface LoginResult {
@@ -118,6 +119,33 @@ export async function getAdminDestinationPageById(id: string) {
 export async function getReusableDestinationContentAction() {
   if (!(await isAdminAuthenticated())) return { serviceFacts: [], globalFaqs: [], reviews: [] }
   return listReusableDestinationContent()
+}
+
+export async function getAdminAirportFaqsAction() {
+  if (!(await isAdminAuthenticated())) return []
+  return listAdminAirportFaqs()
+}
+
+export async function saveAdminAirportFaqAction(input: { id?: string; question: string; answer: string }) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await saveAdminAirportFaq(input)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/admin/airport-faqs")
+  }
+  return result
+}
+
+export async function deleteAdminAirportFaqAction(id: string) {
+  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  const result = await deleteAdminAirportFaq(id)
+  if (result.ok) {
+    invalidateSafePublishedAirportPageCache()
+    revalidatePath("/airport-transfers", "layout")
+    revalidatePath("/admin/airport-faqs")
+  }
+  return result
 }
 
 export async function getRelatedDestinationCandidatesAction(pageId?: string) {
