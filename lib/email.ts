@@ -487,27 +487,34 @@ export async function sendLowRatingAlertEmail(booking: Booking, rating: number, 
   }
 }
 
-/** One-time code that completes a customer sign-up (see verifyCustomerEmail). */
-export async function sendVerificationCodeEmail(to: string, name: string, code: string): Promise<{ ok: boolean }> {
+const CODE_EMAIL_COPY = {
+  signup: { heading: "Verify your email", body: `Enter this code to finish creating your ${COMPANY_NAME} account:`, ignore: "If you didn't try to create an account, you can ignore this email." },
+  email_change: { heading: "Confirm your new email", body: `Enter this code to make this your ${COMPANY_NAME} sign-in email:`, ignore: "If you didn't ask to change your email, you can ignore this email." },
+  password_reset: { heading: "Reset your password", body: `Enter this code to choose a new password for your ${COMPANY_NAME} account:`, ignore: "If you didn't ask to reset your password, ignore this email — your password stays the same. Never share this code; we'll never ask you for it." },
+}
+
+/** One-time code for sign-up, an email change, or a password reset. */
+export async function sendVerificationCodeEmail(to: string, name: string, code: string, purpose: keyof typeof CODE_EMAIL_COPY = "signup"): Promise<{ ok: boolean }> {
   const resend = getResendClient()
   if (!resend) {
-    console.warn("RESEND_API_KEY is not set; can't send the sign-up verification code.")
+    console.warn(`RESEND_API_KEY is not set; can't send the ${purpose} code.`)
     return { ok: false }
   }
 
+  const copy = CODE_EMAIL_COPY[purpose]
   const fromAddress = process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>"
   const firstName = name.trim().split(/\s+/)[0] || name
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
-      <h2 style="color:#111827;">Verify your email, ${escapeHtml(firstName)}</h2>
-      <p style="color:#374151;">Enter this code to finish creating your ${COMPANY_NAME} account:</p>
+      <h2 style="color:#111827;">${copy.heading}, ${escapeHtml(firstName)}</h2>
+      <p style="color:#374151;">${copy.body}</p>
       <p style="margin:24px 0;font-size:32px;font-weight:700;letter-spacing:8px;color:#111827;">${code}</p>
-      <p style="color:#6b7280;font-size:13px;">The code expires in 10 minutes. If you didn't try to create an account, you can ignore this email.</p>
+      <p style="color:#6b7280;font-size:13px;">The code expires in 10 minutes. ${copy.ignore}</p>
     </div>
   `
 
   try {
-    const result = await resend.emails.send({ from: fromAddress, to, subject: `${code} is your ${COMPANY_NAME} verification code`, html })
+    const result = await resend.emails.send({ from: fromAddress, to, subject: `${code} is your ${COMPANY_NAME} ${purpose === "password_reset" ? "password reset" : "verification"} code`, html })
     if (result.error) {
       console.error("Failed to send verification code email:", result.error)
       return { ok: false }
@@ -516,5 +523,25 @@ export async function sendVerificationCodeEmail(to: string, name: string, code: 
   } catch (error) {
     console.error("Failed to send verification code email:", error)
     return { ok: false }
+  }
+}
+
+/** Security notice after a password reset, so an owner who didn't do it finds out. */
+export async function sendPasswordChangedEmail(to: string, name: string): Promise<void> {
+  const resend = getResendClient()
+  if (!resend) return console.warn("RESEND_API_KEY is not set; can't send the password-changed notice.")
+  const firstName = name.trim().split(/\s+/)[0] || name
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#111827;">Your password was changed</h2>
+      <p style="color:#374151;">Hi ${escapeHtml(firstName)}, the password for your ${COMPANY_NAME} account was just reset, and every device that was signed in has been signed out.</p>
+      <p style="color:#374151;">If this wasn't you, reset your password again straight away and contact us at ${escapeHtml(COMPANY_EMAIL)}.</p>
+    </div>
+  `
+  try {
+    const result = await resend.emails.send({ from: process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>", to, subject: `Your ${COMPANY_NAME} password was changed`, html })
+    if (result.error) console.error("Failed to send password-changed email:", result.error)
+  } catch (error) {
+    console.error("Failed to send password-changed email:", error)
   }
 }

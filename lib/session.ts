@@ -1,10 +1,10 @@
 import { cache } from "react"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, createSessionToken, verifySessionToken } from "./auth"
+import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, createSessionToken, readSessionToken, readSignedValue, signValue, verifySessionToken } from "./auth"
 import { CUSTOMER_HINT_COOKIE } from "./session-config"
 import { ADMIN_TABS, canAccess, type AdminSection } from "./admin-roles"
-import { findAdminUser, findCustomer } from "./store"
+import { findAdminUser, findCustomer, findCustomerCredentialsById } from "./store"
 import type { AdminUser, Customer } from "./types"
 
 // Only usable in Server Components / Server Actions. The user is re-read from the
@@ -46,9 +46,57 @@ export async function requireAdminSection(section: AdminSection, from: string): 
 /** The signed-in customer, or `null`. */
 export const getCustomer = cache(async (): Promise<Customer | null> => {
   const store = await cookies()
-  const id = await verifySessionToken(store.get(CUSTOMER_SESSION_COOKIE)?.value, "customer")
-  return id ? findCustomer(id) : null
+  const session = await readSessionToken(store.get(CUSTOMER_SESSION_COOKIE)?.value, "customer")
+  const customer = session ? await findCustomerCredentialsById(session.userId) : null
+  if (!session || !customer?.emailVerified) return null
+  // A password reset or change signs out every session that began before it.
+  if (customer.passwordChangedAt && session.issuedAt < Date.parse(customer.passwordChangedAt)) return null
+  return { id: customer.id, email: customer.email, name: customer.name, phone: customer.phone, referralCode: customer.referralCode }
 })
+
+// --- Forgot-password flow state ---------------------------------------------------
+// Which step of /account/forgot-password this browser has reached lives only in this
+// signed, httpOnly cookie, scoped to that one page. Nothing about the flow is in the URL,
+// so a step can't be reached by typing an address, and the account can't be swapped
+// between steps (the email is fixed here at step 1).
+
+const PASSWORD_RESET_COOKIE = "password_reset"
+const PASSWORD_RESET_PATH = "/account/forgot-password"
+/** Minimum gap between reset codes; the page counts it down before enabling "Resend code". */
+export const RESET_RESEND_MS = 60 * 1000
+
+export type PasswordResetState =
+  | { stage: "code"; email: string; exp: number; /** When the latest code was requested (resend cooldown). */ sentAt: number }
+  | { stage: "verified"; customerId: string; nonce: string; exp: number }
+
+export async function writePasswordResetState(state: PasswordResetState): Promise<void> {
+  const store = await cookies()
+  store.set(PASSWORD_RESET_COOKIE, await signValue(Buffer.from(JSON.stringify(state)).toString("base64url")), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: PASSWORD_RESET_PATH,
+    maxAge: Math.max(0, Math.ceil((state.exp - Date.now()) / 1000)),
+  })
+}
+
+/** The flow's current step, or `null` if there isn't one (none started, expired, or tampered with). */
+export async function readPasswordResetState(): Promise<PasswordResetState | null> {
+  const store = await cookies()
+  const value = await readSignedValue(store.get(PASSWORD_RESET_COOKIE)?.value)
+  if (!value) return null
+  try {
+    const state = JSON.parse(Buffer.from(value, "base64url").toString()) as PasswordResetState
+    return typeof state.exp === "number" && Date.now() < state.exp ? state : null
+  } catch {
+    return null
+  }
+}
+
+export async function clearPasswordResetState(): Promise<void> {
+  const store = await cookies()
+  store.set(PASSWORD_RESET_COOKIE, "", { path: PASSWORD_RESET_PATH, maxAge: 0 })
+}
 
 export async function setSessionCookie(name: string, token: string, maxAge: number) {
   const store = await cookies()
@@ -64,8 +112,15 @@ export async function setSessionCookie(name: string, token: string, maxAge: numb
 /** Signs a customer in (password, email code, or Google). */
 export async function startCustomerSession(customerId: string) {
   await setSessionCookie(CUSTOMER_SESSION_COOKIE, await createSessionToken("customer", customerId), CUSTOMER_SESSION_MAX_AGE)
-  // Readable by the (statically rendered) site header, purely to show "My account" vs
-  // "Sign in". It grants nothing — the httpOnly session cookie is what's checked.
+  // Readable by the (statically rendered) site header, purely to show the signed-in avatar
+  // (name, for its initial) instead of "Sign in". It grants nothing — the httpOnly session
+  // cookie above is what's actually checked.
+  const customer = await findCustomer(customerId)
   const store = await cookies()
-  store.set(CUSTOMER_HINT_COOKIE, "1", { secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: CUSTOMER_SESSION_MAX_AGE })
+  store.set(CUSTOMER_HINT_COOKIE, encodeURIComponent(customer?.name?.trim() || "?"), {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: CUSTOMER_SESSION_MAX_AGE,
+  })
 }

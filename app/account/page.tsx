@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { AccountForms } from "@/components/account-forms"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { getCustomer } from "@/lib/session"
 import { isGoogleSignInConfigured } from "@/lib/google-oauth"
 import { listCustomerBookings } from "@/lib/store"
@@ -12,7 +13,7 @@ import { formatCurrency } from "@/lib/fleet"
 export const metadata: Metadata = { title: "Bookings" }
 export const dynamic = "force-dynamic"
 
-export default async function AccountBookingsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function AccountBookingsPage({ searchParams }: { searchParams: Promise<{ error?: string; reset?: string }> }) {
   const customer = await getCustomer()
 
   if (!customer) {
@@ -22,7 +23,7 @@ export default async function AccountBookingsPage({ searchParams }: { searchPara
           <h1 className="text-3xl font-semibold tracking-tight">Sign in or create an account</h1>
           <p className="mt-2 text-muted-foreground">Keep all your bookings in one place and book faster — your details are filled in for you.</p>
         </div>
-        <AccountForms googleEnabled={isGoogleSignInConfigured()} googleError={(await searchParams).error} />
+        <AccountForms googleEnabled={isGoogleSignInConfigured()} googleError={(await searchParams).error} passwordReset={(await searchParams).reset === "1"} />
       </>
     )
   }
@@ -37,19 +38,15 @@ export default async function AccountBookingsPage({ searchParams }: { searchPara
           <Link href="/book" className="font-medium text-primary underline-offset-4 hover:underline">Book a ride</Link>
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
           {bookings.map((booking) => (
             <li key={booking.reference}>
-              <Link href={`/booking/${booking.reference}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-sm transition-colors hover:bg-secondary/50">
-                <div className="min-w-0">
-                  <p className="font-medium">{formatDate(booking.pickupDate)} · {formatTimeLabel(booking.pickupTime)}</p>
-                  <p className="truncate text-muted-foreground">{booking.pickupAddress ?? "Pickup"} → {booking.dropoffAddress ?? booking.destinationAddress}</p>
-                  <p className="font-mono text-xs text-muted-foreground">{booking.reference}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className={STATUS_STYLES[booking.status]}>{STATUS_LABELS[booking.status]}</Badge>
-                  <span className="font-medium">{formatCurrency(booking.fare)}</span>
-                </div>
+              <Link href={`/booking/${booking.reference}`} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3.5 text-sm transition-colors hover:bg-secondary/50">
+                <p className="font-medium">{formatDate(booking.pickupDate)} · {formatTimeLabel(booking.pickupTime)}</p>
+                <Badge variant="outline" className={cn("justify-self-end", STATUS_STYLES[booking.status])}>{STATUS_LABELS[booking.status]}</Badge>
+                <p className="truncate text-muted-foreground">{booking.pickupAddress ?? "Pickup"} → {booking.dropoffAddress ?? booking.destinationAddress}</p>
+                <span className="justify-self-end font-medium">{formatCurrency(booking.fare)}</span>
+                <p className="col-span-2 font-mono text-xs text-muted-foreground">{booking.reference}</p>
               </Link>
             </li>
           ))}

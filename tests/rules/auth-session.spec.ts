@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { createSessionToken, renewSessionToken, verifySessionToken } from "@/lib/auth"
+import { createSessionToken, readSignedValue, renewSessionToken, signValue, verifySessionToken } from "@/lib/auth"
 import { hashPassword, verifyCredentials, verifyPassword } from "@/lib/password"
 import { canAccess } from "@/lib/admin-roles"
 import { passwordProblem } from "@/lib/password-policy"
@@ -48,4 +48,16 @@ test("roles only reach their sections", () => {
   expect(canAccess("admin", "users")).toBe(false)
   expect(canAccess("dispatcher", "pricing")).toBe(false)
   expect(canAccess("editor", "content")).toBe(true)
+})
+
+test("signed values (the password-reset step cookie) reject any tampering", async () => {
+  const state = Buffer.from(JSON.stringify({ stage: "code", email: "a@example.com", exp: Date.now() + 60_000 })).toString("base64url")
+  const token = await signValue(state)
+  expect(await readSignedValue(token)).toBe(state)
+  // Swapping the email (or skipping ahead to "verified") changes the payload, so the signature fails.
+  const forged = Buffer.from(JSON.stringify({ stage: "verified", customerId: "x", nonce: "y", exp: Date.now() + 60_000 })).toString("base64url")
+  expect(await readSignedValue(`${forged}.${token.split(".").pop()}`)).toBeNull()
+  expect(await readSignedValue(`${state}.deadbeef`)).toBeNull()
+  expect(await readSignedValue(state)).toBeNull()
+  expect(await readSignedValue(undefined)).toBeNull()
 })

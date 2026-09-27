@@ -154,6 +154,32 @@ export async function verifySessionToken(
   return (await readToken(token, kind))?.userId ?? null
 }
 
+/** Like verifySessionToken, plus when the session began (to reject sessions older than a password change). */
+export async function readSessionToken(
+  token: string | undefined | null,
+  kind: SessionKind,
+): Promise<{ userId: string; issuedAt: number } | null> {
+  const session = await readToken(token, kind)
+  return session ? { userId: session.userId, issuedAt: session.issuedAt } : null
+}
+
+/** HMAC-signs a value (which must not contain "."), e.g. for a tamper-proof cookie. */
+export async function signValue(value: string): Promise<string> {
+  return `${value}.${await sign(value)}`
+}
+
+/** The value inside a `signValue` token, or `null` if it's been tampered with. */
+export async function readSignedValue(token: string | undefined | null): Promise<string | null> {
+  const dotIndex = token?.lastIndexOf(".") ?? -1
+  if (!token || dotIndex <= 0) return null
+  const value = token.slice(0, dotIndex)
+  try {
+    return timingSafeEqual(token.slice(dotIndex + 1), await sign(value)) ? value : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Re-signs a still-valid admin token with a pushed-forward idle expiry, capped at the
  * absolute session lifetime. Called on every authenticated request so an active
