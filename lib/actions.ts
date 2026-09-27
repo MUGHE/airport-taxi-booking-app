@@ -41,6 +41,8 @@ import {
   applyPendingEmail,
   findCustomerCredentialsById,
   type CustomerCredentials,
+  type OtpPurpose,
+  setCustomerPassword,
   findAdminCredentials,
   findAdminUser,
   findCustomerCredentials,
@@ -57,11 +59,12 @@ import {
   listAdminUsers,
   updateAdminUser,
 } from "./store"
-import { createHash, randomInt, timingSafeEqual } from "node:crypto"
+import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto"
+import { after } from "next/server"
 import { z } from "zod"
 import { CUSTOMER_HINT_COOKIE, REFERRAL_COOKIE } from "./session-config"
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, SESSION_MAX_AGE, createSessionToken } from "./auth"
-import { getAdminUser, getCustomer, isAdminAuthenticated, setSessionCookie, startCustomerSession } from "./session"
+import { RESET_RESEND_MS, clearPasswordResetState, getAdminUser, getCustomer, isAdminAuthenticated, readPasswordResetState, setSessionCookie, startCustomerSession, writePasswordResetState } from "./session"
 import { hashPassword, verifyCredentials } from "./password"
 import { passwordProblem } from "./password-policy"
 import { isAdminRole, type AdminRole } from "./admin-roles"
@@ -78,6 +81,7 @@ import {
   sendLowRatingAlertEmail,
   sendReviewRequestEmail,
   sendVerificationCodeEmail,
+  sendPasswordChangedEmail,
 } from "./email"
 import { bulkPublishPlaceDrafts, getAdminDestinationPage, listAdminDestinationPages, listPlaceIdentityOptions, listReusableDestinationContent, reviewAdminDestinationPage, saveAdminDestinationPage, type BulkPublishSelection, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
@@ -181,19 +185,23 @@ const OTP_TTL_MS = 10 * 60 * 1000
 const OTP_RESEND_MS = 60 * 1000
 const OTP_MAX_ATTEMPTS = 5
 const hashOtp = (code: string) => createHash("sha256").update(code).digest()
+/** Flows that email a code (the reset flow's later "verified" permission is never emailed). */
+type CodePurpose = Exclude<OtpPurpose, "password_reset_verified">
 
 /** Emails a fresh 6-digit code, unless one went out in the last minute (that one still works). */
-async function sendCustomerOtp(customer: CustomerCredentials, to = customer.email): Promise<CustomerAuthResult> {
+async function sendCustomerOtp(customer: CustomerCredentials, purpose: CodePurpose, to = customer.email): Promise<CustomerAuthResult> {
   const lastSentAt = customer.otpExpiresAt ? Date.parse(customer.otpExpiresAt) - OTP_TTL_MS : 0
-  if (Date.now() - lastSentAt < OTP_RESEND_MS) return { ok: true, needsCode: true }
+  // The throttle only covers a code for the same flow; a different flow always gets its own.
+  if ((customer.otpPurpose ?? "signup") === purpose && Date.now() - lastSentAt < OTP_RESEND_MS) return { ok: true, needsCode: true }
 
   const code = String(randomInt(1_000_000)).padStart(6, "0")
   await updateCustomerVerification(customer.id, {
     otp_hash: hashOtp(code).toString("hex"),
     otp_expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
     otp_attempts: 0,
+    otp_purpose: purpose,
   })
-  const sent = await sendVerificationCodeEmail(to, customer.name, code)
+  const sent = await sendVerificationCodeEmail(to, customer.name, code, purpose)
   if (!sent.ok) return { ok: false, error: "We couldn't send your verification code. Please try again shortly." }
   return { ok: true, needsCode: true }
 }
@@ -206,21 +214,21 @@ export async function registerCustomer(input: { name: string; email: string; pho
   if (weak) return { ok: false, error: weak }
   const customer = await savePendingCustomer({ ...input, passwordHash: await hashPassword(input.password) })
   if (!customer) return { ok: false, error: "An account with this email already exists. Sign in instead." }
-  return sendCustomerOtp(customer)
+  return sendCustomerOtp(customer, "signup")
 }
 
 export async function resendCustomerCode(email: string): Promise<CustomerAuthResult> {
   const customer = await findCustomerCredentials(email ?? "")
   if (!customer || customer.emailVerified) return { ok: false, error: "There's no sign-up waiting for this email. Start again." }
-  return sendCustomerOtp(customer)
+  return sendCustomerOtp(customer, "signup")
 }
 
 /**
  * Checks a code against the customer's outstanding one, counting the guess against the
  * limit. Returns why it failed, or `null` when it matches.
  */
-async function checkCustomerOtp(customer: CustomerCredentials, code: string): Promise<string | null> {
-  if (!customer.otpHash || !customer.otpExpiresAt) return "This code isn't valid any more. Request a new one."
+async function checkCustomerOtp(customer: CustomerCredentials, code: string, purpose: CodePurpose): Promise<string | null> {
+  if (!customer.otpHash || !customer.otpExpiresAt || (customer.otpPurpose ?? "signup") !== purpose) return "This code isn't valid any more. Request a new one."
   if (Date.now() > Date.parse(customer.otpExpiresAt)) return "This code has expired. Request a new one."
   if (customer.otpAttempts >= OTP_MAX_ATTEMPTS || !(await claimOtpAttempt(customer.id, customer.otpAttempts))) {
     return "Too many attempts. Request a new code."
@@ -237,10 +245,10 @@ async function checkCustomerOtp(customer: CustomerCredentials, code: string): Pr
 export async function verifyCustomerEmail(email: string, code: string): Promise<CustomerAuthResult> {
   const customer = await findCustomerCredentials(email ?? "")
   if (!customer || customer.emailVerified) return { ok: false, error: "This code isn't valid any more. Request a new one." }
-  const problem = await checkCustomerOtp(customer, code)
+  const problem = await checkCustomerOtp(customer, code, "signup")
   if (problem) return { ok: false, error: problem }
 
-  await updateCustomerVerification(customer.id, { email_verified: true, otp_hash: null, otp_expires_at: null, otp_attempts: 0 })
+  await updateCustomerVerification(customer.id, { email_verified: true, otp_hash: null, otp_expires_at: null, otp_attempts: 0, otp_purpose: null })
   await startCustomerSession(customer.id)
   return { ok: true }
 }
@@ -266,7 +274,9 @@ export async function changeCustomerPasswordAction(currentPassword: string, newP
   if (hasPassword && newPassword === currentPassword) return { ok: false, error: "Choose a password different from your current one." }
   const weak = passwordProblem(newPassword, customer.email)
   if (weak) return { ok: false, error: weak }
-  await updateCustomerAccount(customer.id, { password_hash: await hashPassword(newPassword) })
+  // Signs out every other device (see setCustomerPassword), then keeps this one signed in.
+  await setCustomerPassword(customer.id, await hashPassword(newPassword))
+  await startCustomerSession(customer.id)
   return { ok: true }
 }
 
@@ -288,7 +298,7 @@ export async function requestCustomerEmailChangeAction(newEmail: string, current
   // A different new address than last time needs a fresh code, not the throttled old one.
   const resend = credentials.pendingEmail === email ? credentials : { ...credentials, otpExpiresAt: null }
   await updateCustomerAccount(customer.id, { pending_email: email })
-  return sendCustomerOtp(resend, email)
+  return sendCustomerOtp(resend, "email_change", email)
 }
 
 /** Step 2: the code from the new inbox makes it the login email. */
@@ -297,7 +307,7 @@ export async function confirmCustomerEmailChangeAction(code: string): Promise<Lo
   if (!customer) return { ok: false, error: "Your session has expired. Sign in again." }
   const credentials = await findCustomerCredentialsById(customer.id)
   if (!credentials?.pendingEmail) return { ok: false, error: "There's no email change waiting. Start again." }
-  const problem = await checkCustomerOtp(credentials, code)
+  const problem = await checkCustomerOtp(credentials, code, "email_change")
   if (problem) return { ok: false, error: problem }
   if (!(await applyPendingEmail(customer.id, credentials.pendingEmail))) return { ok: false, error: "An account with this email already exists." }
   revalidatePath("/account", "layout")
@@ -314,7 +324,7 @@ export async function loginCustomer(email: string, password: string): Promise<Cu
     return { ok: false, error: "Incorrect email or password." }
   }
   // Right password but the sign-up was never finished: send them back to the code step.
-  if (!customer.emailVerified) return sendCustomerOtp(customer)
+  if (!customer.emailVerified) return sendCustomerOtp(customer, "signup")
   await startCustomerSession(customer.id)
   return { ok: true }
 }
@@ -323,6 +333,92 @@ export async function logoutCustomer(): Promise<void> {
   const store = await cookies()
   store.delete(CUSTOMER_SESSION_COOKIE)
   store.delete(CUSTOMER_HINT_COOKIE)
+}
+
+// --- Forgot password ---------------------------------------------------------------
+// Three steps on /account/forgot-password: email → emailed code → new password. Which step
+// this browser is on is held server-side in a signed cookie (lib/session.ts), never in the
+// URL. Every step answers the same whether or not the email has an account, and codes go
+// out after the response, so neither wording nor timing reveals who's registered.
+
+const RESET_FLOW_MS = 15 * 60 * 1000
+const RESET_PERMISSION_MS = 10 * 60 * 1000
+const RESET_CODE_PROBLEM = "That code isn't right or has expired. Check the latest email, or start again."
+const RESET_EXPIRED = "Your reset session has expired. Please start again."
+
+/** Emails a reset code if (and only if) this is a verified account — after the response is sent. */
+function sendResetCodeLater(email: string) {
+  after(async () => {
+    const customer = await findCustomerCredentials(email)
+    if (!customer?.emailVerified) return
+    const result = await sendCustomerOtp(customer, "password_reset")
+    if (!result.ok) console.error(`Password reset code not sent: ${result.error}`)
+  })
+}
+
+/** Step 1. Always "succeeds", so the form can't be used to test which emails have accounts. */
+export async function requestPasswordResetAction(email: string): Promise<LoginResult> {
+  const normalized = (email ?? "").trim().toLowerCase()
+  if (!emailSchema.safeParse(normalized).success) return { ok: false, error: "Enter a valid email address." }
+  await writePasswordResetState({ stage: "code", email: normalized, exp: Date.now() + RESET_FLOW_MS, sentAt: Date.now() })
+  sendResetCodeLater(normalized)
+  return { ok: true }
+}
+
+/** Resends to the email fixed at step 1 (never one supplied now). Same one-a-minute throttle. */
+export async function resendPasswordResetCodeAction(): Promise<LoginResult> {
+  const state = await readPasswordResetState()
+  if (state?.stage !== "code") return { ok: false, error: RESET_EXPIRED }
+  // Matches the page's 60-second countdown, so clicking early (or scripting it) sends nothing.
+  const wait = Math.ceil((state.sentAt + RESET_RESEND_MS - Date.now()) / 1000)
+  if (wait > 0) return { ok: false, error: `You can request a new code in ${wait} seconds.` }
+  await writePasswordResetState({ ...state, sentAt: Date.now() })
+  sendResetCodeLater(state.email)
+  return { ok: true }
+}
+
+/** Step 2. A correct code swaps the flow to a single-use, 10-minute permission to set a password. */
+export async function verifyPasswordResetCodeAction(code: string): Promise<LoginResult> {
+  const state = await readPasswordResetState()
+  if (state?.stage !== "code") return { ok: false, error: RESET_EXPIRED }
+  const customer = await findCustomerCredentials(state.email)
+  // One message for every failure (wrong, expired, too many tries, or no such account).
+  if (!customer?.emailVerified || (await checkCustomerOtp(customer, code, "password_reset"))) return { ok: false, error: RESET_CODE_PROBLEM }
+
+  const nonce = randomBytes(32).toString("base64url")
+  const exp = Date.now() + RESET_PERMISSION_MS
+  // Stored hashed, so the permission is spent (single use) once setCustomerPassword clears it.
+  await updateCustomerVerification(customer.id, { otp_purpose: "password_reset_verified", otp_hash: hashOtp(nonce).toString("hex"), otp_expires_at: new Date(exp).toISOString(), otp_attempts: 0 })
+  await writePasswordResetState({ stage: "verified", customerId: customer.id, nonce, exp })
+  return { ok: true }
+}
+
+/** Step 3. Sets the password, signs the account out everywhere, and ends the flow. */
+export async function resetPasswordAction(newPassword: string): Promise<LoginResult> {
+  const state = await readPasswordResetState()
+  if (state?.stage !== "verified") return { ok: false, error: RESET_EXPIRED }
+  const customer = await findCustomerCredentialsById(state.customerId)
+  const expected = customer?.otpPurpose === "password_reset_verified" && customer.otpHash && customer.otpExpiresAt && Date.now() < Date.parse(customer.otpExpiresAt)
+    ? Buffer.from(customer.otpHash, "hex")
+    : null
+  const presented = hashOtp(state.nonce)
+  if (!customer || !expected || expected.length !== presented.length || !timingSafeEqual(expected, presented)) {
+    await clearPasswordResetState()
+    return { ok: false, error: RESET_EXPIRED }
+  }
+  const weak = passwordProblem(newPassword, customer.email)
+  if (weak) return { ok: false, error: weak }
+
+  await setCustomerPassword(customer.id, await hashPassword(newPassword))
+  await clearPasswordResetState()
+  after(() => sendPasswordChangedEmail(customer.email, customer.name))
+  return { ok: true }
+}
+
+/** "Start again": forgets which step this browser was on. */
+export async function cancelPasswordResetAction(): Promise<LoginResult> {
+  await clearPasswordResetState()
+  return { ok: true }
 }
 
 /**

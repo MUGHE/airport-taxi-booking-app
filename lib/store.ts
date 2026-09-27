@@ -392,16 +392,24 @@ export async function updateAdminUser(id: string, changes: { role?: AdminRole; a
   return data ? toAdminUser(data as AdminUserRow) : null
 }
 
+/** What an outstanding one-time code is for; a code only ever completes its own flow. */
+export type OtpPurpose = "signup" | "email_change" | "password_reset" | "password_reset_verified"
 type CustomerRow = {
   id: string; email: string; name: string; phone: string; password_hash: string; created_at: string
   email_verified: boolean; otp_hash: string | null; otp_expires_at: string | null; otp_attempts: number; referral_code: string | null; pending_email: string | null; google_sub: string | null
+  otp_purpose: OtpPurpose | null; password_changed_at: string | null
 }
 function toCustomer(row: CustomerRow): Customer {
   return { id: row.id, email: row.email, name: row.name, phone: row.phone, referralCode: row.referral_code ?? undefined }
 }
-export type CustomerCredentials = Customer & { passwordHash: string; emailVerified: boolean; otpHash: string | null; otpExpiresAt: string | null; otpAttempts: number; pendingEmail: string | null; googleSub: string | null }
+export type CustomerCredentials = Customer & { passwordHash: string; emailVerified: boolean; otpHash: string | null; otpExpiresAt: string | null; otpAttempts: number; pendingEmail: string | null; googleSub: string | null
+  /** NULL means a sign-up code (sent before purposes were recorded). */
+  otpPurpose: OtpPurpose | null; passwordChangedAt: string | null
+}
 function toCustomerCredentials(row: CustomerRow): CustomerCredentials {
-  return { ...toCustomer(row), passwordHash: row.password_hash, emailVerified: row.email_verified, otpHash: row.otp_hash, otpExpiresAt: row.otp_expires_at, otpAttempts: row.otp_attempts, pendingEmail: row.pending_email ?? null, googleSub: row.google_sub ?? null }
+  return { ...toCustomer(row), passwordHash: row.password_hash, emailVerified: row.email_verified, otpHash: row.otp_hash, otpExpiresAt: row.otp_expires_at, otpAttempts: row.otp_attempts, pendingEmail: row.pending_email ?? null, googleSub: row.google_sub ?? null,
+    otpPurpose: row.otp_purpose ?? null, passwordChangedAt: row.password_changed_at ?? null,
+  }
 }
 export async function findCustomerCredentials(email: string): Promise<CustomerCredentials | null> {
   const { data, error } = await getSupabase().from("customers").select("*").eq("email", email.trim().toLowerCase()).maybeSingle()
@@ -470,7 +478,18 @@ export async function createGoogleCustomer(customer: { email: string; name: stri
   if (error) return isUniqueViolation(error) ? null : throwDatabaseError(error)
   return toCustomer(data as CustomerRow)
 }
-export async function updateCustomerVerification(id: string, changes: Partial<Pick<CustomerRow, "email_verified" | "otp_hash" | "otp_expires_at" | "otp_attempts">>): Promise<void> {
+/**
+ * Sets a new password, spends any outstanding code (so a reset permission is single-use),
+ * and stamps password_changed_at, which signs out every session that started before now.
+ * The timestamp comes from this server's clock, the same one session tokens use.
+ */
+export async function setCustomerPassword(id: string, passwordHash: string): Promise<void> {
+  const { error } = await getSupabase().from("customers")
+    .update({ password_hash: passwordHash, password_changed_at: new Date().toISOString(), otp_hash: null, otp_expires_at: null, otp_attempts: 0, otp_purpose: null })
+    .eq("id", id)
+  if (error) throwDatabaseError(error)
+}
+export async function updateCustomerVerification(id: string, changes: Partial<Pick<CustomerRow, "email_verified" | "otp_hash" | "otp_expires_at" | "otp_attempts" | "otp_purpose">>): Promise<void> {
   const { error } = await getSupabase().from("customers").update(changes).eq("id", id)
   if (error) throwDatabaseError(error)
 }
@@ -552,6 +571,7 @@ export async function deletePendingReferralCommission(bookingReference: string):
 
 type ReferralCommissionRow = {
   booking_reference: string; referrer_customer_id: string; amount: number; status: ReferralCommission["status"]; created_at: string; paid_at: string | null
+  payout_id: string | null
   customers?: { name: string; email: string; referral_code: string | null } | null
   bookings?: { pickup_date: string; customer_name: string; vehicle_id: string; fare: number } | null
 }
@@ -563,7 +583,7 @@ function shortName(fullName: string): string {
 function toReferralCommission(row: ReferralCommissionRow): ReferralCommission {
   return {
     bookingReference: row.booking_reference, referrerCustomerId: row.referrer_customer_id, amount: Number(row.amount),
-    status: row.status, createdAt: row.created_at, paidAt: row.paid_at ?? undefined,
+    status: row.status, createdAt: row.created_at, paidAt: row.paid_at ?? undefined, payoutId: row.payout_id ?? undefined,
     referrer: row.customers ? { name: row.customers.name, email: row.customers.email, referralCode: row.customers.referral_code } : undefined,
     ride: row.bookings ? {
       date: row.bookings.pickup_date,

@@ -202,6 +202,8 @@ export interface ReferralCommission {
   status: "pending" | "paid"
   createdAt: string
   paidAt?: string
+  /** Which payout settled this commission — joins it to that payout's receipt. */
+  payoutId?: string
   /** Joined for the admin payout view. */
   referrer?: { name: string; email: string; referralCode: string | null }
   /** The referred ride, trimmed to what a referrer may see (never its reference or contact details). */

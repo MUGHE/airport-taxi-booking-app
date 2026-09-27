@@ -5,11 +5,13 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Check, Copy, Loader2, LogOut, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ChangePasswordForm } from "@/components/change-password-form"
 import { PasswordChecklist } from "@/components/password-checklist"
 import { passwordProblem } from "@/lib/password-policy"
-import { confirmCustomerEmailChangeAction, loginCustomer, logoutCustomer, registerCustomer, requestCustomerEmailChangeAction, resendCustomerCode, updateCustomerProfileAction, verifyCustomerEmail, type CustomerAuthResult } from "@/lib/actions"
+import { changeCustomerPasswordAction, confirmCustomerEmailChangeAction, loginCustomer, logoutCustomer, registerCustomer, requestCustomerEmailChangeAction, resendCustomerCode, updateCustomerProfileAction, verifyCustomerEmail, type CustomerAuthResult } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 
 const TITLES = { signin: "Sign in", register: "Create an account", verify: "Check your email" }
@@ -23,13 +25,13 @@ const GOOGLE_ERRORS: Record<string, string> = {
   "google-failed": "Google sign-in didn't work. Please try again.",
 }
 
-export function AccountForms({ googleEnabled = false, googleError }: { googleEnabled?: boolean; googleError?: string }) {
+export function AccountForms({ googleEnabled = false, googleError, passwordReset = false }: { googleEnabled?: boolean; googleError?: string; passwordReset?: boolean }) {
   const router = useRouter()
   const [mode, setMode] = useState<"signin" | "register" | "verify">("signin")
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" })
   const [code, setCode] = useState("")
   const [error, setError] = useState(googleError ? GOOGLE_ERRORS[googleError] ?? GOOGLE_ERRORS["google-failed"] : "")
-  const [notice, setNotice] = useState("")
+  const [notice, setNotice] = useState(passwordReset ? "Your password has been reset and you've been signed out everywhere. Sign in with your new password." : "")
   const [isPending, startTransition] = useTransition()
   const registering = mode === "register"
   const field = (key: keyof typeof form) => ({
@@ -91,7 +93,10 @@ export function AccountForms({ googleEnabled = false, googleError }: { googleEna
             )}
             <div className="space-y-1.5"><Label htmlFor="account-email">Email</Label><Input id="account-email" type="email" required autoComplete="email" {...field("email")} /></div>
             <div className="space-y-1.5">
-              <Label htmlFor="account-password">Password</Label>
+              <div className="flex items-baseline justify-between gap-3">
+                <Label htmlFor="account-password">Password</Label>
+                {mode === "signin" && <Link href="/account/forgot-password" className="text-xs font-medium text-primary underline-offset-4 hover:underline">Forgot password?</Link>}
+              </div>
               <Input id="account-password" type="password" required aria-describedby={registering ? "account-password-rules" : undefined} autoComplete={registering ? "new-password" : "current-password"} {...field("password")} />
               {registering && <PasswordChecklist id="account-password-rules" password={form.password} email={form.email} />}
             </div>
@@ -196,23 +201,67 @@ function FormMessage({ error, success }: { error: string; success: string }) {
   return null
 }
 
-export function ProfileForm({ name, phone }: { name: string; phone: string }) {
+/**
+ * Name, phone, and email in one form with a single "Save changes" button. Changing the email
+ * still needs its own confirm-the-code step below (it can't be collapsed into the same click —
+ * the code hasn't been sent yet), but the button that kicks everything off is unified.
+ */
+export function ProfileForm({ name, phone, email, hasPassword }: { name: string; phone: string; email: string; hasPassword: boolean }) {
   const router = useRouter()
-  const [form, setForm] = useState({ name, phone })
+  const [form, setForm] = useState({ name, phone, email })
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [code, setCode] = useState("")
+  const [step, setStep] = useState<"edit" | "confirm">("edit")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isPending, startTransition] = useTransition()
-  const unchanged = form.name === name && form.phone === phone
+  const emailChanged = form.email.trim().toLowerCase() !== email.trim().toLowerCase()
+  const unchanged = form.name === name && form.phone === phone && !emailChanged
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(""); setSuccess("")
+    if (emailChanged && !currentPassword) { setError("Enter your current password to change your email address."); return }
     startTransition(async () => {
-      const result = await updateCustomerProfileAction(form)
-      if (!result.ok) { setError(result.error || "Something went wrong. Please try again."); return }
-      setSuccess("Your details have been saved.")
+      if (emailChanged) {
+        const emailResult = await requestCustomerEmailChangeAction(form.email, currentPassword)
+        if (!emailResult.ok) { setError(emailResult.error || "Something went wrong. Please try again."); return }
+      }
+      const profileResult = await updateCustomerProfileAction({ name: form.name, phone: form.phone })
+      if (!profileResult.ok) { setError(profileResult.error || "Something went wrong. Please try again."); return }
+      if (emailChanged) { setStep("confirm"); setCurrentPassword("") }
+      else setSuccess("Your details have been saved.")
       router.refresh()
     })
+  }
+
+  function confirmEmail(e: React.FormEvent) {
+    e.preventDefault()
+    setError("")
+    startTransition(async () => {
+      const result = await confirmCustomerEmailChangeAction(code)
+      if (!result.ok) { setError(result.error || "Something went wrong. Please try again."); return }
+      setStep("edit"); setCode("")
+      setSuccess("Your email has been changed. Use the new address next time you sign in.")
+      router.refresh()
+    })
+  }
+
+  if (step === "confirm") {
+    return (
+      <form onSubmit={confirmEmail} className="space-y-4">
+        <p className="text-sm text-muted-foreground">We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>. Enter it to switch to this address.</p>
+        <div className="max-w-48 space-y-1.5">
+          <Label htmlFor="email-change-code">Verification code</Label>
+          <Input id="email-change-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required autoFocus className="text-center font-mono text-lg tracking-[0.5em]" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+        </div>
+        <FormMessage error={error} success="" />
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={isPending || code.length !== 6}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm new email</Button>
+          <Button type="button" variant="ghost" disabled={isPending} onClick={() => { setStep("edit"); setForm({ ...form, email }); setError("") }}>Cancel</Button>
+        </div>
+      </form>
+    )
   }
 
   return (
@@ -221,69 +270,39 @@ export function ProfileForm({ name, phone }: { name: string; phone: string }) {
         <div className="space-y-1.5"><Label htmlFor="profile-name">Full name</Label><Input id="profile-name" required autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor="profile-phone">Phone</Label><Input id="profile-phone" type="tel" required autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="profile-email">Email</Label>
+        <Input id="profile-email" type="email" required autoComplete="email" disabled={!hasPassword} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        {!hasPassword && <p className="text-xs text-muted-foreground">Signed in with Google — set a password to change your email address.</p>}
+      </div>
+      {emailChanged && (
+        <div className="space-y-1.5">
+          <Label htmlFor="profile-current-password">Current password</Label>
+          <Input id="profile-current-password" type="password" required autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+        </div>
+      )}
       <FormMessage error={error} success={success} />
-      <Button type="submit" disabled={isPending || unchanged}>{isPending && <Loader2 className="size-4 animate-spin" />}Save details</Button>
+      <Button type="submit" disabled={isPending || unchanged}>{isPending && <Loader2 className="size-4 animate-spin" />}Save changes</Button>
     </form>
   )
 }
 
-export function EmailChangeForm() {
-  const router = useRouter()
-  const [step, setStep] = useState<"request" | "confirm">("request")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [code, setCode] = useState("")
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const [isPending, startTransition] = useTransition()
-
-  function request() {
-    setError(""); setSuccess("")
-    startTransition(async () => {
-      const result = await requestCustomerEmailChangeAction(email, password)
-      if (!result.ok) { setError(result.error || "Something went wrong. Please try again."); return }
-      setStep("confirm"); setCode(""); setPassword("")
-    })
-  }
-
-  function confirm(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    startTransition(async () => {
-      const result = await confirmCustomerEmailChangeAction(code)
-      if (!result.ok) { setError(result.error || "Something went wrong. Please try again."); return }
-      setStep("request"); setEmail(""); setCode("")
-      setSuccess("Your email has been changed. Use the new address next time you sign in.")
-      router.refresh()
-    })
-  }
-
-  if (step === "confirm") {
-    return (
-      <form onSubmit={confirm} className="space-y-4">
-        <p className="text-sm text-muted-foreground">We sent a 6-digit code to <span className="font-medium text-foreground">{email}</span>. Enter it to switch to this address.</p>
-        <div className="max-w-48 space-y-1.5">
-          <Label htmlFor="email-change-code">Verification code</Label>
-          <Input id="email-change-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required autoFocus className="text-center font-mono text-lg tracking-[0.5em]" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
-        </div>
-        <FormMessage error={error} success="" />
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={isPending || code.length !== 6}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm new email</Button>
-          <Button type="button" variant="ghost" disabled={isPending} onClick={() => { setStep("request"); setError("") }}>Use a different email</Button>
-        </div>
-      </form>
-    )
-  }
+/** "Change password" trigger + the actual form inside a popup, instead of sitting inline on the page. */
+export function ChangePasswordDialog({ email, hasPassword }: { email: string; hasPassword: boolean }) {
+  const [open, setOpen] = useState(false)
+  const label = hasPassword ? "Change password" : "Set a password"
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); request() }} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5"><Label htmlFor="email-change-new">New email</Label><Input id="email-change-new" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label htmlFor="email-change-password">Current password</Label><Input id="email-change-password" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-      </div>
-      <FormMessage error={error} success={success} />
-      <Button type="submit" disabled={isPending || !email || !password}>{isPending && <Loader2 className="size-4 animate-spin" />}Send code</Button>
-    </form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button type="button" variant="outline" />}>{label}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{label}</DialogTitle>
+          {!hasPassword && <DialogDescription>Optional: lets you sign in with your email and password as well as Google.</DialogDescription>}
+        </DialogHeader>
+        <ChangePasswordForm email={email} action={changeCustomerPasswordAction} requireCurrent={hasPassword} />
+      </DialogContent>
+    </Dialog>
   )
 }
 
