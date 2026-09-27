@@ -1,11 +1,13 @@
 import type { Metadata } from "next"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 import { getAllBookingAddOns, getAllBookings, getVehicleFleet } from "@/lib/actions"
+import { requireAdminSection } from "@/lib/session"
 
 export const metadata: Metadata = { title: "Bookings" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminBookingsPage() {
+  await requireAdminSection("bookings", "/admin")
   const [bookings, vehicles, addOns] = await Promise.all([
     getAllBookings(),
     getVehicleFleet(),

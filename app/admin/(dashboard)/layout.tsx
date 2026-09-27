@@ -3,6 +3,12 @@ import { SiteHeader } from "@/components/site-header"
 import { LogoutButton } from "@/components/admin/logout-button"
 import { AdminNav } from "@/components/admin/admin-nav"
 import { IdleSessionGuard } from "@/components/admin/idle-session-guard"
+import { redirect } from "next/navigation"
+import { getAdminUser } from "@/lib/session"
+import { ADMIN_ROLES } from "@/lib/admin-roles"
+import Link from "next/link"
+import { KeyRound } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export const metadata: Metadata = {
   title: {
@@ -13,7 +19,11 @@ export const metadata: Metadata = {
   alternates: { canonical: null },
 }
 
-export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getAdminUser()
+  if (!user) redirect("/admin/login")
+  if (user.mustChangePassword) redirect("/admin/change-password")
+
   return (
     <div className="flex min-h-screen flex-col">
       <IdleSessionGuard />
@@ -27,9 +37,16 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
               calculation up to date.
             </p>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            <p className="text-right text-sm leading-tight">
+              <span className="block font-medium">{user.name || user.email}</span>
+              <span className="text-muted-foreground">{ADMIN_ROLES[user.role].label}</span>
+            </p>
+            <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/admin/change-password" />}><KeyRound className="size-4" />Change password</Button>
+            <LogoutButton />
+          </div>
         </div>
-        <AdminNav />
+        <AdminNav sections={ADMIN_ROLES[user.role].sections} />
         <div className="mt-8">{children}</div>
       </main>
     </div>

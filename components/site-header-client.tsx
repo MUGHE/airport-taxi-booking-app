@@ -3,8 +3,9 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { Menu, X } from "lucide-react"
+import { useState, useSyncExternalStore } from "react"
+import { Menu, UserRound, X } from "lucide-react"
+import { CUSTOMER_HINT_COOKIE } from "@/lib/session-config"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
@@ -67,6 +68,9 @@ function DesktopAirportNavigation({ airports }: { airports: AirportDirectoryEntr
 export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry[] }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  // Re-read on every render (router.refresh after sign-in/out re-renders this), false on the server.
+  const signedIn = useSyncExternalStore(() => () => {}, () => document.cookie.split("; ").includes(`${CUSTOMER_HINT_COOKIE}=1`), () => false)
+  const accountLabel = signedIn ? "My account" : "Sign in"
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -77,10 +81,10 @@ export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry
           <Link href="/destinations" className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === "/destinations" && "text-foreground")}>Destinations</Link>
           {NAV.map((item) => <Link key={item.href} href={item.href} className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === item.href && "text-foreground")}>{item.label}</Link>)}
         </nav>
-        <div className="hidden md:block"><Button nativeButton={false} render={<Link href="/book" />}>Book a Ride</Button></div>
+        <div className="hidden items-center gap-2 md:flex"><Button variant="ghost" nativeButton={false} render={<Link href="/account" />}><UserRound className="size-4" />{accountLabel}</Button><Button nativeButton={false} render={<Link href="/book" />}>Book a Ride</Button></div>
         <button type="button" aria-label="Toggle menu" className="inline-flex size-9 items-center justify-center rounded-md text-foreground md:hidden" onClick={() => setOpen((value) => !value)}>{open ? <X className="size-5" /> : <Menu className="size-5" />}</button>
       </div>
-      {open && <div className="border-t border-border/60 bg-background md:hidden"><nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3"><details className="rounded-md"><summary className="cursor-pointer list-none rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Airports</summary><div className="ml-3 border-l border-border pl-3"><AirportLinks airports={airports} onNavigate={() => setOpen(false)} /></div></details><Link href="/destinations" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Destinations</Link>{NAV.map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">{item.label}</Link>)}<Button className="mt-2" nativeButton={false} render={<Link href="/book" onClick={() => setOpen(false)} />}>Book a Ride</Button></nav></div>}
+      {open && <div className="border-t border-border/60 bg-background md:hidden"><nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3"><details className="rounded-md"><summary className="cursor-pointer list-none rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Airports</summary><div className="ml-3 border-l border-border pl-3"><AirportLinks airports={airports} onNavigate={() => setOpen(false)} /></div></details><Link href="/destinations" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Destinations</Link>{NAV.map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">{item.label}</Link>)}<Link href="/account" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><UserRound className="size-4" />{accountLabel}</Link><Button className="mt-2" nativeButton={false} render={<Link href="/book" onClick={() => setOpen(false)} />}>Book a Ride</Button></nav></div>}
     </header>
   )
 }

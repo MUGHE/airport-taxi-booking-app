@@ -9,7 +9,7 @@ test("unauthenticated visitors cannot open Full Preview", async ({ page }) => {
 test("admin can create an Airport Page draft and reload its identity and terminals", async ({ page }) => {
   test.skip(
     process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
-    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+    "Set RUN_ADMIN_E2E=1, ADMIN_E2E_EMAIL and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
   )
 
   const suffix = Date.now().toString()
@@ -17,6 +17,7 @@ test("admin can create an Airport Page draft and reload its identity and termina
   const slug = `browser-airport-${suffix}-airport-taxi`
 
   await page.goto("/admin/login")
+  await page.getByLabel("Email").fill(process.env.ADMIN_E2E_EMAIL!)
   await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
   await page.getByRole("button", { name: "Sign in" }).click()
   await page.goto("/admin/destination-pages/new")
@@ -89,13 +90,14 @@ test("admin can create an Airport Page draft and reload its identity and termina
 test("admin can create a Place Page draft and reload it after saving", async ({ page }) => {
   test.skip(
     process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
-    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+    "Set RUN_ADMIN_E2E=1, ADMIN_E2E_EMAIL and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
   )
 
   const suffix = Date.now().toString()
   const displayName = `Browser Place ${suffix}`
 
   await page.goto("/admin/login")
+  await page.getByLabel("Email").fill(process.env.ADMIN_E2E_EMAIL!)
   await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
   await page.getByRole("button", { name: "Sign in" }).click()
   await page.goto("/admin/destination-pages/new?type=place")
@@ -117,10 +119,11 @@ test("admin can create a Place Page draft and reload it after saving", async ({ 
 test("admin can compose controlled sections and explicitly save them as a draft", async ({ page }) => {
   test.skip(
     process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
-    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+    "Set RUN_ADMIN_E2E=1, ADMIN_E2E_EMAIL and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
   )
 
   await page.goto("/admin/login")
+  await page.getByLabel("Email").fill(process.env.ADMIN_E2E_EMAIL!)
   await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
   await page.getByRole("button", { name: "Sign in" }).click()
   await page.goto("/admin/destination-pages/new")
@@ -157,10 +160,11 @@ test("admin can compose controlled sections and explicitly save them as a draft"
 test("admin sees reusable content selectors and local FAQ minimum feedback", async ({ page }) => {
   test.skip(
     process.env.RUN_ADMIN_E2E !== "1" || !process.env.ADMIN_E2E_PASSWORD,
-    "Set RUN_ADMIN_E2E=1 and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
+    "Set RUN_ADMIN_E2E=1, ADMIN_E2E_EMAIL and ADMIN_E2E_PASSWORD for the database-backed admin journey.",
   )
 
   await page.goto("/admin/login")
+  await page.getByLabel("Email").fill(process.env.ADMIN_E2E_EMAIL!)
   await page.getByLabel("Password").fill(process.env.ADMIN_E2E_PASSWORD!)
   await page.getByRole("button", { name: "Sign in" }).click()
   await page.goto("/admin/destination-pages/new")

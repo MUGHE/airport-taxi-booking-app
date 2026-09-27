@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { AirportPageRenderer } from "@/components/airport-page/airport-page-renderer"
 import { PlacePageRenderer } from "@/components/place-page/place-page-renderer"
-import { isAdminAuthenticated } from "@/lib/session"
+import { requireAdminSection } from "@/lib/session"
 import { createDraftAirportPagePresentation, createDraftPlacePagePresentation } from "@/lib/destination-pages"
 import { getAdminDestinationPage } from "@/lib/admin-destination-pages"
 
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default async function DraftPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  if (!(await isAdminAuthenticated())) redirect(`/admin/login?from=/admin/destination-pages/${id}/preview`)
+  await requireAdminSection("content", `/admin/destination-pages/${id}/preview`)
   const page = await getAdminDestinationPage(id)
   if (!page) notFound()
   return page.pageType === "place" ? <PlacePageRenderer page={await createDraftPlacePagePresentation(page)} showFooter={false} analyticsEnabled={false} /> : <AirportPageRenderer page={await createDraftAirportPagePresentation(page)} showFooter={false} />

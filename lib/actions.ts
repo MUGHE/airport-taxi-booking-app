@@ -33,13 +33,42 @@ import {
   deleteAddOn as removeAddOn,
   upsertPromoCode as savePromoCode,
   deletePromoCode as removePromoCode,
+  createAdminUser,
+  claimOtpAttempt,
+  savePendingCustomer,
+  updateCustomerVerification,
+  updateCustomerAccount,
+  applyPendingEmail,
+  findCustomerCredentialsById,
+  type CustomerCredentials,
+  findAdminCredentials,
+  findAdminUser,
+  findCustomerCredentials,
+  linkBookingAccounts,
+  findCustomerByReferralCode,
+  getReferralSettings as getStoredReferralSettings,
+  updateReferralSettings as setReferralSettings,
+  recordReferralCommission,
+  deletePendingReferralCommission,
+  isAllowedReceipt,
+  recordReferralPayout,
+  removeReferralReceipt,
+  uploadReferralReceipt,
+  listAdminUsers,
+  updateAdminUser,
 } from "./store"
-import { ADMIN_SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken } from "./auth"
-import { isAdminAuthenticated } from "./session"
-import type { Booking, BookingAddOn, BookingStatus, CongestionZone, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
+import { createHash, randomInt, timingSafeEqual } from "node:crypto"
+import { z } from "zod"
+import { CUSTOMER_HINT_COOKIE, REFERRAL_COOKIE } from "./session-config"
+import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, SESSION_MAX_AGE, createSessionToken } from "./auth"
+import { getAdminUser, getCustomer, isAdminAuthenticated, setSessionCookie, startCustomerSession } from "./session"
+import { hashPassword, verifyCredentials } from "./password"
+import { passwordProblem } from "./password-policy"
+import { isAdminRole, type AdminRole } from "./admin-roles"
+import type { AdminUser, Booking, Customer, BookingAddOn, BookingStatus, CongestionZone, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
-import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, MIN_DISTANCE_MILES } from "./fleet"
+import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, MIN_DISTANCE_MILES, referralCommission } from "./fleet"
 import { getGoogleReviewUrl, REVIEW_PUBLISH_THRESHOLD } from "./company"
 import {
   sendBookingNotificationEmails,
@@ -48,6 +77,7 @@ import {
   sendInvoiceEmail,
   sendLowRatingAlertEmail,
   sendReviewRequestEmail,
+  sendVerificationCodeEmail,
 } from "./email"
 import { bulkPublishPlaceDrafts, getAdminDestinationPage, listAdminDestinationPages, listPlaceIdentityOptions, listReusableDestinationContent, reviewAdminDestinationPage, saveAdminDestinationPage, type BulkPublishSelection, type SaveAdminDestinationPageInput } from "./admin-destination-pages"
 import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig } from "./cloudinary"
@@ -66,34 +96,233 @@ export interface LoginResult {
   error?: string
 }
 
-export async function loginAdmin(password: string): Promise<LoginResult> {
-  const expectedPassword = process.env.ADMIN_PASSWORD
-  if (!expectedPassword) {
-    return {
-      ok: false,
-      error: "Admin login isn't configured. Set ADMIN_PASSWORD on the server.",
-    }
-  }
-  if (!password || password !== expectedPassword) {
-    return { ok: false, error: "Incorrect password." }
-  }
+const emailSchema = z.email()
 
-  const token = await createSessionToken()
-  const store = await cookies()
-  store.set(ADMIN_SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-  })
+export async function loginAdmin(email: string, password: string): Promise<LoginResult> {
+  if (!email?.trim() || !password) return { ok: false, error: "Enter your email and password." }
+  const user = await findAdminCredentials(email)
+  const valid = await verifyCredentials(password, user?.passwordHash)
+  // Same message for unknown email, wrong password and deactivated account, so the form
+  // can't be used to discover which staff emails exist.
+  if (!user || !valid || !user.active) return { ok: false, error: "Incorrect email or password." }
 
+  await setSessionCookie(ADMIN_SESSION_COOKIE, await createSessionToken("admin", user.id), SESSION_MAX_AGE)
   return { ok: true }
 }
 
 export async function logoutAdmin(): Promise<void> {
   const store = await cookies()
   store.delete(ADMIN_SESSION_COOKIE)
+}
+
+export async function listAdminUsersAction(): Promise<AdminUser[]> {
+  if (!(await isAdminAuthenticated("users"))) return []
+  return listAdminUsers()
+}
+
+export async function createAdminUserAction(input: { email: string; name: string; role: AdminRole; password: string }): Promise<{ ok: boolean; error?: string }> {
+  if (!(await isAdminAuthenticated("users"))) return { ok: false, error: "Not authorized." }
+  if (!emailSchema.safeParse(input.email?.trim()).success) return { ok: false, error: "Enter a valid email address." }
+  if (!input.name?.trim()) return { ok: false, error: "Name is required." }
+  if (!isAdminRole(input.role)) return { ok: false, error: "Choose a role." }
+  const weak = passwordProblem(input.password, input.email)
+  if (weak) return { ok: false, error: weak }
+  const user = await createAdminUser({ ...input, passwordHash: await hashPassword(input.password) })
+  if (!user) return { ok: false, error: "An admin user with this email already exists." }
+  revalidatePath("/admin/users")
+  return { ok: true }
+}
+
+export async function updateAdminUserAction(id: string, changes: { role?: AdminRole; active?: boolean; password?: string }): Promise<{ ok: boolean; error?: string }> {
+  const actor = await getAdminUser()
+  if (!actor || !(await isAdminAuthenticated("users"))) return { ok: false, error: "Not authorized." }
+  // A super admin can't demote or deactivate themselves — that's how the last one
+  // would lock everybody out of user management.
+  if (id === actor.id && (changes.role !== undefined || changes.active !== undefined)) {
+    return { ok: false, error: "You can't change your own role or deactivate yourself." }
+  }
+  if (changes.role !== undefined && !isAdminRole(changes.role)) return { ok: false, error: "Choose a role." }
+  const target = await findAdminUser(id)
+  if (!target) return { ok: false, error: "User not found." }
+  if (changes.password !== undefined) {
+    const weak = passwordProblem(changes.password, target.email)
+    if (weak) return { ok: false, error: weak }
+  }
+  await updateAdminUser(id, {
+    role: changes.role,
+    active: changes.active,
+    passwordHash: changes.password !== undefined ? await hashPassword(changes.password) : undefined,
+    // A password set for someone else is temporary: they replace it on next sign-in.
+    mustChangePassword: changes.password !== undefined ? id !== actor.id : undefined,
+  })
+  revalidatePath("/admin/users")
+  return { ok: true }
+}
+
+/** Any signed-in staff member replacing their own password (required after a temporary one). */
+export async function changeOwnAdminPasswordAction(currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await getAdminUser()
+  if (!user) return { ok: false, error: "Your session has expired. Sign in again." }
+  const credentials = await findAdminCredentials(user.email)
+  if (!(await verifyCredentials(currentPassword ?? "", credentials?.passwordHash))) return { ok: false, error: "Your current password is incorrect." }
+  if (newPassword === currentPassword) return { ok: false, error: "Choose a password different from your current one." }
+  const weak = passwordProblem(newPassword, user.email)
+  if (weak) return { ok: false, error: weak }
+  await updateAdminUser(user.id, { passwordHash: await hashPassword(newPassword), mustChangePassword: false })
+  return { ok: true }
+}
+
+/** `needsCode`: a verification code was emailed and the form should ask for it next. */
+export interface CustomerAuthResult extends LoginResult {
+  needsCode?: boolean
+}
+
+const OTP_TTL_MS = 10 * 60 * 1000
+const OTP_RESEND_MS = 60 * 1000
+const OTP_MAX_ATTEMPTS = 5
+const hashOtp = (code: string) => createHash("sha256").update(code).digest()
+
+/** Emails a fresh 6-digit code, unless one went out in the last minute (that one still works). */
+async function sendCustomerOtp(customer: CustomerCredentials, to = customer.email): Promise<CustomerAuthResult> {
+  const lastSentAt = customer.otpExpiresAt ? Date.parse(customer.otpExpiresAt) - OTP_TTL_MS : 0
+  if (Date.now() - lastSentAt < OTP_RESEND_MS) return { ok: true, needsCode: true }
+
+  const code = String(randomInt(1_000_000)).padStart(6, "0")
+  await updateCustomerVerification(customer.id, {
+    otp_hash: hashOtp(code).toString("hex"),
+    otp_expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+    otp_attempts: 0,
+  })
+  const sent = await sendVerificationCodeEmail(to, customer.name, code)
+  if (!sent.ok) return { ok: false, error: "We couldn't send your verification code. Please try again shortly." }
+  return { ok: true, needsCode: true }
+}
+
+export async function registerCustomer(input: { name: string; email: string; phone: string; password: string }): Promise<CustomerAuthResult> {
+  if (!input.name?.trim()) return { ok: false, error: "Name is required." }
+  if (!emailSchema.safeParse(input.email?.trim()).success) return { ok: false, error: "Enter a valid email address." }
+  if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
+  const weak = passwordProblem(input.password, input.email)
+  if (weak) return { ok: false, error: weak }
+  const customer = await savePendingCustomer({ ...input, passwordHash: await hashPassword(input.password) })
+  if (!customer) return { ok: false, error: "An account with this email already exists. Sign in instead." }
+  return sendCustomerOtp(customer)
+}
+
+export async function resendCustomerCode(email: string): Promise<CustomerAuthResult> {
+  const customer = await findCustomerCredentials(email ?? "")
+  if (!customer || customer.emailVerified) return { ok: false, error: "There's no sign-up waiting for this email. Start again." }
+  return sendCustomerOtp(customer)
+}
+
+/**
+ * Checks a code against the customer's outstanding one, counting the guess against the
+ * limit. Returns why it failed, or `null` when it matches.
+ */
+async function checkCustomerOtp(customer: CustomerCredentials, code: string): Promise<string | null> {
+  if (!customer.otpHash || !customer.otpExpiresAt) return "This code isn't valid any more. Request a new one."
+  if (Date.now() > Date.parse(customer.otpExpiresAt)) return "This code has expired. Request a new one."
+  if (customer.otpAttempts >= OTP_MAX_ATTEMPTS || !(await claimOtpAttempt(customer.id, customer.otpAttempts))) {
+    return "Too many attempts. Request a new code."
+  }
+  const expected = Buffer.from(customer.otpHash, "hex")
+  const actual = hashOtp((code ?? "").trim())
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+    const left = OTP_MAX_ATTEMPTS - customer.otpAttempts - 1
+    return left > 0 ? `That code is incorrect. ${left} ${left === 1 ? "attempt" : "attempts"} left.` : "Too many attempts. Request a new code."
+  }
+  return null
+}
+
+export async function verifyCustomerEmail(email: string, code: string): Promise<CustomerAuthResult> {
+  const customer = await findCustomerCredentials(email ?? "")
+  if (!customer || customer.emailVerified) return { ok: false, error: "This code isn't valid any more. Request a new one." }
+  const problem = await checkCustomerOtp(customer, code)
+  if (problem) return { ok: false, error: problem }
+
+  await updateCustomerVerification(customer.id, { email_verified: true, otp_hash: null, otp_expires_at: null, otp_attempts: 0 })
+  await startCustomerSession(customer.id)
+  return { ok: true }
+}
+
+export async function updateCustomerProfileAction(input: { name: string; phone: string }): Promise<LoginResult> {
+  const customer = await getCustomer()
+  if (!customer) return { ok: false, error: "Your session has expired. Sign in again." }
+  if (!input.name?.trim()) return { ok: false, error: "Name is required." }
+  if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
+  await updateCustomerAccount(customer.id, { name: input.name.trim(), phone: input.phone.trim() })
+  revalidatePath("/account", "layout")
+  return { ok: true }
+}
+
+export async function changeCustomerPasswordAction(currentPassword: string, newPassword: string): Promise<LoginResult> {
+  const customer = await getCustomer()
+  if (!customer) return { ok: false, error: "Your session has expired. Sign in again." }
+  const credentials = await findCustomerCredentialsById(customer.id)
+  if (!credentials) return { ok: false, error: "Your session has expired. Sign in again." }
+  // A Google-only account has no password yet, so its first one needs no current password.
+  const hasPassword = credentials.passwordHash !== ""
+  if (hasPassword && !(await verifyCredentials(currentPassword ?? "", credentials.passwordHash))) return { ok: false, error: "Your current password is incorrect." }
+  if (hasPassword && newPassword === currentPassword) return { ok: false, error: "Choose a password different from your current one." }
+  const weak = passwordProblem(newPassword, customer.email)
+  if (weak) return { ok: false, error: weak }
+  await updateCustomerAccount(customer.id, { password_hash: await hashPassword(newPassword) })
+  return { ok: true }
+}
+
+/**
+ * Step 1 of changing the login email: confirms it's really them (current password), then
+ * sends a code to the new address. Nothing changes until that code is entered.
+ */
+export async function requestCustomerEmailChangeAction(newEmail: string, currentPassword: string): Promise<CustomerAuthResult> {
+  const customer = await getCustomer()
+  if (!customer) return { ok: false, error: "Your session has expired. Sign in again." }
+  const email = (newEmail ?? "").trim().toLowerCase()
+  if (!emailSchema.safeParse(email).success) return { ok: false, error: "Enter a valid email address." }
+  if (email === customer.email) return { ok: false, error: "That's already your email address." }
+  const credentials = await findCustomerCredentialsById(customer.id)
+  if (credentials && !credentials.passwordHash) return { ok: false, error: "Set a password first (below), then change your email." }
+  if (!credentials || !(await verifyCredentials(currentPassword ?? "", credentials.passwordHash))) return { ok: false, error: "Your current password is incorrect." }
+  if (await findCustomerCredentials(email)) return { ok: false, error: "An account with this email already exists." }
+
+  // A different new address than last time needs a fresh code, not the throttled old one.
+  const resend = credentials.pendingEmail === email ? credentials : { ...credentials, otpExpiresAt: null }
+  await updateCustomerAccount(customer.id, { pending_email: email })
+  return sendCustomerOtp(resend, email)
+}
+
+/** Step 2: the code from the new inbox makes it the login email. */
+export async function confirmCustomerEmailChangeAction(code: string): Promise<LoginResult> {
+  const customer = await getCustomer()
+  if (!customer) return { ok: false, error: "Your session has expired. Sign in again." }
+  const credentials = await findCustomerCredentialsById(customer.id)
+  if (!credentials?.pendingEmail) return { ok: false, error: "There's no email change waiting. Start again." }
+  const problem = await checkCustomerOtp(credentials, code)
+  if (problem) return { ok: false, error: problem }
+  if (!(await applyPendingEmail(customer.id, credentials.pendingEmail))) return { ok: false, error: "An account with this email already exists." }
+  revalidatePath("/account", "layout")
+  return { ok: true }
+}
+
+export async function loginCustomer(email: string, password: string): Promise<CustomerAuthResult> {
+  if (!email?.trim() || !password) return { ok: false, error: "Enter your email and password." }
+  const customer = await findCustomerCredentials(email)
+  if (!(await verifyCredentials(password, customer?.passwordHash)) || !customer) {
+    // Their email is already known to be registered by now (sign-up says so), so saying how
+    // they sign in reveals nothing new and saves a dead end.
+    if (customer?.googleSub && !customer.passwordHash) return { ok: false, error: "This account signs in with Google. Use \"Continue with Google\" above." }
+    return { ok: false, error: "Incorrect email or password." }
+  }
+  // Right password but the sign-up was never finished: send them back to the code step.
+  if (!customer.emailVerified) return sendCustomerOtp(customer)
+  await startCustomerSession(customer.id)
+  return { ok: true }
+}
+
+export async function logoutCustomer(): Promise<void> {
+  const store = await cookies()
+  store.delete(CUSTOMER_SESSION_COOKIE)
+  store.delete(CUSTOMER_HINT_COOKIE)
 }
 
 /**
@@ -103,31 +332,31 @@ export async function logoutAdmin(): Promise<void> {
  * cookie the same way any other admin request would.
  */
 export async function pingAdminSession(): Promise<boolean> {
-  return isAdminAuthenticated()
+  return !!(await getAdminUser())
 }
 
 export async function getAdminDestinationPages() {
-  if (!(await isAdminAuthenticated())) return []
+  if (!(await isAdminAuthenticated("content"))) return []
   return listAdminDestinationPages()
 }
 
 export async function getAdminDestinationPageById(id: string) {
-  if (!(await isAdminAuthenticated())) return null
+  if (!(await isAdminAuthenticated("content"))) return null
   return getAdminDestinationPage(id)
 }
 
 export async function getReusableDestinationContentAction() {
-  if (!(await isAdminAuthenticated())) return { serviceFacts: [], globalFaqs: [], reviews: [] }
+  if (!(await isAdminAuthenticated("content"))) return { serviceFacts: [], globalFaqs: [], reviews: [] }
   return listReusableDestinationContent()
 }
 
 export async function getAdminAirportFaqsAction() {
-  if (!(await isAdminAuthenticated())) return []
+  if (!(await isAdminAuthenticated("content"))) return []
   return listAdminAirportFaqs()
 }
 
 export async function saveAdminAirportFaqAction(input: { id?: string; question: string; answer: string }) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await saveAdminAirportFaq(input)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -138,7 +367,7 @@ export async function saveAdminAirportFaqAction(input: { id?: string; question: 
 }
 
 export async function deleteAdminAirportFaqAction(id: string) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await deleteAdminAirportFaq(id)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -149,17 +378,17 @@ export async function deleteAdminAirportFaqAction(id: string) {
 }
 
 export async function getRelatedDestinationCandidatesAction(pageId?: string) {
-  if (!(await isAdminAuthenticated())) return []
+  if (!(await isAdminAuthenticated("content"))) return []
   return listPublishedDestinationCandidates(pageId)
 }
 
 export async function getPlaceIdentityOptionsAction() {
-  if (!(await isAdminAuthenticated())) return { groups: [], parents: [] }
+  if (!(await isAdminAuthenticated("content"))) return { groups: [], parents: [] }
   return listPlaceIdentityOptions()
 }
 
 export async function reviewGooglePlaceAction(placeId: string) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const apiKey = process.env.GOOGLE_MAPS_API_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   if (!apiKey) return { ok: false as const, error: "Google Place review is not configured." }
   if (!placeId.trim()) return { ok: false as const, error: "Select a Google Place before reviewing it." }
@@ -178,7 +407,7 @@ export async function reviewGooglePlaceAction(placeId: string) {
 }
 
 export async function setAirportFeaturedAction(pageId: string, featured: boolean) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await setAirportFeatured(pageId, featured)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -192,7 +421,7 @@ export async function setAirportFeaturedAction(pageId: string, featured: boolean
 }
 
 export async function saveAdminDestinationPageAction(input: SaveAdminDestinationPageInput) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await saveAdminDestinationPage(input)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -207,7 +436,7 @@ export async function saveAdminDestinationPageAction(input: SaveAdminDestination
 export async function publishAdminDestinationPageAction(pageId: string, override?: import("./admin-destination-pages").PublishOverride, traceId?: string) {
   const trace = traceId ? `[Destination publish] ${traceId}` : "[Destination publish]"
   console.info(`${trace} Server Action started.`, { pageId, warningOverride: Boolean(override) })
-  if (!(await isAdminAuthenticated())) {
+  if (!(await isAdminAuthenticated("content"))) {
     console.warn(`${trace} Server Action rejected: admin authentication failed.`)
     return { ok: false as const, error: "Not authorized." }
   }
@@ -231,13 +460,13 @@ export async function publishAdminDestinationPageAction(pageId: string, override
 }
 
 export async function reviewBulkPlacePublishAction(pageIds: string[]) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const reviews = await Promise.all([...new Set(pageIds)].map((pageId) => reviewAdminDestinationPage(pageId)))
   return { ok: true as const, reviews }
 }
 
 export async function bulkPublishPlaceDraftsAction(selections: BulkPublishSelection[]) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const report = await bulkPublishPlaceDrafts(selections)
   if (report.some((item) => item.status === "published")) {
     invalidateSafePublishedAirportPageCache()
@@ -252,7 +481,7 @@ export async function bulkPublishPlaceDraftsAction(selections: BulkPublishSelect
 }
 
 export async function restoreAdminDestinationPageAction(pageId: string) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await restoreAdminDestinationPage(pageId)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -264,7 +493,7 @@ export async function restoreAdminDestinationPageAction(pageId: string) {
 }
 
 export async function deleteAdminDestinationDraftAction(pageId: string) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await deleteAdminDestinationDraft(pageId)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -276,7 +505,7 @@ export async function deleteAdminDestinationDraftAction(pageId: string) {
 }
 
 export async function archiveAdminDestinationPageAction(pageId: string, replacementSlug: string) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await archiveAdminDestinationPage(pageId, replacementSlug)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -292,7 +521,7 @@ export async function archiveAdminDestinationPageAction(pageId: string, replacem
 }
 
 export async function setAdminBookingAvailabilityAction(pageId: string, available: boolean) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await setAdminBookingAvailability(pageId, available)
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
@@ -308,12 +537,12 @@ export async function setAdminBookingAvailabilityAction(pageId: string, availabl
 }
 
 export async function promoteCoveredLocalityToPlaceAction(input: Parameters<typeof promoteCoveredLocalityToPlace>[0]) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   return promoteCoveredLocalityToPlace(input)
 }
 
 export async function getCloudinaryAssetsAction(kind?: CloudinaryImageKind) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   try {
     const [assets, usage] = await Promise.all([listCloudinaryAssets(kind), listCloudinaryAssetUsage()])
     return { ok: true as const, assets, usage: Object.fromEntries(usage) }
@@ -322,14 +551,14 @@ export async function getCloudinaryAssetsAction(kind?: CloudinaryImageKind) {
 }
 
 export async function deleteCloudinaryAssetAction(assetId: string, confirmed: boolean) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   const result = await deleteCloudinaryAsset(assetId, confirmed)
   if (result.ok) revalidatePath("/admin/media-library")
   return result
 }
 
 export async function requestCloudinaryUploadSignatureAction(kind: CloudinaryImageKind) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   if (kind !== "hero" && kind !== "content") return { ok: false as const, error: "Unsupported image type." }
   const config = getCloudinaryConfig()
   if (!config) return { ok: false as const, error: cloudinaryConfigError() }
@@ -339,7 +568,7 @@ export async function requestCloudinaryUploadSignatureAction(kind: CloudinaryIma
 }
 
 export async function saveCloudinaryAssetAction(input: Omit<CloudinaryAsset, "id" | "uploadedAt" | "resourceType">) {
-  if (!(await isAdminAuthenticated())) return { ok: false as const, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("content"))) return { ok: false as const, error: "Not authorized." }
   return saveCloudinaryAsset(input)
 }
 
@@ -352,10 +581,84 @@ export interface CreateBookingResult {
 // Keeps routes reasonable and bounds the per-booking cost of extra Routes API stops.
 const MAX_STOPS = 3
 
+/**
+ * The customer whose referral link brought this visitor (see ReferralCapture), while the
+ * programme is on. A link covers one ride: the first booking made with it uses it up, so
+ * later bookings (including a return leg booked alongside) aren't credited. Nobody earns
+ * commission on their own rides.
+ */
+async function takeReferrer(customer: Customer | null, bookingEmail: string): Promise<Customer | null> {
+  const store = await cookies()
+  const code = store.get(REFERRAL_COOKIE)?.value
+  if (!code) return null
+  store.delete(REFERRAL_COOKIE)
+  if (!(await getStoredReferralSettings()).active) return null
+  const referrer = await findCustomerByReferralCode(code)
+  if (!referrer || referrer.id === customer?.id || referrer.email === bookingEmail.trim().toLowerCase()) return null
+  return referrer
+}
+
+/**
+ * A referred ride earns its commission when it's marked completed, at the current rate on
+ * the final fare. Moving it to any other status withdraws the commission if not yet paid.
+ */
+async function syncReferralCommission(booking: Booking): Promise<void> {
+  if (!booking.referrerCustomerId) return
+  if (booking.status !== "completed") return deletePendingReferralCommission(booking.reference)
+  const { commissionPercent } = await getStoredReferralSettings()
+  await recordReferralCommission(booking.reference, booking.referrerCustomerId, referralCommission(booking.fare, commissionPercent))
+}
+
+export async function updateReferralSettingsAction(active: boolean, commissionPercent: number): Promise<{ ok: boolean; error?: string }> {
+  if (!(await isAdminAuthenticated("referrals"))) return { ok: false, error: "Not authorized." }
+  if (!Number.isFinite(commissionPercent) || commissionPercent <= 0 || commissionPercent > 100) {
+    return { ok: false, error: "Enter a commission between 0.01 and 100%." }
+  }
+  await setReferralSettings(active, Math.round(commissionPercent * 100) / 100)
+  revalidatePath("/admin/referrals")
+  return { ok: true }
+}
+
+/**
+ * Records a payout for the owed commissions the admin saw, with the bank-transfer receipt
+ * (required). Takes FormData because it carries the file: referrerId, references (JSON
+ * array of booking references) and receipt.
+ */
+export async function markReferrerPaidAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const admin = await getAdminUser()
+  if (!admin || !(await isAdminAuthenticated("referrals"))) return { ok: false, error: "Not authorized." }
+  const referrerId = formData.get("referrerId")
+  const receipt = formData.get("receipt")
+  let references: unknown
+  try { references = JSON.parse(String(formData.get("references"))) } catch { references = null }
+  if (typeof referrerId !== "string" || !/^[0-9a-f-]{36}$/i.test(referrerId) || !Array.isArray(references) || references.length === 0 || references.some((reference) => typeof reference !== "string")) {
+    return { ok: false, error: "Invalid request." }
+  }
+  if (!(receipt instanceof File) || receipt.size === 0) return { ok: false, error: "Attach the transfer receipt." }
+  if (!(await isAllowedReceipt(receipt))) return { ok: false, error: "The receipt must be a JPG/JPEG image of 200 KB or less." }
+
+  const receiptPath = await uploadReferralReceipt(referrerId, receipt)
+  const payout = await recordReferralPayout(referrerId, references, receiptPath, admin.id).catch(async (error) => {
+    await removeReferralReceipt(receiptPath)
+    throw error
+  })
+  if (!payout) {
+    await removeReferralReceipt(receiptPath)
+    return { ok: false, error: "Nothing is owed for these rides any more. Refresh the page." }
+  }
+  revalidatePath("/admin/referrals")
+  return { ok: true }
+}
+
 async function buildAndSaveBooking(
   input: NewBookingInput & { addOnIds: string[] },
   options: { extraDiscountPercent?: number; outboundTripReference?: string } = {},
 ): Promise<CreateBookingResult> {
+  // Signed-in customers book under their verified account details, whatever the form sent.
+  const customer = await getCustomer()
+  // (A Google sign-up has no phone yet: the form asks for it, and it's saved to their profile.)
+  if (customer) input = { ...input, customerName: customer.name, email: customer.email, phone: customer.phone || input.phone }
+  if (customer && !customer.phone && input.phone?.trim()) await updateCustomerAccount(customer.id, { phone: input.phone.trim() })
   if (!input.customerName?.trim()) return { ok: false, error: "Name is required." }
   if (!input.email?.trim()) return { ok: false, error: "Email is required." }
   if (!input.phone?.trim()) return { ok: false, error: "Phone is required." }
@@ -439,6 +742,7 @@ async function buildAndSaveBooking(
   }
 
   await saveBooking(booking)
+  await linkBookingAccounts(booking.reference, { customerId: customer?.id, referrerId: (await takeReferrer(customer, booking.email))?.id })
   revalidatePath("/admin")
 
   // Cash bookings are confirmed the moment they're placed — nothing is left to collect
@@ -688,7 +992,7 @@ export async function lookupBooking(reference: string): Promise<Booking | null> 
 export async function getAllBookings(): Promise<Booking[]> {
   // Defense in depth: middleware already gates the /admin route, but this
   // keeps the action itself from leaking data if ever called directly.
-  if (!(await isAdminAuthenticated())) return []
+  if (!(await isAdminAuthenticated("bookings"))) return []
   return listBookings()
 }
 
@@ -696,8 +1000,9 @@ export async function updateBookingStatus(
   reference: string,
   status: BookingStatus,
 ): Promise<Booking | null> {
-  if (!(await isAdminAuthenticated())) return null
+  if (!(await isAdminAuthenticated("bookings"))) return null
   const updated = await setBookingStatus(reference, status)
+  if (updated) await syncReferralCommission(updated)
   revalidatePath("/admin")
 
   if (updated && status === "completed" && !updated.reviewRequestedAt) {
@@ -783,7 +1088,7 @@ export interface UpdateBookingResult {
  * and recomputed against the new subtotal.
  */
 export async function updateBookingAction(reference: string, input: BookingEditInput): Promise<UpdateBookingResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("bookings"))) return { ok: false, error: "Not authorized." }
   const existing = await findBooking(reference)
   if (!existing) return { ok: false, error: "Booking not found." }
 
@@ -874,7 +1179,7 @@ export interface SendInvoiceResult {
 
 /** Emails the customer an itemized invoice for a booking, on demand from the admin panel. */
 export async function sendInvoiceAction(reference: string): Promise<SendInvoiceResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("bookings"))) return { ok: false, error: "Not authorized." }
   const booking = await findBooking(reference)
   if (!booking) return { ok: false, error: "Booking not found." }
 
@@ -892,12 +1197,12 @@ export async function getBookingAddOns(): Promise<BookingAddOn[]> {
 }
 
 export async function getAllBookingAddOns() {
-  if (!(await isAdminAuthenticated())) return []
+  if (!(await isAdminAuthenticated("bookings")) && !(await isAdminAuthenticated("pricing"))) return []
   return listAddOns()
 }
 
 export async function upsertBookingAddOn(addOn: { id?: string; name: string; price: number; active: boolean }) {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   const name = addOn.name.trim()
   if (!name) return { ok: false, error: "Add-on name is required." }
   if (!Number.isFinite(addOn.price) || addOn.price < 0) return { ok: false, error: "Enter a valid add-on price." }
@@ -908,7 +1213,7 @@ export async function upsertBookingAddOn(addOn: { id?: string; name: string; pri
 }
 
 export async function deleteBookingAddOnAction(id: string): Promise<{ ok: boolean; error?: string }> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   // Re-check server-side rather than trusting the client's view of the add-on's state — only
   // a disabled add-on can be deleted (an active one is still offered on the booking flow).
   const existing = (await listAddOns()).find((addOn) => addOn.id === id)
@@ -921,7 +1226,7 @@ export async function deleteBookingAddOnAction(id: string): Promise<{ ok: boolea
 }
 
 export async function getAllPromoCodes(): Promise<PromoCode[]> {
-  if (!(await isAdminAuthenticated())) return []
+  if (!(await isAdminAuthenticated("pricing"))) return []
   return listPromoCodes()
 }
 
@@ -932,7 +1237,7 @@ export interface UpsertPromoCodeResult {
 }
 
 export async function upsertPromoCodeAction(promo: { code: string; discountType: PromoDiscountType; discountValue: number; active: boolean }): Promise<UpsertPromoCodeResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   const code = promo.code.trim().toUpperCase()
   if (!code) return { ok: false, error: "Promo code is required." }
   if (!/^[A-Z0-9_-]+$/.test(code)) return { ok: false, error: "Use letters, numbers, - or _ only." }
@@ -945,7 +1250,7 @@ export async function upsertPromoCodeAction(promo: { code: string; discountType:
 }
 
 export async function deletePromoCodeAction(code: string): Promise<{ ok: boolean; error?: string }> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   // Re-check server-side rather than trusting the client's view of the code's state — only
   // a disabled promo code can be deleted (an active one could still be applied at checkout).
   const existing = (await listPromoCodes()).find((promo) => promo.code === code.trim().toUpperCase())
@@ -986,7 +1291,7 @@ export interface UpdateSitePromotionResult {
 }
 
 export async function updateSitePromotionAction(active: boolean, discountPercent: number): Promise<UpdateSitePromotionResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
     return { ok: false, error: "Enter a discount percentage between 0 and 100." }
   }
@@ -1006,7 +1311,7 @@ export interface UpdateReturnTripDiscountResult {
 }
 
 export async function updateReturnTripDiscountAction(active: boolean, discountPercent: number): Promise<UpdateReturnTripDiscountResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
     return { ok: false, error: "Enter a discount percentage between 0 and 100." }
   }
@@ -1026,7 +1331,7 @@ export interface UpdateStopPricingResult {
 }
 
 export async function updateStopPricingAction(pricePerStop: number): Promise<UpdateStopPricingResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   if (!Number.isFinite(pricePerStop) || pricePerStop < 0) {
     return { ok: false, error: "Enter a valid price per stop." }
   }
@@ -1048,7 +1353,7 @@ export interface UpsertCongestionZoneResult {
 // Fee may be negative (a discount zone, e.g. around the company office) or positive (a
 // surcharge zone) — unlike stop/add-on pricing, this one is deliberately not clamped to >= 0.
 export async function upsertCongestionZoneAction(name: string, fee: number, zone: [number, number][]): Promise<UpsertCongestionZoneResult> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   if (!name.trim()) return { ok: false, error: "Enter a zone name." }
   if (!Number.isFinite(fee)) return { ok: false, error: "Enter a valid fee." }
   if (!Array.isArray(zone) || zone.length < 3 || zone.some((p) => !Array.isArray(p) || p.length !== 2 || !p.every((n) => Number.isFinite(n)))) {
@@ -1060,7 +1365,7 @@ export async function upsertCongestionZoneAction(name: string, fee: number, zone
 }
 
 export async function deleteCongestionZoneAction(name: string): Promise<{ ok: boolean; error?: string }> {
-  if (!(await isAdminAuthenticated())) return { ok: false, error: "Not authorized." }
+  if (!(await isAdminAuthenticated("pricing"))) return { ok: false, error: "Not authorized." }
   await removeCongestionZone(name)
   revalidatePath("/admin"); revalidatePath("/book")
   return { ok: true }
@@ -1080,7 +1385,7 @@ export async function updateVehiclePricing(
   longDistanceThresholdMiles: number,
   deadheadPerMile: number,
 ): Promise<UpdateVehiclePricingResult> {
-  if (!(await isAdminAuthenticated())) {
+  if (!(await isAdminAuthenticated("pricing"))) {
     return { ok: false, error: "Not authorized." }
   }
   if (!Number.isFinite(minFare) || minFare < 0) {

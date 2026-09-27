@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
 import { ReactToastContainer } from '@/components/ui/react-toastify'
 import { HelpButton } from '@/components/help-button'
+import { ReferralCapture } from '@/components/referral-capture'
 import { SiteBackdrop } from '@/components/site-backdrop'
 import { SITE_URL } from '@/lib/site'
 import './globals.css'
@@ -77,6 +78,7 @@ export default function RootLayout({
         <SiteBackdrop />
         {children}
         <HelpButton />
+        <ReferralCapture />
         <Toaster position="top-center" />
         <ReactToastContainer />
         {process.env.NODE_ENV === 'production' && <Analytics />}

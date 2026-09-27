@@ -149,6 +149,8 @@ export interface Booking {
   createdAt: string
   /** Set once the post-ride review request email has been sent, so it's never sent twice. */
   reviewRequestedAt?: string
+  /** Customer whose referral link this booking came through; set server-side only. */
+  referrerCustomerId?: string
 }
 
 /** A customer's post-ride rating, always kept regardless of score. Only bookings rated at or
@@ -165,5 +167,54 @@ export interface Review {
 
 export type NewBookingInput = Omit<
   Booking,
-  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal" | "discountAmount" | "returnTripReference" | "outboundTripReference" | "stopsTotal"
+  "reference" | "status" | "paymentStatus" | "createdAt" | "fare" | "distanceMiles" | "addOns" | "addOnsTotal" | "discountAmount" | "returnTripReference" | "outboundTripReference" | "stopsTotal" | "referrerCustomerId"
 >
+
+export interface AdminUser {
+  id: string
+  email: string
+  name: string
+  role: import("./admin-roles").AdminRole
+  active: boolean
+  /** Signed in with a temporary password; must set their own before using the dashboard. */
+  mustChangePassword: boolean
+  createdAt: string
+}
+
+export interface Customer {
+  id: string
+  email: string
+  name: string
+  phone: string
+  /** Assigned the first time they open their account page. */
+  referralCode?: string
+}
+
+export interface ReferralSettings {
+  active: boolean
+  commissionPercent: number
+}
+
+export interface ReferralCommission {
+  bookingReference: string
+  referrerCustomerId: string
+  amount: number
+  status: "pending" | "paid"
+  createdAt: string
+  paidAt?: string
+  /** Joined for the admin payout view. */
+  referrer?: { name: string; email: string; referralCode: string | null }
+  /** The referred ride, trimmed to what a referrer may see (never its reference or contact details). */
+  ride?: { date: string; passenger: string; vehicle: string; fare: number }
+}
+
+export interface ReferralPayout {
+  id: string
+  referrerCustomerId: string
+  amount: number
+  createdAt: string
+  /** Short-lived signed link to the transfer receipt. */
+  receiptUrl?: string
+  /** Joined for the admin payout history. */
+  referrer?: { name: string; email: string }
+}

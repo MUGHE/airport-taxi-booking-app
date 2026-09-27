@@ -2,12 +2,14 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { getAdminDestinationPages } from "@/lib/actions"
+import { requireAdminSection } from "@/lib/session"
 import { DestinationPagesList } from "@/components/admin/destination-pages-list"
 
 export const metadata: Metadata = { title: "Destination Pages" }
 export const dynamic = "force-dynamic"
 
 export default async function AdminDestinationPagesPage() {
+  await requireAdminSection("content", "/admin/destination-pages")
   const pages = await getAdminDestinationPages()
 
   return (

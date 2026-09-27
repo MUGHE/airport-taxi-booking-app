@@ -3,27 +3,20 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { ADMIN_TABS, type AdminSection } from "@/lib/admin-roles"
 
-const TABS = [
-  { href: "/admin", label: "Bookings" },
-  { href: "/admin/pricing", label: "Pricing engine" },
-  { href: "/admin/destination-pages", label: "Destination Pages" },
-  { href: "/admin/airport-faqs", label: "Airport FAQs" },
-  { href: "/admin/media-library", label: "Media Library" },
-] as const
-
-export function AdminNav() {
+export function AdminNav({ sections }: { sections: AdminSection[] }) {
   const pathname = usePathname()
   return (
-    <nav className="flex gap-1 border-b border-border">
-      {TABS.map((tab) => {
+    <nav className="flex gap-1 overflow-x-auto border-b border-border">
+      {ADMIN_TABS.filter((tab) => sections.includes(tab.section)).map((tab) => {
         const active = tab.href === "/admin" ? pathname === "/admin" : pathname.startsWith(tab.href)
         return (
           <Link
             key={tab.href}
             href={tab.href}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
+              "-mb-px shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
               active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >

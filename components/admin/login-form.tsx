@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Loader2, Lock } from "lucide-react"
+import { Loader2, Lock, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +11,7 @@ import { loginAdmin } from "@/lib/actions"
 export function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isPending, startTransition] = useTransition()
@@ -21,9 +22,11 @@ export function LoginForm() {
     e.preventDefault()
     setError("")
     startTransition(async () => {
-      const res = await loginAdmin(password)
+      const res = await loginAdmin(email, password)
       if (res.ok) {
-        const destination = params.get("from") || "/admin"
+        // Only follow in-dashboard paths, so a crafted ?from= link can't bounce a fresh sign-in off-site.
+        const from = params.get("from")
+        const destination = from?.startsWith("/admin") ? from : "/admin"
         router.push(destination)
         router.refresh()
       } else {
@@ -40,6 +43,20 @@ export function LoginForm() {
         </p>
       )}
       <div className="space-y-1.5">
+        <Label htmlFor="admin-email" className="flex items-center gap-1.5">
+          <Mail className="size-4 text-muted-foreground" />
+          Email
+        </Label>
+        <Input
+          id="admin-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="username"
+          autoFocus
+        />
+      </div>
+      <div className="space-y-1.5">
         <Label htmlFor="admin-password" className="flex items-center gap-1.5">
           <Lock className="size-4 text-muted-foreground" />
           Password
@@ -50,7 +67,7 @@ export function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          autoFocus
+          autoComplete="current-password"
         />
       </div>
 
@@ -60,7 +77,7 @@ export function LoginForm() {
         </p>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending || !password}>
+      <Button type="submit" className="w-full" disabled={isPending || !email || !password}>
         {isPending && <Loader2 className="size-4 animate-spin" />}
         Sign in
       </Button>
