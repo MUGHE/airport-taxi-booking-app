@@ -165,6 +165,11 @@ export function applyPromotion(amount: number, discountPercent: number): number 
   return Math.max(0, Math.round(amount * (1 - discountPercent / 100)))
 }
 
+/** A referrer's commission on a completed ride: `commissionPercent`% of the final fare, to the penny. */
+export function referralCommission(fare: number, commissionPercent: number): number {
+  return Math.max(0, Math.round(fare * commissionPercent) / 100)
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",

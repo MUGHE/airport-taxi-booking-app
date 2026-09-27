@@ -15,6 +15,7 @@ import {
   getStopPricing,
   getVehicleFleet,
 } from "@/lib/actions"
+import { requireAdminSection } from "@/lib/session"
 
 export const metadata: Metadata = { title: "Pricing" }
 export const dynamic = "force-dynamic"
@@ -23,6 +24,7 @@ export const dynamic = "force-dynamic"
 // per-vehicle rate card, the two admin-managed discounts, the per-stop fee, and the
 // add-ons/promo codes that add to or discount the subtotal.
 export default async function AdminPricingPage() {
+  await requireAdminSection("pricing", "/admin/pricing")
   const [vehicles, addOns, promoCodes, promotion, returnTripDiscount, stopPricing, congestionZones] = await Promise.all([
     getVehicleFleet(),
     getAllBookingAddOns(),

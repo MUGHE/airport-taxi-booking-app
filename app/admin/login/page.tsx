@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
           <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={48} height={48} className="size-12" />
           <h1 className="mt-3 text-xl font-semibold tracking-tight">Admin sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Enter the admin password to access the operations dashboard.
+            Sign in with your staff account to access the operations dashboard.
           </p>
         </div>
         <Suspense fallback={null}>

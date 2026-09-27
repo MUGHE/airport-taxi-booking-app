@@ -1,5 +1,5 @@
 /**
- * Edge-safe primitives for the admin session cookie.
+ * Edge-safe primitives for the admin and customer session cookies.
  *
  * This file intentionally avoids importing `next/headers` so it can be
  * used from `proxy.ts` (which runs in the Edge runtime) as well as
@@ -9,23 +9,28 @@
 import { ADMIN_IDLE_TIMEOUT_MINUTES } from "./session-config"
 
 export const ADMIN_SESSION_COOKIE = "admin_session"
+export const CUSTOMER_SESSION_COOKIE = "customer_session"
 
-// Sliding idle timeout: the admin is signed out after this many minutes of
-// no activity. Every authenticated request that reaches `proxy.ts`
-// re-issues the cookie with a fresh expiry, so an active admin never hits
-// this — only a genuinely idle tab does.
-const IDLE_TIMEOUT_SECONDS = ADMIN_IDLE_TIMEOUT_MINUTES * 60
+/** Who a session belongs to. Bound into the signed payload so a customer token can never pass as an admin one. */
+export type SessionKind = "admin" | "customer"
 
-// Hard cap on how long a single sign-in can last, even with continuous
-// activity. This bounds the "keep sliding forever" case (e.g. a stray
-// background tab polling the dashboard) and is standard defense-in-depth
-// alongside the idle timeout.
-const ABSOLUTE_SESSION_SECONDS = 60 * 60 * 8 // 8 hours
+const SESSION_SECONDS: Record<SessionKind, { idle: number; absolute: number }> = {
+  // Sliding idle timeout: the admin is signed out after this many minutes of
+  // no activity. Every authenticated request that reaches `proxy.ts`
+  // re-issues the cookie with a fresh expiry, so an active admin never hits
+  // this — only a genuinely idle tab does. The absolute cap (8 hours) bounds
+  // how long a single sign-in can last even with continuous activity (e.g. a
+  // stray background tab polling the dashboard).
+  admin: { idle: ADMIN_IDLE_TIMEOUT_MINUTES * 60, absolute: 60 * 60 * 8 },
+  // Customers stay signed in for 30 days; their sessions are never renewed.
+  customer: { idle: 60 * 60 * 24 * 30, absolute: 60 * 60 * 24 * 30 },
+}
 
 // Cookie `maxAge` mirrors the idle timeout: if the browser never gets a
 // renewed Set-Cookie (no requests at all), it drops the cookie itself once
 // the idle window elapses.
-export const SESSION_MAX_AGE = IDLE_TIMEOUT_SECONDS
+export const SESSION_MAX_AGE = SESSION_SECONDS.admin.idle
+export const CUSTOMER_SESSION_MAX_AGE = SESSION_SECONDS.customer.idle
 
 function bufferToHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
@@ -71,22 +76,25 @@ async function sign(payload: string): Promise<string> {
 }
 
 interface SessionPayload {
-  /** When the admin originally signed in — never changes across renewals. */
+  kind: SessionKind
+  userId: string
+  /** When the user originally signed in — never changes across renewals. */
   issuedAt: number
   /** Sliding idle-expiry — pushed forward on every renewal. */
   expiresAt: number
 }
 
-function encodePayload({ issuedAt, expiresAt }: SessionPayload): string {
-  return `${issuedAt}:${expiresAt}`
+function encodePayload({ kind, userId, issuedAt, expiresAt }: SessionPayload): string {
+  return `${kind}:${userId}:${issuedAt}:${expiresAt}`
 }
 
 function decodePayload(payload: string): SessionPayload | null {
-  const [issuedAtRaw, expiresAtRaw] = payload.split(":")
+  const [kind, userId, issuedAtRaw, expiresAtRaw] = payload.split(":")
   const issuedAt = Number(issuedAtRaw)
   const expiresAt = Number(expiresAtRaw)
+  if ((kind !== "admin" && kind !== "customer") || !userId) return null
   if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt)) return null
-  return { issuedAt, expiresAt }
+  return { kind, userId, issuedAt, expiresAt }
 }
 
 async function signToken(session: SessionPayload): Promise<string> {
@@ -95,9 +103,13 @@ async function signToken(session: SessionPayload): Promise<string> {
   return `${payload}.${signature}`
 }
 
-/** Verifies a token's signature and returns its payload, or `null` if invalid/tampered. */
+/**
+ * Verifies a token's signature, kind, idle expiry, and absolute-session cap and returns
+ * its payload, or `null` if invalid/tampered/expired. Never throws on malformed input.
+ */
 async function readToken(
   token: string | undefined | null,
+  kind: SessionKind,
 ): Promise<SessionPayload | null> {
   if (!token) return null
 
@@ -115,37 +127,35 @@ async function readToken(
   }
   if (!timingSafeEqual(signature, expected)) return null
 
-  return decodePayload(payload)
+  const session = decodePayload(payload)
+  if (!session || session.kind !== kind) return null
+  const now = Date.now()
+  if (now > session.expiresAt) return null // idle timeout elapsed
+  if (now > session.issuedAt + SESSION_SECONDS[kind].absolute * 1000) return null // absolute cap
+  return session
 }
 
 /** Creates a signed session token for a brand-new sign-in. */
-export async function createSessionToken(): Promise<string> {
+export async function createSessionToken(kind: SessionKind, userId: string): Promise<string> {
   const now = Date.now()
   return signToken({
+    kind,
+    userId,
     issuedAt: now,
-    expiresAt: now + IDLE_TIMEOUT_SECONDS * 1000,
+    expiresAt: now + SESSION_SECONDS[kind].idle * 1000,
   })
 }
 
-/**
- * Verifies a session token's signature, idle expiry, and absolute-session cap.
- * Never throws on malformed input.
- */
+/** Returns the signed-in user's id, or `null` if the token is invalid or expired. */
 export async function verifySessionToken(
   token: string | undefined | null,
-): Promise<boolean> {
-  const session = await readToken(token)
-  if (!session) return false
-
-  const now = Date.now()
-  if (now > session.expiresAt) return false // idle timeout elapsed
-  if (now > session.issuedAt + ABSOLUTE_SESSION_SECONDS * 1000) return false // absolute cap
-
-  return true
+  kind: SessionKind,
+): Promise<string | null> {
+  return (await readToken(token, kind))?.userId ?? null
 }
 
 /**
- * Re-signs a still-valid token with a pushed-forward idle expiry, capped at the
+ * Re-signs a still-valid admin token with a pushed-forward idle expiry, capped at the
  * absolute session lifetime. Called on every authenticated request so an active
  * admin's session keeps sliding, while a genuinely idle one still expires on time.
  * Returns `null` if the token is invalid, already idle-expired, or past the
@@ -154,14 +164,11 @@ export async function verifySessionToken(
 export async function renewSessionToken(
   token: string | undefined | null,
 ): Promise<string | null> {
-  const session = await readToken(token)
+  const session = await readToken(token, "admin")
   if (!session) return null
 
-  const now = Date.now()
-  if (now > session.expiresAt) return null
-  const absoluteDeadline = session.issuedAt + ABSOLUTE_SESSION_SECONDS * 1000
-  if (now > absoluteDeadline) return null
-
-  const nextExpiresAt = Math.min(now + IDLE_TIMEOUT_SECONDS * 1000, absoluteDeadline)
-  return signToken({ issuedAt: session.issuedAt, expiresAt: nextExpiresAt })
+  const { idle, absolute } = SESSION_SECONDS.admin
+  const absoluteDeadline = session.issuedAt + absolute * 1000
+  const nextExpiresAt = Math.min(Date.now() + idle * 1000, absoluteDeadline)
+  return signToken({ ...session, expiresAt: nextExpiresAt })
 }

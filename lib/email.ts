@@ -486,3 +486,35 @@ export async function sendLowRatingAlertEmail(booking: Booking, rating: number, 
     console.error("Failed to send low rating alert email:", error)
   }
 }
+
+/** One-time code that completes a customer sign-up (see verifyCustomerEmail). */
+export async function sendVerificationCodeEmail(to: string, name: string, code: string): Promise<{ ok: boolean }> {
+  const resend = getResendClient()
+  if (!resend) {
+    console.warn("RESEND_API_KEY is not set; can't send the sign-up verification code.")
+    return { ok: false }
+  }
+
+  const fromAddress = process.env.EMAIL_FROM || "Airport Taxi <onboarding@resend.dev>"
+  const firstName = name.trim().split(/\s+/)[0] || name
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;">
+      <h2 style="color:#111827;">Verify your email, ${escapeHtml(firstName)}</h2>
+      <p style="color:#374151;">Enter this code to finish creating your ${COMPANY_NAME} account:</p>
+      <p style="margin:24px 0;font-size:32px;font-weight:700;letter-spacing:8px;color:#111827;">${code}</p>
+      <p style="color:#6b7280;font-size:13px;">The code expires in 10 minutes. If you didn't try to create an account, you can ignore this email.</p>
+    </div>
+  `
+
+  try {
+    const result = await resend.emails.send({ from: fromAddress, to, subject: `${code} is your ${COMPANY_NAME} verification code`, html })
+    if (result.error) {
+      console.error("Failed to send verification code email:", result.error)
+      return { ok: false }
+    }
+    return { ok: true }
+  } catch (error) {
+    console.error("Failed to send verification code email:", error)
+    return { ok: false }
+  }
+}
