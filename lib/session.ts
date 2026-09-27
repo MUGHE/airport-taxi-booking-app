@@ -58,7 +58,8 @@ export const getCustomer = cache(async (): Promise<Customer | null> => {
 // Which step of /account/forgot-password this browser has reached lives only in this
 // signed, httpOnly cookie, scoped to that one page. Nothing about the flow is in the URL,
 // so a step can't be reached by typing an address, and the account can't be swapped
-// between steps (the email is fixed here at step 1).
+// between steps (the email is fixed here at step 1). `tabId` ties the flow to the browser
+// tab that started it: that tab keeps it in sessionStorage, which dies with the tab.
 
 const PASSWORD_RESET_COOKIE = "password_reset"
 const PASSWORD_RESET_PATH = "/account/forgot-password"
@@ -66,8 +67,8 @@ const PASSWORD_RESET_PATH = "/account/forgot-password"
 export const RESET_RESEND_MS = 60 * 1000
 
 export type PasswordResetState =
-  | { stage: "code"; email: string; exp: number; /** When the latest code was requested (resend cooldown). */ sentAt: number }
-  | { stage: "verified"; customerId: string; nonce: string; exp: number }
+  | { stage: "code"; email: string; exp: number; /** When the latest code was requested (resend cooldown). */ sentAt: number; tabId: string }
+  | { stage: "verified"; customerId: string; nonce: string; exp: number; tabId: string }
 
 export async function writePasswordResetState(state: PasswordResetState): Promise<void> {
   const store = await cookies()

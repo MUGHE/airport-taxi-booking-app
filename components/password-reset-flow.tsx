@@ -8,19 +8,45 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChangePasswordForm } from "@/components/change-password-form"
-import { cancelPasswordResetAction, requestPasswordResetAction, resendPasswordResetCodeAction, resetPasswordAction, verifyPasswordResetCodeAction } from "@/lib/actions"
+import { endPasswordResetAction, requestPasswordResetAction, resendPasswordResetCodeAction, resetPasswordAction, verifyPasswordResetCodeAction } from "@/lib/actions"
+
+type ResetResult = { ok: boolean; error?: string; restart?: boolean }
+
+// Ties the flow to this browser tab. sessionStorage survives reloads but is wiped when the
+// tab closes, so a closed tab's flow can't be picked up again (the server checks this id on
+// every step; see readResetFlow in lib/actions.ts).
+const TAB_KEY = "password-reset-tab"
+// Fallback when sessionStorage is blocked: lasts until reload, enough to finish the flow.
+let memoryTabId = ""
+function readTabId(): string {
+  try { return sessionStorage.getItem(TAB_KEY) ?? memoryTabId } catch { return memoryTabId }
+}
+function newTabId(): string {
+  // getRandomValues, not randomUUID: the latter is missing on plain-http LAN dev origins.
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join("")
+  memoryTabId = id
+  try { sessionStorage.setItem(TAB_KEY, id) } catch { /* storage blocked: memoryTabId covers this page */ }
+  return id
+}
+function forgetTabId() {
+  memoryTabId = ""
+  try { sessionStorage.removeItem(TAB_KEY) } catch { /* nothing to forget */ }
+}
 
 /**
  * The step is decided by the server (see app/account/forgot-password/page.tsx); after each
- * action this only asks the server to re-render, so it never chooses a step itself.
+ * action this only asks the server to re-render, so it never chooses a step itself. The flow
+ * ends on its own when its time runs out or when the tab that started it is gone.
  */
-export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt = 0 }: {
+export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt = 0, expiresIn = 0 }: {
   stage: "request" | "code" | "verified"
   maskedEmail?: string
   /** Seconds until "Resend code" unlocks, as computed by the server. */
   resendIn?: number
   /** When the current code was sent; restarts the countdown after each resend. */
   codeSentAt?: number
+  /** Seconds until this reset session runs out. */
+  expiresIn?: number
 }) {
   const router = useRouter()
   const [email, setEmail] = useState("")
@@ -29,18 +55,35 @@ export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt
   const [notice, setNotice] = useState("")
   const [isPending, startTransition] = useTransition()
   const resendLeft = useCountdown(resendIn, codeSentAt)
+  const inFlow = stage !== "request"
 
-  function run(action: () => Promise<{ ok: boolean; error?: string }>, successNotice = "") {
+  function run(action: () => Promise<ResetResult>, successNotice = "") {
     setError("")
     setNotice("")
     startTransition(async () => {
       const result = await action()
       if (!result.ok) setError(result.error || "Something went wrong. Please try again.")
       else setNotice(successNotice)
+      if (result.restart) forgetTabId()
       setCode("")
       router.refresh()
     })
   }
+
+  // A flow this tab didn't start (the original tab was closed, or the link was opened
+  // elsewhere) is ended straight away rather than continued.
+  useEffect(() => {
+    if (inFlow && !readTabId()) run(endPasswordResetAction)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the step changes
+  }, [inFlow])
+
+  // Time's up: end the flow without waiting for the next click.
+  useEffect(() => {
+    if (!inFlow || expiresIn <= 0) return
+    const id = setTimeout(() => run(endPasswordResetAction), expiresIn * 1000)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-armed when the server's deadline changes
+  }, [inFlow, expiresIn])
 
   const messages = (
     <>
@@ -54,15 +97,27 @@ export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Choose a new password. You&apos;ll be signed out on every device and can then sign in with it.</p>
         {messages}
-        <ChangePasswordForm email="" requireCurrent={false} successHref="/account?reset=1" action={(_current, next) => resetPasswordAction(next)} />
-        <StartAgain disabled={isPending} onClick={() => run(cancelPasswordResetAction)} />
+        <ChangePasswordForm
+          email=""
+          requireCurrent={false}
+          successHref="/account?reset=1"
+          action={async (_current, next) => {
+            const result = await resetPasswordAction(next, readTabId())
+            if (result.ok || result.restart) forgetTabId()
+            if (result.restart) {
+              setError(result.error ?? "")
+              router.refresh()
+            }
+            return result
+          }}
+        />
       </div>
     )
   }
 
   if (stage === "code") {
     return (
-      <form onSubmit={(e) => { e.preventDefault(); run(() => verifyPasswordResetCodeAction(code)) }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); run(() => verifyPasswordResetCodeAction(code, readTabId())) }} className="space-y-4">
         <p className="text-sm text-muted-foreground">
           If <span className="font-medium text-foreground">{maskedEmail}</span> has an account, we&apos;ve emailed it a 6-digit code. It expires in 10 minutes.
         </p>
@@ -78,7 +133,7 @@ export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt
             type="button"
             disabled={isPending || resendLeft > 0}
             className="font-medium text-primary underline-offset-4 enabled:hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground"
-            onClick={() => run(resendPasswordResetCodeAction, "A new code is on its way.")}
+            onClick={() => run(() => resendPasswordResetCodeAction(readTabId()), "A new code is on its way.")}
           >
             {resendLeft > 0 ? `Resend code in 0:${String(resendLeft).padStart(2, "0")}` : "Resend code"}
           </button>
@@ -88,7 +143,7 @@ export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); run(() => requestPasswordResetAction(email)) }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); run(() => requestPasswordResetAction(email, newTabId())) }} className="space-y-4">
       <p className="text-sm text-muted-foreground">Enter the email you signed up with and we&apos;ll send you a code to reset your password.</p>
       <div className="space-y-1.5">
         <Label htmlFor="reset-email">Email</Label>
@@ -99,10 +154,6 @@ export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt
       <p className="text-center text-sm text-muted-foreground"><Link href="/account" className="font-medium text-primary underline-offset-4 hover:underline">Back to sign in</Link></p>
     </form>
   )
-}
-
-function StartAgain({ disabled, onClick }: { disabled: boolean; onClick: () => void }) {
-  return <button type="button" disabled={disabled} className="text-sm text-muted-foreground underline-offset-4 hover:underline" onClick={onClick}>Start again</button>
 }
 
 /**
