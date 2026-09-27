@@ -87,7 +87,7 @@ export function FareEstimator({
       }`}
     >
       <div className="sm:hidden">
-        <RouteCard pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} />
+        <RouteCard bare pickup={pickup} dropoff={dropoff} stops={stops} maxStops={MAX_STOPS} pricePerStop={stopPricing.pricePerStop} onPickupChange={setPickup} onDropoffChange={setDropoff} onStopsChange={setStops} />
       </div>
       <div
         className={`hidden gap-4 sm:grid @min-[480px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[480px]:items-end ${

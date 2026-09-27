@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, createSessionToken, readSessionToken, readSignedValue, signValue, verifySessionToken } from "./auth"
 import { CUSTOMER_HINT_COOKIE } from "./session-config"
 import { ADMIN_TABS, canAccess, type AdminSection } from "./admin-roles"
-import { findAdminUser, findCustomer, findCustomerCredentialsById } from "./store"
+import { findAdminUser, findCustomer, findCustomerCredentials, findCustomerCredentialsById, updateCustomerVerification } from "./store"
 import type { AdminUser, Customer } from "./types"
 
 // Only usable in Server Components / Server Actions. The user is re-read from the
@@ -124,4 +124,21 @@ export async function startCustomerSession(customerId: string) {
     path: "/",
     maxAge: CUSTOMER_SESSION_MAX_AGE,
   })
+}
+
+/**
+ * Ends the flow for good: spends its emailed code or its set-a-password permission in the
+ * database, then drops the cookie. Because the database side is gone too, a browser that
+ * restores the old tab (cookie, sessionStorage and all) finds nothing left to continue.
+ */
+export async function endPasswordResetFlow(): Promise<void> {
+  const state = await readPasswordResetState()
+  const customer = state?.stage === "code"
+    ? await findCustomerCredentials(state.email)
+    : state?.stage === "verified" ? await findCustomerCredentialsById(state.customerId) : null
+  const flowPurpose = state?.stage === "code" ? "password_reset" : "password_reset_verified"
+  if (customer?.otpPurpose === flowPurpose) {
+    await updateCustomerVerification(customer.id, { otp_hash: null, otp_expires_at: null, otp_attempts: 0, otp_purpose: null })
+  }
+  await clearPasswordResetState()
 }

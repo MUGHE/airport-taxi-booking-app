@@ -64,7 +64,7 @@ import { after } from "next/server"
 import { z } from "zod"
 import { CUSTOMER_HINT_COOKIE, REFERRAL_COOKIE } from "./session-config"
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, SESSION_MAX_AGE, createSessionToken } from "./auth"
-import { RESET_RESEND_MS, type PasswordResetState, clearPasswordResetState, getAdminUser, getCustomer, isAdminAuthenticated, readPasswordResetState, setSessionCookie, startCustomerSession, writePasswordResetState } from "./session"
+import { RESET_RESEND_MS, type PasswordResetState, clearPasswordResetState, endPasswordResetFlow, getAdminUser, getCustomer, isAdminAuthenticated, readPasswordResetState, setSessionCookie, startCustomerSession, writePasswordResetState } from "./session"
 import { hashPassword, verifyCredentials } from "./password"
 import { passwordProblem } from "./password-policy"
 import { isAdminRole, type AdminRole } from "./admin-roles"
@@ -360,7 +360,7 @@ const isTabId = (value: unknown): value is string => typeof value === "string" &
 async function readResetFlow(tabId: string): Promise<PasswordResetState | null> {
   const state = await readPasswordResetState()
   if (state && (!isTabId(tabId) || state.tabId !== tabId)) {
-    await clearPasswordResetState()
+    await endPasswordResetFlow()
     return null
   }
   return state
@@ -438,10 +438,11 @@ export async function resetPasswordAction(newPassword: string, tabId: string): P
 
 /**
  * Ends the flow. The page calls it itself when the reset session's time runs out, or when
- * it's opened in a tab that didn't start the flow (e.g. the original tab was closed).
+ * it's opened in a tab that didn't start the flow. (Closing or leaving the page ends it through
+ * app/account/forgot-password/end/route.ts, which a closing page can still reach.)
  */
 export async function endPasswordResetAction(): Promise<PasswordResetResult> {
-  await clearPasswordResetState()
+  await endPasswordResetFlow()
   return flowEnded
 }
 

@@ -28,6 +28,9 @@ function newTabId(): string {
   try { sessionStorage.setItem(TAB_KEY, id) } catch { /* storage blocked: memoryTabId covers this page */ }
   return id
 }
+const END_FLOW_URL = "/account/forgot-password/end"
+let pendingLeave: ReturnType<typeof setTimeout> | undefined
+
 function forgetTabId() {
   memoryTabId = ""
   try { sessionStorage.removeItem(TAB_KEY) } catch { /* nothing to forget */ }
@@ -75,6 +78,31 @@ export function PasswordResetFlow({ stage, maskedEmail, resendIn = 0, codeSentAt
   useEffect(() => {
     if (inFlow && !readTabId()) run(endPasswordResetAction)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the step changes
+  }, [inFlow])
+
+  // Leaving the page in any way (closing the tab, reloading, typing another address, or
+  // following a link elsewhere in the site) ends the flow on the server at once. A browser
+  // can't tell a page whether it's closing or reloading, so a reload ends it too — that's
+  // what stops Ctrl+Shift+T (which restores the tab's cookie and sessionStorage) from
+  // bringing a closed flow back.
+  useEffect(() => {
+    if (!inFlow) return
+    clearTimeout(pendingLeave) // React Strict Mode remounts at once in development; not a real leave.
+    const leave = () => {
+      forgetTabId()
+      navigator.sendBeacon(END_FLOW_URL)
+    }
+    // Back/forward cache: a page restored from memory shows a flow the server already ended.
+    const returned = (event: PageTransitionEvent) => { if (event.persisted) run(endPasswordResetAction) }
+    window.addEventListener("pagehide", leave)
+    window.addEventListener("pageshow", returned)
+    return () => {
+      window.removeEventListener("pagehide", leave)
+      window.removeEventListener("pageshow", returned)
+      // Unmounted by an in-app navigation (no pagehide fires for those).
+      pendingLeave = setTimeout(leave, 100)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- attach once per flow
   }, [inFlow])
 
   // Time's up: end the flow without waiting for the next click.

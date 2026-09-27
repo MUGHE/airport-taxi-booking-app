@@ -2,7 +2,8 @@ import { LEGACY_AIRPORT_REDIRECTS } from './lib/legacy-airport-redirects.mjs'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['192.168.1.10'],
+  // 127.0.0.1: the Playwright configs use it, and dev assets are only served to listed origins.
+  allowedDevOrigins: ['192.168.1.10', '127.0.0.1'],
   // Account pages (sign-in, codes, password reset) can't be framed by another site
   // (clickjacking), leak nothing via the Referer header, and are never cached.
   async headers() {
