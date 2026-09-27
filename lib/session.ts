@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, createSessionToken, readSessionToken, readSignedValue, signValue, verifySessionToken } from "./auth"
 import { CUSTOMER_HINT_COOKIE } from "./session-config"
 import { ADMIN_TABS, canAccess, type AdminSection } from "./admin-roles"
-import { findAdminUser, findCustomer, findCustomerCredentialsById } from "./store"
+import { findAdminUser, findCustomer, findCustomerCredentials, findCustomerCredentialsById, updateCustomerVerification } from "./store"
 import type { AdminUser, Customer } from "./types"
 
 // Only usable in Server Components / Server Actions. The user is re-read from the
@@ -58,7 +58,8 @@ export const getCustomer = cache(async (): Promise<Customer | null> => {
 // Which step of /account/forgot-password this browser has reached lives only in this
 // signed, httpOnly cookie, scoped to that one page. Nothing about the flow is in the URL,
 // so a step can't be reached by typing an address, and the account can't be swapped
-// between steps (the email is fixed here at step 1).
+// between steps (the email is fixed here at step 1). `tabId` ties the flow to the browser
+// tab that started it: that tab keeps it in sessionStorage, which dies with the tab.
 
 const PASSWORD_RESET_COOKIE = "password_reset"
 const PASSWORD_RESET_PATH = "/account/forgot-password"
@@ -66,8 +67,8 @@ const PASSWORD_RESET_PATH = "/account/forgot-password"
 export const RESET_RESEND_MS = 60 * 1000
 
 export type PasswordResetState =
-  | { stage: "code"; email: string; exp: number; /** When the latest code was requested (resend cooldown). */ sentAt: number }
-  | { stage: "verified"; customerId: string; nonce: string; exp: number }
+  | { stage: "code"; email: string; exp: number; /** When the latest code was requested (resend cooldown). */ sentAt: number; tabId: string }
+  | { stage: "verified"; customerId: string; nonce: string; exp: number; tabId: string }
 
 export async function writePasswordResetState(state: PasswordResetState): Promise<void> {
   const store = await cookies()
@@ -123,4 +124,21 @@ export async function startCustomerSession(customerId: string) {
     path: "/",
     maxAge: CUSTOMER_SESSION_MAX_AGE,
   })
+}
+
+/**
+ * Ends the flow for good: spends its emailed code or its set-a-password permission in the
+ * database, then drops the cookie. Because the database side is gone too, a browser that
+ * restores the old tab (cookie, sessionStorage and all) finds nothing left to continue.
+ */
+export async function endPasswordResetFlow(): Promise<void> {
+  const state = await readPasswordResetState()
+  const customer = state?.stage === "code"
+    ? await findCustomerCredentials(state.email)
+    : state?.stage === "verified" ? await findCustomerCredentialsById(state.customerId) : null
+  const flowPurpose = state?.stage === "code" ? "password_reset" : "password_reset_verified"
+  if (customer?.otpPurpose === flowPurpose) {
+    await updateCustomerVerification(customer.id, { otp_hash: null, otp_expires_at: null, otp_attempts: 0, otp_purpose: null })
+  }
+  await clearPasswordResetState()
 }

@@ -64,7 +64,7 @@ import { after } from "next/server"
 import { z } from "zod"
 import { CUSTOMER_HINT_COOKIE, REFERRAL_COOKIE } from "./session-config"
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_MAX_AGE, SESSION_MAX_AGE, createSessionToken } from "./auth"
-import { RESET_RESEND_MS, clearPasswordResetState, getAdminUser, getCustomer, isAdminAuthenticated, readPasswordResetState, setSessionCookie, startCustomerSession, writePasswordResetState } from "./session"
+import { RESET_RESEND_MS, type PasswordResetState, clearPasswordResetState, endPasswordResetFlow, getAdminUser, getCustomer, isAdminAuthenticated, readPasswordResetState, setSessionCookie, startCustomerSession, writePasswordResetState } from "./session"
 import { hashPassword, verifyCredentials } from "./password"
 import { passwordProblem } from "./password-policy"
 import { isAdminRole, type AdminRole } from "./admin-roles"
@@ -338,13 +338,33 @@ export async function logoutCustomer(): Promise<void> {
 // --- Forgot password ---------------------------------------------------------------
 // Three steps on /account/forgot-password: email → emailed code → new password. Which step
 // this browser is on is held server-side in a signed cookie (lib/session.ts), never in the
-// URL. Every step answers the same whether or not the email has an account, and codes go
-// out after the response, so neither wording nor timing reveals who's registered.
+// URL, and only the browser tab that started the flow can move it on. Every step answers
+// the same whether or not the email has an account, and codes go out after the response,
+// so neither wording nor timing reveals who's registered.
 
 const RESET_FLOW_MS = 15 * 60 * 1000
 const RESET_PERMISSION_MS = 10 * 60 * 1000
-const RESET_CODE_PROBLEM = "That code isn't right or has expired. Check the latest email, or start again."
-const RESET_EXPIRED = "Your reset session has expired. Please start again."
+const RESET_CODE_PROBLEM = "That code isn't right or has expired. Check the latest email and try again."
+const RESET_ENDED = "Your reset session has ended. Enter your email to get a new code."
+
+/** `restart`: the flow is over (expired, or opened in another tab) and the page should go back to step 1. */
+type PasswordResetResult = LoginResult & { restart?: boolean }
+const flowEnded: PasswordResetResult = { ok: false, error: RESET_ENDED, restart: true }
+
+const isTabId = (value: unknown): value is string => typeof value === "string" && /^[A-Za-z0-9-]{16,64}$/.test(value)
+
+/**
+ * The flow state, but only for the tab that started it. Any other tab (including one
+ * reopened after the original was closed) ends the flow instead of continuing it.
+ */
+async function readResetFlow(tabId: string): Promise<PasswordResetState | null> {
+  const state = await readPasswordResetState()
+  if (state && (!isTabId(tabId) || state.tabId !== tabId)) {
+    await endPasswordResetFlow()
+    return null
+  }
+  return state
+}
 
 /** Emails a reset code if (and only if) this is a verified account — after the response is sent. */
 function sendResetCodeLater(email: string) {
@@ -357,18 +377,19 @@ function sendResetCodeLater(email: string) {
 }
 
 /** Step 1. Always "succeeds", so the form can't be used to test which emails have accounts. */
-export async function requestPasswordResetAction(email: string): Promise<LoginResult> {
+export async function requestPasswordResetAction(email: string, tabId: string): Promise<PasswordResetResult> {
   const normalized = (email ?? "").trim().toLowerCase()
   if (!emailSchema.safeParse(normalized).success) return { ok: false, error: "Enter a valid email address." }
-  await writePasswordResetState({ stage: "code", email: normalized, exp: Date.now() + RESET_FLOW_MS, sentAt: Date.now() })
+  if (!isTabId(tabId)) return { ok: false, error: "Something went wrong. Please reload the page." }
+  await writePasswordResetState({ stage: "code", email: normalized, exp: Date.now() + RESET_FLOW_MS, sentAt: Date.now(), tabId })
   sendResetCodeLater(normalized)
   return { ok: true }
 }
 
-/** Resends to the email fixed at step 1 (never one supplied now). Same one-a-minute throttle. */
-export async function resendPasswordResetCodeAction(): Promise<LoginResult> {
-  const state = await readPasswordResetState()
-  if (state?.stage !== "code") return { ok: false, error: RESET_EXPIRED }
+/** Resends to the email fixed at step 1 (never one supplied now), at most once a minute. */
+export async function resendPasswordResetCodeAction(tabId: string): Promise<PasswordResetResult> {
+  const state = await readResetFlow(tabId)
+  if (state?.stage !== "code") return flowEnded
   // Matches the page's 60-second countdown, so clicking early (or scripting it) sends nothing.
   const wait = Math.ceil((state.sentAt + RESET_RESEND_MS - Date.now()) / 1000)
   if (wait > 0) return { ok: false, error: `You can request a new code in ${wait} seconds.` }
@@ -378,9 +399,9 @@ export async function resendPasswordResetCodeAction(): Promise<LoginResult> {
 }
 
 /** Step 2. A correct code swaps the flow to a single-use, 10-minute permission to set a password. */
-export async function verifyPasswordResetCodeAction(code: string): Promise<LoginResult> {
-  const state = await readPasswordResetState()
-  if (state?.stage !== "code") return { ok: false, error: RESET_EXPIRED }
+export async function verifyPasswordResetCodeAction(code: string, tabId: string): Promise<PasswordResetResult> {
+  const state = await readResetFlow(tabId)
+  if (state?.stage !== "code") return flowEnded
   const customer = await findCustomerCredentials(state.email)
   // One message for every failure (wrong, expired, too many tries, or no such account).
   if (!customer?.emailVerified || (await checkCustomerOtp(customer, code, "password_reset"))) return { ok: false, error: RESET_CODE_PROBLEM }
@@ -389,14 +410,14 @@ export async function verifyPasswordResetCodeAction(code: string): Promise<Login
   const exp = Date.now() + RESET_PERMISSION_MS
   // Stored hashed, so the permission is spent (single use) once setCustomerPassword clears it.
   await updateCustomerVerification(customer.id, { otp_purpose: "password_reset_verified", otp_hash: hashOtp(nonce).toString("hex"), otp_expires_at: new Date(exp).toISOString(), otp_attempts: 0 })
-  await writePasswordResetState({ stage: "verified", customerId: customer.id, nonce, exp })
+  await writePasswordResetState({ stage: "verified", customerId: customer.id, nonce, exp, tabId: state.tabId })
   return { ok: true }
 }
 
 /** Step 3. Sets the password, signs the account out everywhere, and ends the flow. */
-export async function resetPasswordAction(newPassword: string): Promise<LoginResult> {
-  const state = await readPasswordResetState()
-  if (state?.stage !== "verified") return { ok: false, error: RESET_EXPIRED }
+export async function resetPasswordAction(newPassword: string, tabId: string): Promise<PasswordResetResult> {
+  const state = await readResetFlow(tabId)
+  if (state?.stage !== "verified") return flowEnded
   const customer = await findCustomerCredentialsById(state.customerId)
   const expected = customer?.otpPurpose === "password_reset_verified" && customer.otpHash && customer.otpExpiresAt && Date.now() < Date.parse(customer.otpExpiresAt)
     ? Buffer.from(customer.otpHash, "hex")
@@ -404,7 +425,7 @@ export async function resetPasswordAction(newPassword: string): Promise<LoginRes
   const presented = hashOtp(state.nonce)
   if (!customer || !expected || expected.length !== presented.length || !timingSafeEqual(expected, presented)) {
     await clearPasswordResetState()
-    return { ok: false, error: RESET_EXPIRED }
+    return flowEnded
   }
   const weak = passwordProblem(newPassword, customer.email)
   if (weak) return { ok: false, error: weak }
@@ -415,10 +436,14 @@ export async function resetPasswordAction(newPassword: string): Promise<LoginRes
   return { ok: true }
 }
 
-/** "Start again": forgets which step this browser was on. */
-export async function cancelPasswordResetAction(): Promise<LoginResult> {
-  await clearPasswordResetState()
-  return { ok: true }
+/**
+ * Ends the flow. The page calls it itself when the reset session's time runs out, or when
+ * it's opened in a tab that didn't start the flow. (Closing or leaving the page ends it through
+ * app/account/forgot-password/end/route.ts, which a closing page can still reach.)
+ */
+export async function endPasswordResetAction(): Promise<PasswordResetResult> {
+  await endPasswordResetFlow()
+  return flowEnded
 }
 
 /**

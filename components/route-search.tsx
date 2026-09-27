@@ -558,6 +558,7 @@ export function RouteCard({
   onPickupChange,
   onDropoffChange,
   onStopsChange,
+  bare = false,
 }: {
   pickup: PlaceSelection | null
   dropoff: PlaceSelection | null
@@ -567,6 +568,9 @@ export function RouteCard({
   onPickupChange: (place: PlaceSelection | null) => void
   onDropoffChange: (place: PlaceSelection | null) => void
   onStopsChange: (stops: PlaceSelection[]) => void
+  /** Skip this component's own border/background — for when a parent (e.g. the homepage fare
+   *  estimator) already wraps it in a card, so it doesn't render as a card inside a card. */
+  bare?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [leg, setLeg] = useState<RouteLeg>({ kind: "pickup" })
@@ -596,7 +600,7 @@ export function RouteCard({
 
   return (
     <>
-      <div className="rounded-xl border border-border bg-card">
+      <div className={cn(!bare && "rounded-xl border border-border bg-card")}>
         <div className="flex items-stretch gap-3 py-1.5 pl-3.5 pr-3">
           <RouteRail stopCount={stops.length} activeIndex={-1} />
 
