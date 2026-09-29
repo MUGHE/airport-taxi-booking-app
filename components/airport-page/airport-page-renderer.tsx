@@ -81,6 +81,18 @@ const sectionLabels: Partial<Record<AirportPageContentSection["type"], string>> 
 
 const storyIcons = [Navigation, PlaneLanding, Luggage, MapPin]
 
+function AirportHeroQuote({ page }: { page: AirportPagePresentation }) {
+  return (
+    <div className="airport-quote-wrap">
+      <div className="airport-quote-heading">
+        <span>Plan your transfer</span>
+        <strong>Get your fixed price</strong>
+      </div>
+      <AirportQuoteActions page={page} onDarkBackground />
+    </div>
+  )
+}
+
 function StorySection({ section, index }: { section: AirportPageContentSection; index: number }) {
   const Icon = storyIcons[index % storyIcons.length]
   const reversed = index % 2 === 1
@@ -246,12 +258,12 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true }: 
                 <h1>{page.heading}</h1>
                 {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
               </div>
-              <AirportQuoteActions page={page} onDarkBackground />
+              <AirportHeroQuote page={page} />
             </div>
             <div className="airport-trust-rail"><div className="airport-container airport-trust-grid">{[[Banknote, "Fixed fares", "Know the price before you ride"], [PlaneTakeoff, "Flight tracking", "Pickup timed to your arrival"], [Headphones, "Human support", "Help whenever plans change"]].map(([Icon, title, description]) => { const FeatureIcon = Icon as typeof Banknote; return <div key={title as string}><FeatureIcon aria-hidden="true" /><span><strong>{title as string}</strong><small>{description as string}</small></span></div> })}</div></div>
           </section>
         ) : (
-          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy"><Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" /><h1>{page.heading}</h1>{page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}</div><AirportQuoteActions page={page} onDarkBackground /></div></section>
+          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy"><Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" /><h1>{page.heading}</h1>{page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}</div><AirportHeroQuote page={page} /></div></section>
         )}
 
         {visibleSections.map((section, index) => <BuilderSection key={section.id} section={section} page={page} index={index} />)}

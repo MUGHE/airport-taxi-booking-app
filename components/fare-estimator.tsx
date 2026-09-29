@@ -99,7 +99,7 @@ export function FareEstimator({
         <LocationField label="Drop-off" placeholder="Enter drop-off address" value={dropoff?.address} onSelect={setDropoff} onClear={() => setDropoff(null)} />
       </div>
       <div
-        className={`mt-4 grid gap-4 sm:grid-cols-2 ${
+        className={`mt-4 grid grid-cols-2 gap-3 sm:gap-4 ${
           layout === "hub" ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-3" : ""
         }`}
       >
