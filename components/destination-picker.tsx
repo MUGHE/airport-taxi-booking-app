@@ -47,6 +47,7 @@ export function DestinationPicker({
   placeholder?: string
 }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
   const inlineInputRef = useRef<HTMLInputElement | null>(null)
   const sheetInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -58,6 +59,7 @@ export function DestinationPicker({
   const sessionTokenRef = useRef<any>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestIdRef = useRef(0)
+  const userEditedRef = useRef(false)
 
   const [value, setValue] = useState(defaultValue)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
@@ -156,16 +158,17 @@ export function DestinationPicker({
       })
   }
 
-  // The places module can land after the first keystrokes; search whatever is already typed as
-  // soon as it does, instead of leaving the field looking like it found nothing.
+  // The places module can land after the first keystrokes; search whatever the user has typed as
+  // soon as it does. A pre-filled saved location is not a new search and must not open suggestions.
   useEffect(() => {
-    if (!library) return
+    if (!library || !userEditedRef.current) return
     const pending = value.trim()
     if (pending && suggestions.length === 0) fetchSuggestions(pending)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [library])
 
   function handleChange(next: string) {
+    userEditedRef.current = true
     setValue(next)
     onClearRef.current?.()
     requestIdRef.current++ // invalidate results for the previous input immediately
@@ -182,6 +185,20 @@ export function DestinationPicker({
 
     debounceRef.current = setTimeout(() => fetchSuggestions(trimmed), 200)
   }
+
+  useEffect(() => {
+    if (!dropdownOpen) return
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (wrapperRef.current?.contains(target) || dropdownRef.current?.contains(target)) return
+      setDropdownOpen(false)
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer)
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer)
+  }, [dropdownOpen])
 
   async function selectSuggestion(suggestion: Suggestion) {
     requestIdRef.current++ // prevent a late autocomplete response from reopening the dropdown
@@ -298,6 +315,7 @@ export function DestinationPicker({
       {mounted && !isCompact && dropdownOpen && anchor && (suggestions.length > 0 || (!loadingSuggestions && trimmed)) &&
         createPortal(
           <div
+            ref={dropdownRef}
             className="absolute z-50 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg"
             style={{ left: anchor.left, top: anchor.top, width: anchor.width }}
           >
