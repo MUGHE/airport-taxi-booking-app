@@ -168,12 +168,12 @@ export function DestinationPicker({
   function handleChange(next: string) {
     setValue(next)
     onClearRef.current?.()
+    requestIdRef.current++ // invalidate results for the previous input immediately
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
 
     const trimmed = next.trim()
     if (!trimmed) {
-      requestIdRef.current++ // invalidate any in-flight request
       setSuggestions([])
       setDropdownOpen(false)
       setLoadingSuggestions(false)
@@ -184,13 +184,18 @@ export function DestinationPicker({
   }
 
   async function selectSuggestion(suggestion: Suggestion) {
+    requestIdRef.current++ // prevent a late autocomplete response from reopening the dropdown
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    setDropdownOpen(false)
+    setSuggestions([])
+    setLoadingSuggestions(false)
+    setHighlighted(-1)
+
     const selection = await resolvePlace(suggestion)
     if (!selection) return
 
     setValue(selection.address)
-    setDropdownOpen(false)
     setSheetOpen(false)
-    setSuggestions([])
     sessionTokenRef.current = null // next search starts a fresh (separately-billed) session
     onSelectRef.current(selection)
   }
