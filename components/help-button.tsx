@@ -13,7 +13,8 @@ export function HelpButton() {
   const pathname = usePathname()
 
   useEffect(() => {
-    if (pathname !== "/") { setShowOnLanding(true); return }
+    const hasFullBleedAirportHero = pathname.startsWith("/airport-transfers/") && pathname !== "/airport-transfers/"
+    if (pathname !== "/" && !hasFullBleedAirportHero) { setShowOnLanding(true); return }
     const updateVisibility = () => setShowOnLanding(window.scrollY > window.innerHeight * .75)
     updateVisibility()
     window.addEventListener("scroll", updateVisibility, { passive: true })

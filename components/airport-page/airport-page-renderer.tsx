@@ -85,10 +85,15 @@ function AirportHeroQuote({ page }: { page: AirportPagePresentation }) {
   return (
     <div className="airport-quote-wrap">
       <div className="airport-quote-heading">
-        <span>Plan your transfer</span>
-        <strong>Get your fixed price</strong>
+        <span>Book your transfer</span>
+        <strong>See your fixed price in minutes</strong>
       </div>
       <AirportQuoteActions page={page} onDarkBackground />
+      <p className="airport-quote-notes">
+        <span>No account needed</span>
+        <span>No surge pricing</span>
+        <span>Free flight tracking</span>
+      </p>
     </div>
   )
 }
@@ -102,6 +107,11 @@ function AirportHeroCopy({ page, canonicalPath, showRating = true }: { page: Air
         <h1>{page.heading}</h1>
       </div>
       {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
+      <ul className="airport-hero-benefits" aria-label="Included with every airport transfer">
+        <li><Check aria-hidden="true" />Fixed price, confirmed before you book</li>
+        <li><Check aria-hidden="true" />Meet &amp; greet with flight tracking</li>
+        <li><Check aria-hidden="true" />Professional, vetted chauffeur</li>
+      </ul>
     </div>
   )
 }
