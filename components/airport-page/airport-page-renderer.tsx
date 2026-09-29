@@ -93,6 +93,19 @@ function AirportHeroQuote({ page }: { page: AirportPagePresentation }) {
   )
 }
 
+function AirportHeroCopy({ page, canonicalPath, showRating = true }: { page: AirportPagePresentation; canonicalPath?: string; showRating?: boolean }) {
+  return (
+    <div className="airport-hero-copy">
+      <div className="airport-hero-heading">
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
+        {showRating && <div className="airport-rating"><ShieldCheck aria-hidden="true" /><span>Professional airport transfers</span></div>}
+        <h1>{page.heading}</h1>
+      </div>
+      {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
+    </div>
+  )
+}
+
 function StorySection({ section, index }: { section: AirportPageContentSection; index: number }) {
   const Icon = storyIcons[index % storyIcons.length]
   const reversed = index % 2 === 1
@@ -252,18 +265,13 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true }: 
             <div className="airport-hero-image"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} /></div>
             <div className="airport-hero-shade" />
             <div className="airport-container airport-hero-content">
-              <div className="airport-hero-copy">
-                <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
-                <div className="airport-rating"><ShieldCheck aria-hidden="true" /><span>Professional airport transfers</span></div>
-                <h1>{page.heading}</h1>
-                {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
-              </div>
+              <AirportHeroCopy page={page} canonicalPath={canonicalPath} />
               <AirportHeroQuote page={page} />
             </div>
             <div className="airport-trust-rail"><div className="airport-container airport-trust-grid">{[[Banknote, "Fixed fares", "Know the price before you ride"], [PlaneTakeoff, "Flight tracking", "Pickup timed to your arrival"], [Headphones, "Human support", "Help whenever plans change"]].map(([Icon, title, description]) => { const FeatureIcon = Icon as typeof Banknote; return <div key={title as string}><FeatureIcon aria-hidden="true" /><span><strong>{title as string}</strong><small>{description as string}</small></span></div> })}</div></div>
           </section>
         ) : (
-          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><div className="airport-hero-copy"><Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" /><h1>{page.heading}</h1>{page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}</div><AirportHeroQuote page={page} /></div></section>
+          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><AirportHeroCopy page={page} canonicalPath={canonicalPath} showRating={false} /><AirportHeroQuote page={page} /></div></section>
         )}
 
         {visibleSections.map((section, index) => <BuilderSection key={section.id} section={section} page={page} index={index} />)}
