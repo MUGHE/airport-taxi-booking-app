@@ -23,7 +23,7 @@ export type CloudinaryAssetUsage = {
 type AssetRow = {
   id: string; public_id: string; secure_url: string; resource_type: "image"; version: number | null
   kind: CloudinaryImageKind; format: string; width: number; height: number; bytes: number
-  alt_text: string; source_owner: string; license_note: string; rights_confirmed: boolean; uploaded_at: string
+  alt_text: string; uploaded_at: string
 }
 
 function getSupabase(): SupabaseClient | null {
@@ -33,7 +33,7 @@ function getSupabase(): SupabaseClient | null {
 }
 
 function toAsset(row: AssetRow): CloudinaryAsset {
-  return { id: row.id, publicId: row.public_id, secureUrl: row.secure_url, resourceType: row.resource_type, version: row.version, kind: row.kind, format: row.format, width: Number(row.width), height: Number(row.height), bytes: Number(row.bytes), altText: row.alt_text, sourceOwner: row.source_owner, licenseNote: row.license_note, rightsConfirmed: row.rights_confirmed, uploadedAt: row.uploaded_at }
+  return { id: row.id, publicId: row.public_id, secureUrl: row.secure_url, resourceType: row.resource_type, version: row.version, kind: row.kind, format: row.format, width: Number(row.width), height: Number(row.height), bytes: Number(row.bytes), altText: row.alt_text, uploadedAt: row.uploaded_at }
 }
 
 function contentReferencesAsset(value: unknown, assetId: string): boolean {
@@ -115,7 +115,7 @@ export async function saveCloudinaryAsset(input: Omit<CloudinaryAsset, "id" | "u
   const { data, error } = await supabase.from("cloudinary_media_assets").insert({
     public_id: input.publicId.trim(), secure_url: input.secureUrl, resource_type: "image", version: input.version,
     kind: input.kind, format: input.format.toLowerCase(), width: input.width, height: input.height, bytes: input.bytes,
-    alt_text: input.altText.trim(), source_owner: input.sourceOwner.trim(), license_note: input.licenseNote.trim(), rights_confirmed: input.rightsConfirmed,
+    alt_text: input.altText.trim(),
   }).select("*").single()
   if (error || !data) return { ok: false, error: "The image uploaded but its library record could not be saved." }
   return { ok: true, asset: toAsset(data as AssetRow) }

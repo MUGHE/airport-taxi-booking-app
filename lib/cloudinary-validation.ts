@@ -10,9 +10,6 @@ export type CloudinaryImageMetadata = {
   height: number
   bytes: number
   altText: string
-  sourceOwner: string
-  licenseNote: string
-  rightsConfirmed: boolean
 }
 function formatName(format: string): string {
   return format.trim().toLowerCase().replace(/^image\//, "")
@@ -30,8 +27,5 @@ export function validateCloudinaryImage(metadata: CloudinaryImageMetadata): stri
     return "Content images must use a 4:3 or 16:9 shape."
   }
   if (!metadata.altText.trim()) return "Alt text is required before using an image."
-  if (!metadata.sourceOwner.trim()) return "The image source or owner is required."
-  if (!metadata.licenseNote.trim()) return "A licence note is required."
-  if (!metadata.rightsConfirmed) return "Confirm that you have the right to use this image."
   return null
 }
