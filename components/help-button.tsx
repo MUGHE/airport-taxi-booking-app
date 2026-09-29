@@ -2,12 +2,23 @@
 
 import { useEffect, useRef, useState } from "react"
 import { LifeBuoy, MessageCircle, Phone, X } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { CALL_LINK, WHATSAPP_LINK } from "@/lib/contact"
 
 export function HelpButton() {
   const [open, setOpen] = useState(false)
+  const [showOnLanding, setShowOnLanding] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (pathname !== "/") { setShowOnLanding(true); return }
+    const updateVisibility = () => setShowOnLanding(window.scrollY > window.innerHeight * .75)
+    updateVisibility()
+    window.addEventListener("scroll", updateVisibility, { passive: true })
+    return () => window.removeEventListener("scroll", updateVisibility)
+  }, [pathname])
 
   useEffect(() => {
     if (!open) return
@@ -30,7 +41,7 @@ export function HelpButton() {
   return (
     <div
       ref={rootRef}
-      className="fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
+      className={cn("fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 transition-opacity duration-200 sm:right-6 sm:bottom-6", showOnLanding ? "opacity-100" : "pointer-events-none opacity-0")}
     >
       <div className={cn("absolute right-0 bottom-[calc(3.5rem+0.75rem)] flex flex-col items-end gap-3 transition-all duration-200", open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
         <ContactAction href={WHATSAPP_LINK} label="WhatsApp us" className="bg-[#25D366] text-white hover:bg-[#1ebe57]" onSelect={() => setOpen(false)} target="_blank"><MessageCircle className="size-5" /></ContactAction>
