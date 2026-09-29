@@ -2,12 +2,26 @@
 
 import { useEffect, useRef, useState } from "react"
 import { LifeBuoy, MessageCircle, Phone, X } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { CALL_LINK, WHATSAPP_LINK } from "@/lib/contact"
 
 export function HelpButton() {
+  const pathname = usePathname()
+  const isHeroFirstPage = pathname === "/" || pathname.startsWith("/airport-transfers/")
   const [open, setOpen] = useState(false)
+  const [heroVisible, setHeroVisible] = useState(isHeroFirstPage)
   const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setHeroVisible(isHeroFirstPage)
+    if (!isHeroFirstPage) return
+    const hero = document.querySelector(".landing-hero, .airport-hero")
+    if (!hero) return
+    const observer = new IntersectionObserver(([entry]) => setHeroVisible(entry.isIntersecting), { threshold: 0.1 })
+    observer.observe(hero)
+    return () => observer.disconnect()
+  }, [isHeroFirstPage])
 
   useEffect(() => {
     if (!open) return
@@ -30,7 +44,10 @@ export function HelpButton() {
   return (
     <div
       ref={rootRef}
-      className="fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
+      className={cn(
+        "fixed right-4 bottom-[calc(1rem+var(--mobile-action-bar-h,0px))] z-50 flex flex-col items-end gap-3 transition-opacity sm:right-6 sm:bottom-6",
+        isHeroFirstPage && heroVisible && "max-sm:pointer-events-none max-sm:opacity-0"
+      )}
     >
       <div className={cn("absolute right-0 bottom-[calc(3.5rem+0.75rem)] flex flex-col items-end gap-3 transition-all duration-200", open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
         <ContactAction href={WHATSAPP_LINK} label="WhatsApp us" className="bg-[#25D366] text-white hover:bg-[#1ebe57]" onSelect={() => setOpen(false)} target="_blank"><MessageCircle className="size-5" /></ContactAction>

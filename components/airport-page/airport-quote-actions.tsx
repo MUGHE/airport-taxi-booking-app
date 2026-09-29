@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import type { AirportPagePresentation } from "@/lib/airport-page-data"
 
 export function AirportQuoteActions({ page, onDarkBackground = false }: { page: AirportPagePresentation; onDarkBackground?: boolean }) {
-  if (page.bookingAvailable === false) return <div className="airport-quote-card mt-7 p-5 text-center"><p className="font-semibold text-foreground">Online booking is temporarily unavailable</p><p className="mt-1 text-sm text-muted-foreground">Please contact our team and we’ll help arrange your transfer.</p><Button size="lg" className="mt-4" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></div>
+  if (page.bookingAvailable === false) return <div className="airport-quote-card p-5 text-center"><p className="font-semibold text-foreground">Online booking is temporarily unavailable</p><p className="mt-1 text-sm text-muted-foreground">Please contact our team and we’ll help arrange your transfer.</p><Button size="lg" className="mt-4" nativeButton={false} render={<Link href="/contact" />}>Contact us</Button></div>
   const primary = page.terminals.find((terminal) => terminal.isPrimary) ?? page.terminals[0]
   const [terminalId, setTerminalId] = useState(primary?.id ?? "")
   const terminal = page.terminals.find((item) => item.id === terminalId) ?? primary
@@ -16,7 +16,7 @@ export function AirportQuoteActions({ page, onDarkBackground = false }: { page: 
     fromAirport: `/book?${new URLSearchParams({ pickupAddress: terminal.name, pickupLat: String(terminal.latitude), pickupLng: String(terminal.longitude) })}`,
   } : page.bookingLinks
   const returnBookingLink = `${links.toAirport}${links.toAirport.includes("?") ? "&" : "?"}returnTrip=1`
-  return <div className="airport-quote-card mt-7 w-full max-w-xl p-3 text-foreground sm:p-4">
+  return <div className="airport-quote-card w-full max-w-xl p-3 text-foreground sm:p-4">
     <div className="mb-3 flex gap-1 rounded-lg bg-secondary p-1 text-xs font-semibold" role="group" aria-label="Trip type">
       <span className="flex-1 rounded-md bg-primary px-3 py-2 text-center text-primary-foreground">One way</span>
       <Link href={returnBookingLink} className="flex-1 rounded-md px-3 py-2 text-center text-muted-foreground hover:bg-background/70 hover:text-foreground">Return</Link>
