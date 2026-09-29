@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { Star } from "lucide-react"
+import { BadgePercent, Check, Star } from "lucide-react"
 import { FareEstimator } from "@/components/fare-estimator"
 import { getSitePromotion, getStopPricing } from "@/lib/actions"
 
@@ -9,8 +9,8 @@ export async function Hero() {
     <section className="landing-hero">
       <div className="landing-hero-image absolute inset-0" style={{ position: "absolute" }}>
         <Image
-          src="/airport-transfers/hero.webp"
-          alt="A professional airport transfer car waiting outside a London terminal"
+          src="/airport-transfers/chauffeur-terminal-hero.png"
+          alt="A chauffeur beside an executive car outside an airport terminal"
           fill
           priority
           sizes="100vw"
@@ -22,15 +22,21 @@ export async function Hero() {
       <div className="landing-container landing-hero-grid">
         <div className="landing-hero-copy">
           <span className="landing-eyebrow landing-eyebrow-light">
-            London airport transfers
+            Premium London airport transfers
           </span>
           <h1>
-            The calmest part of your journey starts here.
+            Your chauffeur is ready when you land.
           </h1>
           <p className="landing-hero-intro">
-            Fixed-price London airport transfers with a professional chauffeur,
-            live flight tracking, and a welcome waiting at arrivals.
+            Book a door-to-door London airport transfer with one clear price and
+            a professional welcome at arrivals.
           </p>
+
+          <ul className="landing-hero-benefits" aria-label="Included with every transfer">
+            <li><Check aria-hidden="true" />Fixed price, confirmed before you book</li>
+            <li><Check aria-hidden="true" />Live flight tracking and meet &amp; greet</li>
+            <li><Check aria-hidden="true" />Professional, vetted chauffeur</li>
+          </ul>
 
           <div className="landing-rating">
             <span className="flex items-center gap-0.5">
@@ -45,24 +51,24 @@ export async function Hero() {
             </a>
           </div>
 
-          {promotion.active && (
-            <p className="mt-4 text-sm font-medium text-accent">
-              Limited time: {promotion.discountPercent}% off every airport transfer
-            </p>
-          )}
         </div>
 
         <div className="landing-quote-wrap">
           <div className="landing-quote-heading">
-            <span>Plan your transfer</span>
-            <strong>Get your fixed price</strong>
+            <span>Book your transfer</span>
+            <strong>See your fixed price in minutes</strong>
           </div>
           <div className="landing-quote-card"><FareEstimator stopPricing={stopPricing} /></div>
-          <p className="landing-quote-notes">
-            <span>No account needed</span>
-            <span>No surge pricing</span>
-            <span>Free flight tracking</span>
-          </p>
+          <div className="landing-quote-reassurance">
+            {promotion.active && (
+              <p className="landing-quote-offer"><BadgePercent aria-hidden="true" />{promotion.discountPercent}% off your airport transfer</p>
+            )}
+            <p className="landing-quote-notes">
+              <span>No account needed</span>
+              <span>No surge pricing</span>
+              <span>Free flight tracking</span>
+            </p>
+          </div>
         </div>
       </div>
     </section>

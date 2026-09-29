@@ -69,7 +69,10 @@ export function FareEstimator({
   function removeStop(index: number) { setStops(stops.filter((_, i) => i !== index)) }
 
   function continueToBooking() {
-    if (!pickup || !dropoff || !pickupDate || !pickupTime) return
+    if (!pickup || !dropoff || !pickupDate || !pickupTime) {
+      toast.error("Add your route, date, and pickup time to see your fixed price.")
+      return
+    }
     const validStops = stops.filter((s) => s.address && Number.isFinite(s.lat) && Number.isFinite(s.lng))
     const params = new URLSearchParams({
       pickupAddress: pickup.address, pickupLat: String(pickup.lat), pickupLng: String(pickup.lng), pickupPlaceId: pickup.placeId,
@@ -142,7 +145,7 @@ export function FareEstimator({
         </div>}
         {stops.length < MAX_STOPS && <Button type="button" variant="outline" size="sm" className="mt-2" onClick={addStop}><MapPinPlus className="size-4" />Add a stop</Button>}
       </div>
-      <Button className="mt-5 w-full" size="lg" disabled={!pickup || !dropoff || !pickupDate || !pickupTime} onClick={continueToBooking}>Choose your vehicle <ArrowRight className="size-4" /></Button>
+      <Button className="mt-5 w-full bg-[#075fbd] font-bold text-white shadow-lg shadow-[#075fbd]/25 hover:bg-[#054d99]" size="lg" onClick={continueToBooking}>See my fixed price <ArrowRight className="size-4" /></Button>
     </div>
   )
 }
