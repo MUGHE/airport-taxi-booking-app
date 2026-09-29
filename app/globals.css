@@ -252,12 +252,12 @@
 .airport-eyebrow-light { color: #8bc7ff; }
 .airport-rich-list { display: grid; gap: .65rem; margin-left: 1.1rem; list-style: disc; }
 
-.airport-hero { position: relative; min-height: 42rem; overflow: hidden; background: var(--airport-ink); color: #fff; isolation: isolate; }
+.airport-hero { position: relative; min-height: 45rem; overflow: hidden; background: var(--airport-ink); color: #fff; isolation: isolate; }
 .airport-hero-image, .airport-hero-shade { position: absolute; inset: 0; }
 .airport-hero-image img { object-position: 72% center; }
 .airport-hero-shade { z-index: -1; background: linear-gradient(90deg, rgba(3,18,33,.90) 0%, rgba(3,18,33,.76) 38%, rgba(3,18,33,.36) 67%, rgba(3,18,33,.20) 100%); }
 .airport-hero-image { z-index: -2; }
-.airport-hero-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(24rem, 30rem); gap: clamp(2.5rem, 5vw, 5rem); min-height: 42rem; align-items: start; padding-block: clamp(3.25rem, 5vw, 4.5rem); }
+.airport-hero-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(24rem, 30rem); gap: clamp(2.5rem, 5vw, 5rem); min-height: 45rem; align-items: start; padding-block: clamp(3.25rem, 5vw, 4.5rem); }
 .airport-hero-copy { width: min(100%, 45rem); }
 .airport-quote-wrap { width: 100%; max-width: 30rem; justify-self: end; }
 .airport-hero-copy h1 { margin-top: .9rem; max-width: 16ch; font-size: clamp(2.65rem, 4vw, 3.55rem); font-weight: 700; line-height: 1; letter-spacing: -.048em; text-wrap: balance; }
