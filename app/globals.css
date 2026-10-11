@@ -338,7 +338,7 @@
 .airport-story { padding-block: clamp(5rem, 9vw, 8rem); }
 .airport-story:nth-of-type(even) { background: #f9fbfd; }
 .airport-story-grid { display: grid; gap: 4rem; align-items: center; }
-.airport-story-copy h2 { margin-top: 1.25rem; }
+.airport-story-copy h2 { color: var(--airport-blue); }
 .airport-chapter { display: flex; gap: .8rem; align-items: center; color: var(--airport-blue); font-size: .68rem; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
 .airport-chapter span:first-child { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border: 1px solid #bcd6ec; border-radius: 999px; }
 .airport-story-media { position: relative; min-height: 30rem; overflow: hidden; border-radius: var(--airport-radius-xl); box-shadow: 0 25px 65px rgba(7,29,51,.16); }

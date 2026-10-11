@@ -26,7 +26,7 @@ export const COMPANY_COUNTRY = process.env.COMPANY_COUNTRY?.trim() || "GB"
 // Place ID for THIS business's own Google Business Profile — from the Google Business Profile
 // dashboard, or Maps > your listing > Share > "Get more reviews" link. Distinct from the
 // per-airport place IDs used elsewhere for destination-page SEO/schema.
-const GOOGLE_REVIEW_PLACE_ID = process.env.GOOGLE_REVIEW_PLACE_ID?.trim() || ""
+export const GOOGLE_REVIEW_PLACE_ID = process.env.GOOGLE_REVIEW_PLACE_ID?.trim() || ""
 /** Star rating (out of 5) at or above which a customer is invited to also post on Google. */
 export const REVIEW_PUBLISH_THRESHOLD = 4
 

@@ -11,10 +11,8 @@ import {
   Navigation,
   PlaneLanding,
   PlaneTakeoff,
-  Quote,
   ShieldCheck,
   Sparkles,
-  Star,
   UsersRound,
 } from "lucide-react"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
@@ -26,6 +24,8 @@ import { SiteHeader } from "@/components/site-header"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
+import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import type { AirportPageContentSection, AirportPagePresentation } from "@/lib/airport-page-data"
 import type { RichTextBlock, TiptapDocument, TiptapNode } from "@/lib/destination-content"
 
@@ -124,7 +124,6 @@ function StorySection({ section, index }: { section: AirportPageContentSection; 
     <section className={`airport-story ${reversed ? "airport-story-reversed" : ""}`} data-preview-section={section.type}>
       <div className="airport-container airport-story-grid">
         <div className="airport-story-copy">
-          <div className="airport-chapter"><span>{String(index + 1).padStart(2, "0")}</span><span>{sectionLabels[section.type] ?? section.type.replace(/_/g, " ")}</span></div>
           <h2>{section.title}</h2>
           <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>
           {Object.entries(section.fields).filter(([, value]) => value.trim()).length > 0 && (
@@ -137,7 +136,6 @@ function StorySection({ section, index }: { section: AirportPageContentSection; 
         </div>
         {section.image ? (
           <div className="airport-story-media">
-            <span className="airport-image-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} />
           </div>
         ) : (
@@ -153,9 +151,8 @@ function RouteSection({ page, title = "Popular transfer routes" }: { page: Airpo
   return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Keep moving</p><h2>{title}</h2></div><p>Direct airport connections, ready to book.</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card">{related.image ? <ResilientImage className="airport-route-image" src={related.image} alt={related.displayName} /> : <div className="airport-route-image airport-route-placeholder"><Navigation aria-hidden="true" /></div>}<div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{related.heading}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>Get a fixed price <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
 }
 
-function ReviewSection({ page, title = "Verified reviews" }: { page: AirportPagePresentation; title?: string }) {
-  if (page.reviews.length === 0) return null
-  return <section className="airport-reviews" data-preview-section="reviews"><div className="airport-container"><div className="airport-review-heading"><p className="airport-eyebrow">Real journeys</p><h2>{title}</h2><p>Feedback from travellers who booked with us.</p></div><div className="airport-review-grid">{page.reviews.map((review, index) => <blockquote key={review.id} className="airport-review-card"><Quote aria-hidden="true" /><div className="airport-review-stars" aria-hidden="true">{Array.from({ length: 5 }, (_, star) => <Star key={star} />)}</div><p>“{review.quote}”</p><footer><span>{review.author}</span><small><Check aria-hidden="true" /> Verified · {review.source}</small></footer><span className="airport-review-number">{String(index + 1).padStart(2, "0")}</span></blockquote>)}</div></div></section>
+function ReviewSection({ title = "Google reviews" }: { page: AirportPagePresentation; title?: string }) {
+  return <GoogleBusinessReviewsWidget placeId={GOOGLE_REVIEW_PLACE_ID} variant="airport" title={title} />
 }
 
 function FaqSection({ page, title = "Frequently asked questions" }: { page: AirportPagePresentation; title?: string }) {
