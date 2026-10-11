@@ -82,7 +82,7 @@ export function EditBookingDialog({
         customerName, email, phone, notes, addOnIds: selectedAddOnIds, paymentMethod,
       })
       if (!res.ok || !res.booking) { toast.error(res.error || "Could not save these changes."); return }
-      toast.success(`${res.booking.reference} updated — new fare ${formatCurrency(res.booking.fare)}.`)
+      toast.success(`${res.booking.reference} updated — fare ${formatCurrency(res.booking.fare)}.`)
       router.refresh()
       onClose()
     })

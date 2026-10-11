@@ -1201,12 +1201,9 @@ export interface UpdateBookingResult {
 }
 
 /**
- * Lets an admin correct a booking's locations, stops, vehicle, add-ons, or contact details —
- * the fare is always fully recomputed from the current rate card so pricing stays accurate,
- * the same way a fresh booking is priced. The site-wide promotion and return-trip discount are
- * deliberately not re-applied here (they're customer-facing incentives for new bookings, not
- * something a support correction should silently add); an existing promo code is re-validated
- * and recomputed against the new subtotal.
+ * Reprice only when an input used by the fare calculation changes. Administrative edits to
+ * flight details, schedule, or contact information must not change a customer's agreed fare;
+ * in particular, a newly calculated route duration can vary even when the route is unchanged.
  */
 export async function updateBookingAction(reference: string, input: BookingEditInput): Promise<UpdateBookingResult> {
   if (!(await isAdminAuthenticated("bookings"))) return { ok: false, error: "Not authorized." }
@@ -1241,25 +1238,34 @@ export async function updateBookingAction(reference: string, input: BookingEditI
   )
   if (route == null) return { ok: false, error: "Unable to price this trip." }
 
-  const quote = computeFare(vehicle, route.distanceMiles, route.durationMinutes)
+  const locationsChanged =
+    input.pickupLat !== existing.pickupLat || input.pickupLng !== existing.pickupLng ||
+    input.dropoffLat !== existing.dropoffLat || input.dropoffLng !== existing.dropoffLng ||
+    stops.length !== existing.stops.length || stops.some((stop, index) => {
+      const previous = existing.stops[index]
+      return !previous || stop.lat !== previous.lat || stop.lng !== previous.lng
+    })
+  const addOnIdsChanged =
+    input.addOnIds.length !== existing.addOns.length ||
+    input.addOnIds.some((id) => !existing.addOns.some((addOn) => addOn.id === id))
+  const fareInputsChanged = locationsChanged || input.vehicleId !== existing.vehicleId || addOnIdsChanged
+
   // Look up by id against every add-on (including disabled ones) so a since-deactivated
   // add-on that's still on this booking keeps its price rather than disappearing.
   const allAddOns = await listAddOns()
   const selectedIds = new Set(input.addOnIds)
-  const addOns: BookingAddOn[] = allAddOns.filter((addOn) => selectedIds.has(addOn.id)).map(({ id, name, price }) => ({ id, name, price }))
-  const addOnsTotal = addOns.reduce((total, addOn) => total + addOn.price, 0)
+  const addOns: BookingAddOn[] = fareInputsChanged
+    ? allAddOns.filter((addOn) => selectedIds.has(addOn.id)).map(({ id, name, price }) => ({ id, name, price }))
+    : existing.addOns
+  const addOnsTotal = fareInputsChanged ? addOns.reduce((total, addOn) => total + addOn.price, 0) : existing.addOnsTotal
   const stopPricing = await getStoredStopPricing()
-  const stopsTotal = stops.length * stopPricing.pricePerStop
+  const stopsTotal = fareInputsChanged ? stops.length * stopPricing.pricePerStop : existing.stopsTotal
   const congestionCharge = congestionChargeFor([{ lat: input.pickupLat, lng: input.pickupLng }, { lat: input.dropoffLat, lng: input.dropoffLng }, ...stops], await listStoredCongestionZones())
-  const subtotal = quote.fare + addOnsTotal + stopsTotal + congestionCharge
-
-  let discountAmount = 0
-  let promoCode = existing.promoCode
-  if (promoCode) {
-    const promo = await findActivePromoCode(promoCode)
-    if (promo) discountAmount = computeDiscount(subtotal, promo)
-    else promoCode = undefined
-  }
+  const quote = fareInputsChanged ? computeFare(vehicle, route.distanceMiles, route.durationMinutes) : null
+  const subtotal = quote ? quote.fare + addOnsTotal + stopsTotal + congestionCharge : existing.fare + existing.discountAmount
+  const promo = fareInputsChanged && existing.promoCode ? await findActivePromoCode(existing.promoCode) : null
+  const promoCode = fareInputsChanged ? (promo ? existing.promoCode : undefined) : existing.promoCode
+  const discountAmount = fareInputsChanged ? (promo ? computeDiscount(subtotal, promo) : 0) : existing.discountAmount
 
   const updated: Booking = {
     ...existing,
@@ -1276,7 +1282,7 @@ export async function updateBookingAction(reference: string, input: BookingEditI
     stops, stopsTotal, addOns, addOnsTotal,
     distanceMiles: route.distanceMiles,
     promoCode, discountAmount,
-    fare: Math.max(0, subtotal - discountAmount),
+    fare: fareInputsChanged ? Math.max(0, subtotal - discountAmount) : existing.fare,
   }
 
   const saved = await replaceBooking(updated)
