@@ -11,10 +11,8 @@ import {
   Navigation,
   PlaneLanding,
   PlaneTakeoff,
-  Quote,
   ShieldCheck,
   Sparkles,
-  Star,
   UsersRound,
 } from "lucide-react"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
@@ -26,6 +24,8 @@ import { SiteHeader } from "@/components/site-header"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
+import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import type { AirportPageContentSection, AirportPagePresentation } from "@/lib/airport-page-data"
 import type { RichTextBlock, TiptapDocument, TiptapNode } from "@/lib/destination-content"
 
@@ -124,7 +124,6 @@ function StorySection({ section, index }: { section: AirportPageContentSection; 
     <section className={`airport-story ${reversed ? "airport-story-reversed" : ""}`} data-preview-section={section.type}>
       <div className="airport-container airport-story-grid">
         <div className="airport-story-copy">
-          <div className="airport-chapter"><span>{String(index + 1).padStart(2, "0")}</span><span>{sectionLabels[section.type] ?? section.type.replace(/_/g, " ")}</span></div>
           <h2>{section.title}</h2>
           <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>
           {Object.entries(section.fields).filter(([, value]) => value.trim()).length > 0 && (
@@ -137,7 +136,6 @@ function StorySection({ section, index }: { section: AirportPageContentSection; 
         </div>
         {section.image ? (
           <div className="airport-story-media">
-            <span className="airport-image-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} />
           </div>
         ) : (
@@ -153,9 +151,8 @@ function RouteSection({ page, title = "Popular transfer routes" }: { page: Airpo
   return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Keep moving</p><h2>{title}</h2></div><p>Direct airport connections, ready to book.</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card">{related.image ? <ResilientImage className="airport-route-image" src={related.image} alt={related.displayName} /> : <div className="airport-route-image airport-route-placeholder"><Navigation aria-hidden="true" /></div>}<div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{related.heading}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>Get a fixed price <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
 }
 
-function ReviewSection({ page, title = "Verified reviews" }: { page: AirportPagePresentation; title?: string }) {
-  if (page.reviews.length === 0) return null
-  return <section className="airport-reviews" data-preview-section="reviews"><div className="airport-container"><div className="airport-review-heading"><p className="airport-eyebrow">Real journeys</p><h2>{title}</h2><p>Feedback from travellers who booked with us.</p></div><div className="airport-review-grid">{page.reviews.map((review, index) => <blockquote key={review.id} className="airport-review-card"><Quote aria-hidden="true" /><div className="airport-review-stars" aria-hidden="true">{Array.from({ length: 5 }, (_, star) => <Star key={star} />)}</div><p>“{review.quote}”</p><footer><span>{review.author}</span><small><Check aria-hidden="true" /> Verified · {review.source}</small></footer><span className="airport-review-number">{String(index + 1).padStart(2, "0")}</span></blockquote>)}</div></div></section>
+function ReviewSection({ title = "Google reviews" }: { page: AirportPagePresentation; title?: string }) {
+  return <GoogleBusinessReviewsWidget placeId={GOOGLE_REVIEW_PLACE_ID} variant="airport" title={title} />
 }
 
 function FaqSection({ page, title = "Frequently asked questions" }: { page: AirportPagePresentation; title?: string }) {
@@ -235,12 +232,13 @@ function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation;
 }
 
 function BuilderSection({ section, page, index }: { section: AirportPageContentSection; page: AirportPagePresentation; index: number }) {
+  const reversed = index % 2 === 1
   if (section.type === "introduction") {
-    return <section className="airport-introduction" data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">Your journey, handled</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Plan my transfer <ArrowRight className="size-4" /></Button></div>{section.image && <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" /><span>Door-to-door service<br /><small>Planned around your flight</small></span></div></div>}</div></section>
+    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">Your journey, handled</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Plan my transfer <ArrowRight className="size-4" /></Button></div>{section.image && <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" /><span>Door-to-door service<br /><small>Planned around your flight</small></span></div></div>}</div></section>
   }
 
   if (section.type === "benefits") {
-    return <section className="airport-benefits" data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">The ONE difference</p><h2>{section.title}</h2></div><p>Calm, dependable travel from booking to drop-off.</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards section={section} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><Sparkles aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
+    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">The ONE difference</p><h2>{section.title}</h2></div><p>Calm, dependable travel from booking to drop-off.</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards section={section} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><Sparkles aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
   }
 
   if (section.type === "fleet_pricing") {
@@ -249,11 +247,11 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
 
   if (section.type === "airport_guide") {
     const guideFields = Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim())
-    return <section className="airport-guide" data-preview-section="airport_guide"><div className="airport-container"><div className="airport-guide-lead"><div><p className="airport-eyebrow">Know before you land</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div></div>{section.image && <div className="airport-guide-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /></div>}</div><div className="airport-guide-grid">{guideFields.map(([key, value], fieldIndex) => { const Icon = storyIcons[fieldIndex % storyIcons.length]; return <article key={key} className="airport-guide-card"><span>{String(fieldIndex + 1).padStart(2, "0")}</span><Icon aria-hidden="true" /><h3>{key.replace(/([A-Z])/g, " $1")}</h3><p>{value}</p></article> })}</div></div></section>
+    return <section className={`airport-guide ${reversed ? "airport-guide-reversed" : ""}`} data-preview-section="airport_guide"><div className="airport-container"><div className="airport-guide-lead"><div><p className="airport-eyebrow">Know before you land</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div></div>{section.image && <div className="airport-guide-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /></div>}</div><div className="airport-guide-grid">{guideFields.map(([key, value], fieldIndex) => { const Icon = storyIcons[fieldIndex % storyIcons.length]; return <article key={key} className="airport-guide-card"><span>{String(fieldIndex + 1).padStart(2, "0")}</span><Icon aria-hidden="true" /><h3>{key.replace(/([A-Z])/g, " $1")}</h3><p>{value}</p></article> })}</div></div></section>
   }
 
   if (section.type === "map") {
-    return <section className="airport-map-chapter" data-preview-section="map"><div className="airport-container airport-map-grid"><div><p className="airport-eyebrow airport-eyebrow-light">Meet your driver with confidence</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><div className="airport-map-promise"><Clock3 aria-hidden="true" /><span><strong>Flight-aware pickup</strong><small>Your pickup adjusts when your flight does.</small></span></div></div>{page.mapLocation && <AirportMapPreview location={page.mapLocation} />}</div></section>
+    return <section className={`airport-map-chapter ${reversed ? "airport-map-reversed" : ""}`} data-preview-section="map"><div className="airport-container airport-map-grid"><div><p className="airport-eyebrow airport-eyebrow-light">Meet your driver with confidence</p><h2>{section.title}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><div className="airport-map-promise"><Clock3 aria-hidden="true" /><span><strong>Flight-aware pickup</strong><small>Your pickup adjusts when your flight does.</small></span></div></div>{page.mapLocation && <AirportMapPreview location={page.mapLocation} />}</div></section>
   }
 
   if (section.type === "reviews") return <ReviewSection page={page} title={section.title} />

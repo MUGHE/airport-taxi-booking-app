@@ -345,11 +345,15 @@ function databaseErrorText(error: unknown): string {
 
 export function friendlyDatabaseError(error: unknown): string {
   const message = databaseErrorText(error)
+  const code = error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code ?? "") : ""
   if (message.includes("destination_pages_slug_key") || message.includes("duplicate key") && message.includes("slug")) return DUPLICATE_SLUG_ERROR
   if (message.includes("destination_pages_iata_code_key") || message.includes("duplicate key") && message.includes("iata")) return DUPLICATE_IATA_ERROR
   if (message.includes("Ambiguous active Place identity")) return "That Place name, alias, or Covered Locality is already used by another active Place."
   if (message.includes("Primary Parent relationship cannot form a cycle")) return "Choose a Primary Parent that does not create a loop."
   if (message.toLowerCase().includes("duplicate key")) return "This conflicts with an existing Destination Page. Check the identity fields."
+  if (code === "PGRST202" || code === "42883") return "The database is missing a Destination Pages function. Apply the latest Supabase migrations and try again."
+  if (code === "42P01" || code === "42703") return "The Destination Pages database schema is out of date. Apply the latest Supabase migrations and try again."
+  if (code === "23502" || code === "23514") return "The database rejected one of the draft fields. Check that the latest Supabase migrations are applied."
   return "The Destination Page could not be saved. Please check the fields and try again."
 }
 
@@ -516,17 +520,19 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
       if (pointerError) throw pointerError
     }
 
-    const { error: terminalError } = await supabase.rpc("replace_destination_page_terminals", {
-      p_page_id: pageId,
-      p_terminals: normalized.terminals.map((terminal) => ({
-        displayName: terminal.displayName,
-        address: terminal.address,
-        latitude: terminal.latitude,
-        longitude: terminal.longitude,
-        isPrimary: terminal.isPrimary,
-      })),
-    })
-    if (terminalError) throw terminalError
+    if (normalized.pageType === "airport") {
+      const { error: terminalError } = await supabase.rpc("replace_destination_page_terminals", {
+        p_page_id: pageId,
+        p_terminals: normalized.terminals.map((terminal) => ({
+          displayName: terminal.displayName,
+          address: terminal.address,
+          latitude: terminal.latitude,
+          longitude: terminal.longitude,
+          isPrimary: terminal.isPrimary,
+        })),
+      })
+      if (terminalError) throw terminalError
+    }
 
     if (normalized.pageType === "place") {
       const { error: supportError } = await supabase.rpc("replace_destination_place_support", {
@@ -562,6 +568,12 @@ export async function saveAdminDestinationPage(input: SaveAdminDestinationPageIn
     if (!saved[0]) return { ok: false, error: "The Destination Page was saved but could not be reloaded." }
     return { ok: true, page: saved[0] }
   } catch (saveError) {
+    console.error("Destination Page draft save failed", {
+      pageId: input.id ?? null,
+      pageType: input.pageType,
+      code: saveError && typeof saveError === "object" && "code" in saveError ? (saveError as { code?: unknown }).code : undefined,
+      message: databaseErrorText(saveError),
+    })
     if (!input.id && pageId) {
       // A failed create should not leave a half-created page behind if a later
       // child insert failed. The delete is best-effort and never hides the real error.

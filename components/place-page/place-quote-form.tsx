@@ -47,7 +47,7 @@ export function PlaceQuoteForm({ place, sourcePlaceId, sourcePlaceSlug, airports
     return <div className="mt-7 rounded-2xl border border-white/20 bg-white/10 p-5 text-white"><p className="font-semibold">Airport booking is currently unavailable</p><p className="mt-1 text-sm text-white/75">Please contact our team and we’ll help arrange your transfer.</p></div>
   }
 
-  return <form onSubmit={submit} className="mt-7 rounded-2xl bg-white p-5 text-foreground shadow-xl" aria-label={`Get a quote from ${place}`}>
+  return <form onSubmit={submit} className="airport-quote-card mt-7 rounded-2xl bg-white p-5 text-foreground shadow-xl" aria-label={`Get a quote from ${place}`}>
     <p className="font-semibold">Start your airport journey</p>
     <p className="mt-1 text-sm text-muted-foreground">Choose an airport, then enter the exact pickup or drop-off address.</p>
     <fieldset className="mt-4">
