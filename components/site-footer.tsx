@@ -27,13 +27,13 @@ export function SiteFooter() {
               </span>
             </Link>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              Fixed-price airport transfers with professional chauffeurs, flight-aware pickup and support whenever your plans change.
+              Fixed-price London airport transfers with licensed drivers, live flight tracking and 24/7 UK support.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[minmax(0,.9fr)_minmax(13rem,1.2fr)_minmax(0,.9fr)]">
-            <FooterContact href={CALL_LINK} icon={Phone} label="Call our team" value={CALL_NUMBER} />
-            <FooterContact href={EMAIL_LINK} icon={Mail} label="Email support" value={CONTACT_EMAIL} noWrap />
+            <FooterContact href={CALL_LINK} icon={Phone} label="Call 24/7" value={CALL_NUMBER} />
+            <FooterContact href={EMAIL_LINK} icon={Mail} label="Email us" value={CONTACT_EMAIL} noWrap />
             <FooterContact href={WHATSAPP_LINK} icon={MessageCircle} label="WhatsApp us" value={`+${WHATSAPP_NUMBER.replace(/^\+/, "")}`} target="_blank" />
           </div>
         </div>
@@ -44,16 +44,16 @@ export function SiteFooter() {
           <div className="rounded-xl bg-card p-5 ring-1 ring-border">
             <p className="text-xs font-bold uppercase tracking-[.18em] text-primary">Travel with confidence</p>
             <div className="mt-5 flex flex-col gap-4 text-sm leading-5 text-muted-foreground">
-              <p className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /> Available for pre-booked airport journeys, day or night.</p>
-              <p className="flex items-start gap-3"><MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /> Door-to-door transfers across airports, cities and hotels.</p>
+              <p className="flex items-start gap-3"><Clock3 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /> Pre-booked transfers, 24 hours a day, 365 days a year.</p>
+              <p className="flex items-start gap-3"><MapPin aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /> Airports, hotels and city addresses, door to door.</p>
             </div>
             <Link href="/book" className={cn(buttonVariants({ size: "lg" }), "mt-6 bg-primary text-primary-foreground hover:bg-primary/85")}>
-              Book your transfer <ArrowRight aria-hidden="true" data-icon="inline-end" />
+              Get My Fixed Price <ArrowRight aria-hidden="true" data-icon="inline-end" />
             </Link>
           </div>
 
           <FooterCol title="Services" links={[
-            { href: "/book", label: "Book a Ride" },
+            { href: "/book", label: "Get a Quote" },
             { href: "/airport-transfers", label: "Airport Transfers" },
             { href: "/destinations", label: "Destinations" },
             { href: "/#fleet", label: "Our Fleet" },
@@ -62,13 +62,12 @@ export function SiteFooter() {
           <FooterCol title="Company" links={[
             { href: "/about", label: "About Us" },
             { href: "/contact", label: "Contact" },
-            { href: "/help", label: "Help Center" },
+            { href: "/help", label: "Help Centre" },
           ]} />
           <FooterCol title="Information" links={[
             { href: "/#how", label: "How It Works" },
             { href: "/terms", label: "Terms" },
             { href: "/privacy", label: "Privacy" },
-            { href: "/admin", label: "Admin Portal" },
           ]} />
           <FooterCompanyDetails />
         </div>
@@ -77,7 +76,7 @@ export function SiteFooter() {
 
         <div className="flex flex-col gap-3 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} ONE Airport Taxi. All rights reserved.</p>
-          <p className="flex items-center gap-2"><span aria-hidden="true" className="size-1.5 rounded-full bg-primary" /> Secure online booking · Clear pricing</p>
+          <p className="flex items-center gap-2"><span aria-hidden="true" className="size-1.5 rounded-full bg-primary" /> Secure booking · Fixed prices</p>
         </div>
       </div>
     </footer>

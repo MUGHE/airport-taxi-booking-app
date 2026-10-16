@@ -3,23 +3,23 @@ import { Baby, Clock, Headset, PlaneLanding } from "lucide-react"
 const ITEMS = [
   {
     icon: PlaneLanding,
-    title: "Flight delay? We adjust.",
-    text: "We track your flight and adjust pickup time at no extra cost.",
+    title: "Delayed flight, same price",
+    text: "We track your flight live and move your pickup automatically.",
   },
   {
     icon: Clock,
-    title: "Free waiting time",
-    text: "Generous waiting time included with every airport pickup.",
+    title: "45 minutes free waiting",
+    text: "Counted from when your flight lands, so baggage and passport control are covered.",
   },
   {
     icon: Headset,
-    title: "Local support, 24/7",
-    text: "Our UK-based team is here day and night.",
+    title: "UK-based support, 24/7",
+    text: "Call or WhatsApp a real person, any time.",
   },
   {
     icon: Baby,
     title: "Child seats on request",
-    text: "Travel safely with child seats available.",
+    text: "Add a child seat when you book and it's fitted before pickup.",
   },
 ]
 
@@ -29,10 +29,10 @@ export function ConfidenceBanner() {
       <div className="landing-container landing-confidence-grid">
         <div className="landing-confidence-heading">
           <span className="landing-eyebrow landing-eyebrow-light">
-            Always on your side
+            Plans change. We don't mind.
           </span>
-          <h2>Built around the moments travel cannot predict.</h2>
-          <p>Delayed flight. Long passport queue. A change of plan. We stay ready.</p>
+          <h2>Flight late? Queue long? We'll still be there.</h2>
+          <p>Delays, long passport queues and last-minute changes are part of travel. Your pickup adjusts around them, and the first 45 minutes of waiting are free.</p>
         </div>
 
         <div className="landing-confidence-list">
