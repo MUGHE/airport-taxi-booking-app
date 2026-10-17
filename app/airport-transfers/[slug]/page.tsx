@@ -4,6 +4,7 @@ import { AirportPageRenderer } from "@/components/airport-page/airport-page-rend
 import { AirportPageStructuredData } from "@/components/airport-page/airport-page-structured-data"
 import { getPublishedAirportRedirect, readPublicAirportPage, type AirportPageSeo } from "@/lib/destination-pages"
 import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
+import { getGoogleRating } from "@/lib/google-rating"
 
 export const dynamic = "force-dynamic"
 
@@ -46,8 +47,8 @@ export default async function AirportPage({ params }: { params: Promise<{ slug: 
   const redirectSlug = await getPublishedAirportRedirect(slug)
   if (redirectSlug === "airport-transfers") permanentRedirect("/airport-transfers")
   if (redirectSlug) permanentRedirect(`/airport-transfers/${redirectSlug}`)
-  const publishedRead = await readPublicAirportPage(slug)
-  if (publishedRead.status === "published" || publishedRead.status === "fallback") return <><AirportPageStructuredData seo={publishedRead.page.metadata} /><AirportPageRenderer page={publishedRead.page.presentation} canonicalPath={publishedRead.page.metadata.canonical} /></>
+  const [publishedRead, googleRating] = await Promise.all([readPublicAirportPage(slug), getGoogleRating()])
+  if (publishedRead.status === "published" || publishedRead.status === "fallback") return <><AirportPageStructuredData seo={publishedRead.page.metadata} /><AirportPageRenderer page={publishedRead.page.presentation} canonicalPath={publishedRead.page.metadata.canonical} googleRating={googleRating} /></>
 
   if (publishedRead.status === "unavailable") return <PublicPageServiceError retryHref={`/airport-transfers/${slug}`} />
 

@@ -10,6 +10,26 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+/** Makes the shared airport FAQs specific to one airport page, so questions name the airport
+ *  ("Where will my driver meet me at Luton Airport?") on the page and in its FAQ schema. */
+export function localizeAirportFaqs<T extends { question: string; answer: string }>(faqs: T[], airportName: string, singleTerminal: boolean): { question: string; answer: string }[] {
+  const airport = `${airportName} Airport`
+  const localized = faqs.map((faq) => ({
+    question: faq.question
+      .replace(/\bat the airport\b/gi, `at ${airport}`)
+      .replace(/\bmy flight is\b/gi, `my flight to ${airportName} is`)
+      .replace(/\ban airport transfer\b/gi, `a ${airport} transfer`)
+      .replace(/\bmy airport transfer\b/gi, `my ${airport} transfer`)
+      .replace(/\ban airport pickup\b/gi, `a ${airport} pickup`),
+    answer: faq.answer,
+  }))
+  if (!singleTerminal) return localized
+  return [...localized, {
+    question: `Does ${airport} have more than one terminal?`,
+    answer: `No. ${airport} has a single terminal, so there is one meeting point and no terminal to choose when you book.`,
+  }]
+}
+
 function toAdminFaq(row: { id: string; question: string; answer: string; approved: boolean; updated_at: string }): AdminAirportFaq {
   return { id: row.id, question: row.question, answer: row.answer, approved: row.approved, updatedAt: row.updated_at }
 }

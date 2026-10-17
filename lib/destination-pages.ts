@@ -11,7 +11,7 @@ import { cacheSafePublishedAirportPage, getSafePublishedAirportPage } from "@/li
 import { getDestinationPagePolicy } from "@/lib/destination-page-policy"
 import type { PlacePagePresentation } from "@/lib/place-page-data"
 import { cacheSafePublishedPlacePage, getSafePublishedPlacePage } from "@/lib/public-place-page-cache"
-import { listAirportFaqs } from "@/lib/airport-faqs"
+import { listAirportFaqs, localizeAirportFaqs } from "@/lib/airport-faqs"
 
 const airportPolicy = getDestinationPagePolicy("airport")
 const placePolicy = getDestinationPagePolicy("place")
@@ -101,7 +101,7 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
   }))
   const primary = terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]
   const relatedTerminals = await getPublishedPrimaryTerminals(page.relatedDestinations.map((item) => item.pageId))
-  const airportFaqs = await listAirportFaqs()
+  const airportFaqs = localizeAirportFaqs(await listAirportFaqs(), page.displayName, terminals.length === 1)
   const relatedDestinations = page.relatedDestinations.flatMap((item) => {
     const relatedTerminal = relatedTerminals.get(item.pageId)
     if (!primary || !relatedTerminal) return []
@@ -117,8 +117,8 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
       intro: content.hero.body.map((block) => block.text),
       introDocument: content.hero.bodyDocument,
       benefits: [
-        { title: "Fixed, all-inclusive fare", description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.", icon: "fare" },
-        { title: "Flight tracking & meet & greet", description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.", icon: "flight" },
+        { title: "Fixed fare", description: "Your fare is calculated from your exact route and confirmed before you pay, with no surge pricing.", icon: "fare" },
+        { title: "Flight tracking", description: "We track your flight, so your pickup adjusts automatically if it lands early or late. Add meet & greet to be met inside arrivals.", icon: "flight" },
       ],
       faqs: airportFaqs,
       serviceFacts: content.serviceFacts,
@@ -249,8 +249,8 @@ export function publishedContentFromSnapshot(snapshot: Pick<DestinationSnapshotR
     intro: content.hero.body.map((block) => block.text),
     introDocument: content.hero.bodyDocument,
     benefits: [
-      { title: "Fixed, all-inclusive fare", description: "Your fare is calculated from your exact route and locked in at booking — no surge pricing, no surprise charges on arrival.", icon: "fare" },
-      { title: "Flight tracking & meet & greet", description: "Your chauffeur tracks your flight and meets you at arrivals, so pickup adjusts automatically if your flight time changes.", icon: "flight" },
+      { title: "Fixed fare", description: "Your fare is calculated from your exact route and confirmed before you pay, with no surge pricing.", icon: "fare" },
+      { title: "Flight tracking", description: "We track your flight, so your pickup adjusts automatically if it lands early or late. Add meet & greet to be met inside arrivals.", icon: "flight" },
     ],
     faqs: content.airportFaqs.map((faq) => ({ question: faq.question, answer: faq.answer })),
     serviceFacts: content.serviceFacts,
@@ -329,7 +329,7 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       isPrimary: terminal.is_primary,
     }))
     const content = publishedContentFromSnapshot(snapshotRow)
-    const airportFaqs = await listAirportFaqs()
+    const airportFaqs = localizeAirportFaqs(await listAirportFaqs(), airport.displayName, terminals.length === 1)
     content.faqs = airportFaqs
     content.airportFaqs = []
     const legacyHeroAsset = (legacyHero as LegacySnapshotMediaRow | null)?.destination_media_assets

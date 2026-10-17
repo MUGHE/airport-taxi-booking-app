@@ -159,7 +159,7 @@ export function GoogleBusinessReviewsWidget({
             <button type="button" onClick={() => scrollByReview(1)} disabled={!canScrollRight} aria-label="Next Google reviews" className="inline-flex size-10 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight aria-hidden="true" className="size-5" /></button>
           </div>}
         </div>
-        {!airport && <div className="landing-section-action"><Link href="/book" className={buttonVariants({ size: "lg" })}>Get My Fixed Price <ArrowRight aria-hidden="true" /></Link></div>}
+        <div className="landing-section-action"><Link href="/book" className={buttonVariants({ size: "lg" })}>Get My Fixed Price <ArrowRight aria-hidden="true" /></Link></div>
       </div>
     </section>
   )

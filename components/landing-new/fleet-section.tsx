@@ -2,18 +2,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { Briefcase, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { VEHICLE_CLASSES, formatCurrency } from "@/lib/fleet"
+import { VEHICLE_BEST_FOR, VEHICLE_CLASSES, formatCurrency } from "@/lib/fleet"
 import { getVehicleFleet } from "@/lib/actions"
-
-// One line per vehicle class to help visitors pick by group size and luggage.
-const BEST_FOR: Record<string, string> = {
-  standard: "Best for solo travellers and couples",
-  executive: "Best for business and premium travel",
-  estate: "Best for small groups with luggage",
-  mpv_4seater: "Best for families who want legroom",
-  mpv: "Best for larger families and sports kit",
-  minibus_8seater: "Best for groups, teams and events",
-}
 
 export async function FleetSection() {
   const vehicles = (await getVehicleFleet()) ?? VEHICLE_CLASSES
@@ -40,7 +30,7 @@ export async function FleetSection() {
               </div>
               <div className="landing-vehicle-copy">
                 <h3>{v.name}</h3>
-                {BEST_FOR[v.id] && <p className="landing-vehicle-best">{BEST_FOR[v.id]}</p>}
+                {VEHICLE_BEST_FOR[v.id] && <p className="landing-vehicle-best">{VEHICLE_BEST_FOR[v.id]}</p>}
                 <div className="landing-vehicle-meta">
                   <span><Users aria-hidden="true" /> {v.capacity} passengers
                   </span>

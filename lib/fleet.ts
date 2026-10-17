@@ -29,6 +29,16 @@ export const AIRPORTS: ServiceLocation[] = [
 // is charged at the vehicle's perMileAfter rate.
 export const MIN_DISTANCE_MILES = 10
 
+/** One short line per vehicle class, shown on fleet cards so visitors can pick by group and luggage. */
+export const VEHICLE_BEST_FOR: Record<string, string> = {
+  standard: "Best for solo travellers and couples",
+  executive: "Best for business and premium travel",
+  estate: "Best for small groups with luggage",
+  mpv_4seater: "Best for families who want legroom",
+  mpv: "Best for larger families and sports kit",
+  minibus_8seater: "Best for groups, teams and events",
+}
+
 export const VEHICLE_CLASSES: VehicleClass[] = [
   {
     id: "standard",
