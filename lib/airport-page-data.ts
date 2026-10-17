@@ -25,7 +25,7 @@ export type AirportPagePresentation = {
   terminals: AirportPageTerminal[]
   bookingLinks: AirportBookingLinks
   benefits: { title: string; description: string; icon: "fare" | "flight" }[]
-  vehicles: Pick<VehicleClass, "id" | "name" | "description" | "image" | "minFare">[]
+  vehicles: Pick<VehicleClass, "id" | "name" | "description" | "image" | "minFare" | "capacity" | "luggage">[]
   faqs: { question: string; answer: string }[]
   serviceFacts: ServiceFact[]
   globalFaqs: GlobalFaq[]

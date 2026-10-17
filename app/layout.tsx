@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-const SITE_TITLE = 'ONE Airport Taxi | Premium Airport Taxi & Transfers in London'
+const SITE_TITLE = 'London Airport Transfers at Fixed Prices | ONE Airport Taxi'
 const SITE_DESCRIPTION =
-  'Book reliable, fixed-price airport taxi transfers with professional chauffeurs. Instant fare estimates, flight tracking, and 24/7 meet & greet service.'
+  'Fixed-price airport taxis to and from Heathrow, Gatwick, Stansted, Luton, City and Southend. Live flight tracking, 45 minutes free waiting and 24/7 support.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -71,7 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="en-GB"
       className={`${geistSans.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">

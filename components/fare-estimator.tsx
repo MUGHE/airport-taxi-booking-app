@@ -97,9 +97,9 @@ export function FareEstimator({
           layout === "hub" ? "lg:gap-3" : ""
         }`}
       >
-        <LocationField label="Pickup" placeholder="Enter pickup address" value={pickup?.address} onSelect={setPickup} onClear={() => setPickup(null)} />
+        <LocationField label="From" placeholder="Airport, address or postcode" value={pickup?.address} onSelect={setPickup} onClear={() => setPickup(null)} />
         <div className="hidden pb-2.5 items-center text-muted-foreground @min-[480px]:flex"><ArrowRightLeft className="size-4" /></div>
-        <LocationField label="Drop-off" placeholder="Enter drop-off address" value={dropoff?.address} onSelect={setDropoff} onClear={() => setDropoff(null)} />
+        <LocationField label="To" placeholder="Airport, address or postcode" value={dropoff?.address} onSelect={setDropoff} onClear={() => setDropoff(null)} />
       </div>
       <div
         className={`mt-4 grid grid-cols-2 gap-3 sm:gap-4 ${
@@ -107,7 +107,7 @@ export function FareEstimator({
         }`}
       >
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Pickup date</Label>
+          <Label className="text-xs font-medium text-muted-foreground">Date</Label>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>
             <PopoverTrigger render={<Button variant="outline" className="w-full justify-start gap-2 font-normal" />}>
               <CalendarIcon className="size-4 text-muted-foreground" />
@@ -125,16 +125,12 @@ export function FareEstimator({
           </Popover>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Pickup time</Label>
+          <Label className="text-xs font-medium text-muted-foreground">Time</Label>
           <TimePicker value={pickupTime} onChange={handleTimeChange} times={availableTimes} />
         </div>
       </div>
       <div className="mt-4 hidden sm:block">
-        <div className="flex items-center justify-between gap-3">
-          <Label className="text-xs font-medium text-muted-foreground">Stops along the way (optional)</Label>
-          {stopPricing.pricePerStop > 0 && <span className="text-xs text-muted-foreground">+{formatCurrency(stopPricing.pricePerStop)} per stop</span>}
-        </div>
-        {stops.length > 0 && <div className="mt-2 space-y-2">
+        {stops.length > 0 && <div className="mb-2 space-y-2">
           {stops.map((stop, index) => (
             <div key={index} className="flex items-center gap-2">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-muted-foreground">{index + 1}</span>
@@ -143,9 +139,9 @@ export function FareEstimator({
             </div>
           ))}
         </div>}
-        {stops.length < MAX_STOPS && <Button type="button" variant="outline" size="sm" className="mt-2" onClick={addStop}><MapPinPlus className="size-4" />Add a stop</Button>}
+        {stops.length < MAX_STOPS && <Button type="button" variant="outline" size="sm" onClick={addStop}><MapPinPlus className="size-4" />Add a stop{stopPricing.pricePerStop > 0 && ` (${formatCurrency(stopPricing.pricePerStop)} each)`}</Button>}
       </div>
-      <Button className="mt-5 w-full bg-[#075fbd] font-bold text-white shadow-lg shadow-[#075fbd]/25 hover:bg-[#054d99]" size="lg" onClick={continueToBooking}>See my fixed price <ArrowRight className="size-4" /></Button>
+      <Button className="mt-5 w-full bg-[#075fbd] font-bold text-white shadow-lg shadow-[#075fbd]/25 hover:bg-[#054d99]" size="lg" onClick={continueToBooking}>Get My Fixed Price <ArrowRight className="size-4" /></Button>
     </div>
   )
 }

@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, ChevronLeft, ChevronRight, Quote, Star } from "lucide-react"
+import { buttonVariants } from "@/components/ui/button"
 import { loadGoogleMaps } from "@/lib/places"
 
 type Review = {
@@ -122,15 +124,15 @@ export function GoogleBusinessReviewsWidget({
   if (!business) {
     if (!loadFailed) return <div className="sr-only" aria-live="polite">Loading Google reviews…</div>
     const mapsUrl = placeId ? `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId)}` : "https://www.google.com/maps"
-    return <section id={airport ? undefined : "reviews"} className={sectionClass} data-preview-section={airport ? "reviews" : undefined}><div className={containerClass}><div className={airport ? "airport-review-heading" : "landing-section-heading"}><div><span className={airport ? "airport-eyebrow" : "landing-eyebrow"}>Google Maps reviews</span><h2>{title}</h2></div><p>Google reviews are temporarily unavailable. <a href={mapsUrl} target="_blank" rel="noopener noreferrer">View our Google profile</a>.</p></div></div></section>
+    return <section id={airport ? undefined : "reviews"} className={sectionClass} data-preview-section={airport ? "reviews" : undefined}><div className={containerClass}><div className={airport ? "airport-review-heading" : "landing-section-heading"}><div><span className={airport ? "airport-eyebrow" : "landing-eyebrow"}>Google reviews</span><h2>{title}</h2></div><p>Google reviews are temporarily unavailable. <a href={mapsUrl} target="_blank" rel="noopener noreferrer">View our Google profile</a>.</p></div></div></section>
   }
 
   return (
     <section id={airport ? undefined : "reviews"} className={sectionClass} data-preview-section={airport ? "reviews" : undefined}>
       <div className={containerClass}>
         <div className={airport ? "airport-review-heading" : "landing-section-heading"}>
-          <div><span className={airport ? "airport-eyebrow" : "landing-eyebrow"}>Google Maps reviews</span><h2>{title}</h2></div>
-          <p><strong>{business.rating.toFixed(1)} out of 5</strong> · {business.reviewCount.toLocaleString()} reviews · <a href={business.mapsUrl} target="_blank" rel="noopener noreferrer">See all reviews on Google Maps</a></p>
+          <div><span className={airport ? "airport-eyebrow" : "landing-eyebrow"}>Google reviews</span><h2>{title}</h2></div>
+          <p><strong>★ {business.rating.toFixed(1)} from {business.reviewCount.toLocaleString("en-GB")} Google reviews</strong> · <a href={business.mapsUrl} target="_blank" rel="noopener noreferrer">Read them all on Google →</a></p>
         </div>
         {business.attributions.length > 0 && <p className="mt-3 text-center text-xs text-muted-foreground">{business.attributions.join(" · ")}</p>}
         <div className="relative mt-12">
@@ -157,6 +159,7 @@ export function GoogleBusinessReviewsWidget({
             <button type="button" onClick={() => scrollByReview(1)} disabled={!canScrollRight} aria-label="Next Google reviews" className="inline-flex size-10 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight aria-hidden="true" className="size-5" /></button>
           </div>}
         </div>
+        <div className="landing-section-action"><Link href="/book" className={buttonVariants({ size: "lg" })}>Get My Fixed Price <ArrowRight aria-hidden="true" /></Link></div>
       </div>
     </section>
   )

@@ -588,14 +588,14 @@ export function RouteCard({
   }
 
   const rows: { leg: RouteLeg; label: string; placeholder: string; place: PlaceSelection | null }[] = [
-    { leg: { kind: "pickup" }, label: "Pickup", placeholder: "Where from?", place: pickup },
+    { leg: { kind: "pickup" }, label: "Pickup", placeholder: "Airport, address or postcode", place: pickup },
     ...stops.map((stop, index) => ({
       leg: { kind: "stop" as const, index },
       label: `Stop ${index + 1}`,
       placeholder: "Where do we stop?",
       place: stop,
     })),
-    { leg: { kind: "dropoff" }, label: "Drop-off", placeholder: "Where to?", place: dropoff },
+    { leg: { kind: "dropoff" }, label: "Drop-off", placeholder: "Airport, address or postcode", place: dropoff },
   ]
 
   return (

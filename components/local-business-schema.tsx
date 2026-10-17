@@ -21,11 +21,12 @@ export function LocalBusinessSchema() {
     image: `${SITE_URL}/icon-96x96.png`,
     telephone: CALL_NUMBER,
     email: CONTACT_EMAIL,
+    // Empty strings are invalid structured data, so only send the address parts that are set.
     address: {
       "@type": "PostalAddress",
-      streetAddress: COMPANY_STREET_ADDRESS,
-      addressLocality: COMPANY_CITY,
-      postalCode: COMPANY_POSTCODE,
+      ...(COMPANY_STREET_ADDRESS && { streetAddress: COMPANY_STREET_ADDRESS }),
+      ...(COMPANY_CITY && { addressLocality: COMPANY_CITY }),
+      ...(COMPANY_POSTCODE && { postalCode: COMPANY_POSTCODE }),
       addressCountry: COMPANY_COUNTRY,
     },
     areaServed: "GB",

@@ -1,20 +1,22 @@
-import { CarFront, MapPinned, Receipt } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, CarFront, MapPinned, Receipt } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const STEPS = [
   {
     icon: MapPinned,
-    title: "Tell us your route",
-    text: "Enter your pickup and drop-off details, plus your travel time.",
+    title: "Enter your journey",
+    text: "Add your pickup, destination and flight number. It takes under a minute.",
   },
   {
     icon: Receipt,
-    title: "See your fixed price",
-    text: "Get an instant, no-obligation price for your journey.",
+    title: "Get your fixed price",
+    text: "See the full fare instantly, with no obligation to book. Pay securely when you're ready.",
   },
   {
     icon: CarFront,
-    title: "Meet your chauffeur",
-    text: "Your driver will be there, with flight tracking and meet & greet.",
+    title: "Meet your driver",
+    text: "We track your flight and your driver waits at the terminal meeting point, even if you land early or late.",
   },
 ]
 
@@ -25,11 +27,11 @@ export function ProcessSteps() {
       <div className="landing-section-heading">
         <div>
         <span className="landing-eyebrow">
-          Simple. Reliable. Stress-free.
+          How it works
         </span>
-        <h2>From flight details to front door.</h2>
+        <h2>Booked in a minute. Met when you land.</h2>
         </div>
-        <p>Three simple steps. One clear price. No last-minute surprises.</p>
+        <p>Three steps, one fixed price, and no surprises on the day.</p>
       </div>
 
       <div className="landing-process-grid">
@@ -41,6 +43,12 @@ export function ProcessSteps() {
             <p>{step.text}</p>
           </article>
         ))}
+      </div>
+
+      <div className="landing-section-action">
+        <Button size="lg" nativeButton={false} render={<Link href="/book" />}>
+          Get My Fixed Price <ArrowRight aria-hidden="true" />
+        </Button>
       </div>
       </div>
     </section>
