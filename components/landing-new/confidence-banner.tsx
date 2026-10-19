@@ -8,7 +8,7 @@ const ITEMS = [
   },
   {
     icon: Clock,
-    title: "45 minutes free waiting",
+    title: "60 minutes free waiting",
     text: "Counted from when your flight lands, so baggage and passport control are covered.",
   },
   {
@@ -32,7 +32,7 @@ export function ConfidenceBanner() {
             Plans change. We don't mind.
           </span>
           <h2>Flight late? Queue long? We'll still be there.</h2>
-          <p>Delays, long passport queues and last-minute changes are part of travel. Your pickup adjusts around them, and the first 45 minutes of waiting are free.</p>
+          <p>Delays, long passport queues and last-minute changes are part of travel. Your pickup adjusts around them, and the first 60 minutes of waiting are free.</p>
         </div>
 
         <div className="landing-confidence-list">

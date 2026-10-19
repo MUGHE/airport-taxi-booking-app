@@ -11,7 +11,7 @@ import { cacheSafePublishedAirportPage, getSafePublishedAirportPage } from "@/li
 import { getDestinationPagePolicy } from "@/lib/destination-page-policy"
 import type { PlacePagePresentation } from "@/lib/place-page-data"
 import { cacheSafePublishedPlacePage, getSafePublishedPlacePage } from "@/lib/public-place-page-cache"
-import { listAirportFaqs, localizeAirportFaqs } from "@/lib/airport-faqs"
+import { airportPageFaqs } from "@/lib/airport-faqs"
 
 const airportPolicy = getDestinationPagePolicy("airport")
 const placePolicy = getDestinationPagePolicy("place")
@@ -101,7 +101,7 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
   }))
   const primary = terminals.find((terminal) => terminal.isPrimary) ?? terminals[0]
   const relatedTerminals = await getPublishedPrimaryTerminals(page.relatedDestinations.map((item) => item.pageId))
-  const airportFaqs = localizeAirportFaqs(await listAirportFaqs(), page.displayName, terminals.length === 1)
+  const airportFaqs = airportPageFaqs(page.displayName)
   const relatedDestinations = page.relatedDestinations.flatMap((item) => {
     const relatedTerminal = relatedTerminals.get(item.pageId)
     if (!primary || !relatedTerminal) return []
@@ -329,7 +329,7 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
       isPrimary: terminal.is_primary,
     }))
     const content = publishedContentFromSnapshot(snapshotRow)
-    const airportFaqs = localizeAirportFaqs(await listAirportFaqs(), airport.displayName, terminals.length === 1)
+    const airportFaqs = airportPageFaqs(airport.displayName)
     content.faqs = airportFaqs
     content.airportFaqs = []
     const legacyHeroAsset = (legacyHero as LegacySnapshotMediaRow | null)?.destination_media_assets

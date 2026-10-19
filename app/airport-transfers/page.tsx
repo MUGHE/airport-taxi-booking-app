@@ -9,6 +9,7 @@ import { FleetGuidance } from "@/components/airport-transfers/fleet-guidance"
 import { AirportTransferFaq } from "@/components/airport-transfers/faq"
 import { getStopPricing } from "@/lib/actions"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
+import { getGoogleRating } from "@/lib/google-rating"
 
 export const metadata: Metadata = {
   title: "Airport Transfers",
@@ -18,14 +19,13 @@ export const metadata: Metadata = {
 }
 
 export default async function AirportTransfersHubPage() {
-  const stopPricing = await getStopPricing()
-  const airports = await listPublishedAirportDirectory()
+  const [stopPricing, airports, googleRating] = await Promise.all([getStopPricing(), listPublishedAirportDirectory(), getGoogleRating()])
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="flex-1">
-        <AirportTransfersHero stopPricing={stopPricing} />
+        <AirportTransfersHero stopPricing={stopPricing} googleRating={googleRating} />
         <AirportGrid airports={airports} />
         <ServiceStrip />
         <FleetGuidance />

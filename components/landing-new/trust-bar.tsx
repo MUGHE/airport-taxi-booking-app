@@ -1,10 +1,10 @@
 import { Banknote, Handshake, Headset, Lock, ShieldCheck } from "lucide-react"
 
 const ITEMS = [
-  { icon: Banknote, title: "Fixed fares", text: "No meters, no surge, no surprises" },
+  { icon: Banknote, title: "Fixed fares", text: "No meters, no surge" },
   { icon: Handshake, title: "Meet & greet", text: "Add it when you book" },
-  { icon: ShieldCheck, title: "Licensed drivers", text: "Licensed and background-checked" },
-  { icon: Headset, title: "24/7 support", text: "Real people by phone or WhatsApp" },
+  { icon: ShieldCheck, title: "Licensed drivers", text: "Licensed and vetted" },
+  { icon: Headset, title: "24/7 support", text: "Phone or WhatsApp" },
   { icon: Lock, title: "Secure payment", text: "Pay securely by card" },
 ]
 

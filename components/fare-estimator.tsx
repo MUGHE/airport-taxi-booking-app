@@ -22,13 +22,22 @@ const MAX_STOPS = 3
 export function FareEstimator({
   stopPricing = NO_STOP_PRICING,
   layout = "card",
+  defaultDropoff,
+  onContinue,
+  extraParams,
 }: {
   stopPricing?: StopPricing
   layout?: "card" | "hub"
+  /** Prefills the To field, e.g. the airport on an airport page. */
+  defaultDropoff?: PlaceSelection
+  /** Called just before going to /book, e.g. for analytics. */
+  onContinue?: () => void
+  /** Extra query parameters carried to /book, e.g. the source place for attribution. */
+  extraParams?: Record<string, string>
 }) {
   const router = useRouter()
   const [pickup, setPickup] = useState<PlaceSelection | null>(null)
-  const [dropoff, setDropoff] = useState<PlaceSelection | null>(null)
+  const [dropoff, setDropoff] = useState<PlaceSelection | null>(defaultDropoff ?? null)
   const [stops, setStops] = useState<PlaceSelection[]>([])
   const [pickupDate, setPickupDate] = useState("")
   const [pickupTime, setPickupTime] = useState("")
@@ -79,7 +88,9 @@ export function FareEstimator({
       dropoffAddress: dropoff.address, dropoffLat: String(dropoff.lat), dropoffLng: String(dropoff.lng), dropoffPlaceId: dropoff.placeId,
       pickupDate, pickupTime,
       ...(validStops.length > 0 ? { stops: JSON.stringify(validStops) } : {}),
+      ...extraParams,
     })
+    onContinue?.()
     router.push(`/book?${params.toString()}`)
   }
 

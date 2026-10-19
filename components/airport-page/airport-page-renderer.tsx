@@ -12,11 +12,13 @@ import {
   PlaneLanding,
   PlaneTakeoff,
   ShieldCheck,
+  Baby,
+  Ship,
   Star,
   UsersRound,
 } from "lucide-react"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
-import { VEHICLE_BEST_FOR } from "@/lib/fleet"
+import { VehicleCard } from "@/components/vehicle-card"
 import { AirportQuoteActions } from "@/components/airport-page/airport-quote-actions"
 import { ResilientImage } from "@/components/airport-page/resilient-image"
 import { Breadcrumbs } from "@/components/breadcrumbs"
@@ -29,6 +31,7 @@ import { GoogleBusinessReviewsWidget } from "@/components/google-business-review
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { WHATSAPP_LINK } from "@/lib/contact"
 import type { GoogleRating } from "@/lib/google-rating"
+import type { StopPricing } from "@/lib/types"
 import type { AirportPageContentSection, AirportPagePresentation } from "@/lib/airport-page-data"
 import type { RichTextBlock, TiptapDocument, TiptapNode } from "@/lib/destination-content"
 
@@ -85,7 +88,7 @@ const sectionLabels: Partial<Record<AirportPageContentSection["type"], string>> 
 const storyIcons = [Navigation, PlaneLanding, Luggage, MapPin]
 
 // CMS template labels that tell visitors nothing; the page swaps in an airport-specific heading.
-const PLACEHOLDER_TITLES = new Set(["introduction", "benefits & service facts", "airport guide", "airport map", "popular transfer routes", "google reviews", "airport faqs", "frequently asked questions", "fleet & pricing", "find the right vehicle for your journey", "ready to book your airport transfer?"])
+const PLACEHOLDER_TITLES = new Set(["introduction", "benefits & service facts", "airport guide", "airport map", "popular transfer routes", "google reviews", "airport faqs", "frequently asked questions", "fleet & pricing", "find the right vehicle for your journey", "ready to book your airport transfer?", "ferry & cruise information"])
 
 function headingFor(title: string | undefined, fallback: string) {
   return title && !PLACEHOLDER_TITLES.has(title.trim().toLowerCase()) ? title : fallback
@@ -102,6 +105,53 @@ function hasContent(section: AirportPageContentSection) {
   return text || Object.values(section.fields).some((value) => value.trim())
 }
 
+function terminalLabel(terminal: AirportPagePresentation["terminals"][number]) {
+  return terminal.name.split(" - ")[1]?.trim() || terminal.name
+}
+
+/** "Terminals 2, 3, 4 and 5" or "North and South Terminals", or null for a single-terminal airport. */
+function terminalsSummary(page: AirportPagePresentation) {
+  if (page.terminals.length < 2) return null
+  const parts = page.terminals.map(terminalLabel)
+  const list = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : items[0])
+  const numbers = parts.map((part) => part.match(/^Terminal (\w+)$/i)?.[1])
+  if (numbers.every(Boolean)) return `Terminals ${list(numbers as string[])}`
+  return `${list(parts.map((part) => part.replace(/\s*Terminal$/i, "")))} Terminals`
+}
+
+function iataCode(page: AirportPagePresentation) {
+  return page.terminals[0]?.name.match(/\(([A-Z]{3})\)/)?.[1]
+}
+
+/** Shows the opening paragraph and folds the rest into "Read more", so long CMS copy stays on the
+ *  page (and in search) without becoming a wall of text. */
+function LeadAndMore({ blocks, document, extra, moreLabel }: { blocks: RichTextBlock[]; document?: TiptapDocument; extra?: React.ReactNode; moreLabel: string }) {
+  let lead: React.ReactNode = null
+  let rest: React.ReactNode = null
+  let hasRest = false
+  if (document) {
+    const leadIndex = document.content.findIndex((node) => node.type === "paragraph")
+    const restNodes = document.content.filter((_, index) => index !== leadIndex)
+    if (leadIndex >= 0) lead = <TiptapRichText document={{ ...document, content: [document.content[leadIndex]] }} />
+    if (restNodes.length > 0) { rest = <TiptapRichText document={{ ...document, content: restNodes }} />; hasRest = true }
+  } else {
+    const filled = blocks.filter((block) => block.text.trim())
+    if (filled.length > 0) lead = <RichText blocks={filled.slice(0, 1)} />
+    if (filled.length > 1) { rest = <RichText blocks={filled.slice(1)} />; hasRest = true }
+  }
+  return (
+    <>
+      {lead}
+      {(hasRest || extra) && (
+        <details className="airport-read-more">
+          <summary>{moreLabel}</summary>
+          <div className="mt-4 space-y-4">{rest}{extra}</div>
+        </details>
+      )}
+    </>
+  )
+}
+
 // Facts here mirror the Terms and Help Centre; keep them in step.
 const trustItems = [
   { icon: Banknote, title: "Fixed fares", text: "No meters, no surge" },
@@ -111,18 +161,67 @@ const trustItems = [
   { icon: Headphones, title: "24/7 support", text: "Phone or WhatsApp" },
 ]
 
-const whyBookCards = [
-  { icon: Banknote, title: "A fixed fare, confirmed before you pay", text: "Your price is set by your exact route, with no surge pricing and no meter running in traffic." },
-  { icon: PlaneTakeoff, title: "Flight tracking", text: "We track your flight live and move your pickup if you land early or late. Add meet & greet to be met inside arrivals." },
-  { icon: Clock3, title: "45 minutes free waiting", text: "Counted from when your flight actually lands, so passport control and baggage reclaim are covered." },
-  { icon: Headphones, title: "24/7 UK support", text: "Call or WhatsApp a real person at any hour, including before an early departure." },
-]
+type AirportCopy = {
+  heroSubhead?: string
+  heroNotes?: string[]
+  benefitsHeading?: string
+  benefitsSubhead?: string
+  benefitCards?: { icon: typeof Banknote; title: string; text: string }[]
+  guideHeading?: string
+  guideLead?: string
+  routesSubhead?: string
+  vehiclesSubhead?: string
+  vehicleFirst?: string
+  bestFor?: Record<string, string>
+  finalHeading?: string
+  finalChip?: string
+}
 
-function AirportHeroQuote({ page }: { page: AirportPagePresentation }) {
+const AIRPORT_COPY: Record<string, AirportCopy> = {
+  // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
+  "London City": {
+    heroSubhead: "Fixed-price transfers from London City to Canary Wharf, the City and beyond. Your driver tracks your flight and is ready when you walk out.",
+    heroNotes: ["No account needed", "Invoice on request", "No surge pricing"],
+    benefitsHeading: "Built for fast, on-time City trips",
+    benefitsSubhead: "From landing to your meeting with no fuss, at a price agreed in advance.",
+    benefitCards: [
+      { icon: Banknote, title: "One fixed fare", text: "Set by your route and locked in when you book. No meter running in City traffic." },
+      { icon: PlaneTakeoff, title: "Ready when you walk out", text: "We track your flight, so your driver is ready as you come through arrivals." },
+      { icon: UsersRound, title: "Executive cars on request", text: "A premium car for client meetings or a smarter arrival." },
+      { icon: Headphones, title: "Invoices for expense claims", text: "Ask and we'll email an invoice for any trip, ready for your expense claim." },
+    ],
+    guideHeading: "Your London City pickup",
+    guideLead: "One compact terminal, so you'll be with your driver within minutes of landing. No terminal to choose when you book.",
+    routesSubhead: "Business districts, Central London and airport connections at fixed prices.",
+    vehiclesSubhead: "Executive cars available for business travel. Compare seats and luggage space, then pick the car that fits.",
+    vehicleFirst: "executive",
+    bestFor: { executive: "Best for client meetings and business travel" },
+    finalHeading: "Landing at London City? Your driver's ready.",
+    finalChip: "Executive cars",
+  },
+}
+
+function airportCopy(page: AirportPagePresentation): AirportCopy {
+  return AIRPORT_COPY[page.shortName] ?? {}
+}
+
+function whyBookCards(page: AirportPagePresentation) {
+  const custom = airportCopy(page).benefitCards
+  if (custom) return custom
+  return [
+    { icon: Banknote, title: "A fixed fare, confirmed before you pay", text: "Set by your exact route, with no surge pricing and no meter running in traffic." },
+    { icon: PlaneTakeoff, title: "Flight tracking", text: "We follow your flight live and adjust your pickup if you land early or late." },
+    { icon: UsersRound, title: page.terminals.length > 1 ? "Meet & greet at every terminal" : "Meet & greet in arrivals", text: "Add it when you book and your driver waits for you inside arrivals with your name." },
+    { icon: Clock3, title: "60 minutes free waiting", text: "Counted from landing, so passport control and baggage reclaim are covered." },
+    { icon: Baby, title: "Child seats on request", text: "Add a child seat when you book and it's fitted before pickup." },
+    { icon: Headphones, title: "24/7 UK support", text: "Call or WhatsApp a real person, day or night." },
+  ]
+}
+
+function AirportHeroQuote({ page, stopPricing }: { page: AirportPagePresentation; stopPricing?: StopPricing }) {
   return (
     <div className="airport-quote-wrap">
-      <h2 className="airport-quote-heading">Get your {page.shortName} fixed price in 30 seconds</h2>
-      <AirportQuoteActions page={page} onDarkBackground />
+      <AirportQuoteActions page={page} stopPricing={stopPricing} />
     </div>
   )
 }
@@ -131,16 +230,15 @@ function AirportHeroCopy({ page, canonicalPath, googleRating }: { page: AirportP
   return (
     <div className="airport-hero-copy">
       <div className="airport-hero-heading">
-        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Transfers", href: "/airport-transfers" }, { label: page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
-        <p className="airport-rating"><PlaneLanding aria-hidden="true" /><span>{airportLabel(page)}</span></p>
-        <h1>{page.heading}</h1>
+        <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airports", href: "/airport-transfers" }, { label: iataCode(page) ? `${page.shortName} (${iataCode(page)})` : page.shortName, href: canonicalPath }]} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
+        <p className="airport-rating"><PlaneLanding aria-hidden="true" /><span>{airportLabel(page)}{terminalsSummary(page) && <> · {terminalsSummary(page)}</>}</span></p>
+        {/* One H1 pattern on every airport page; keyword-heavy wording belongs in the title tag. */}
+        <h1>{page.shortName} Airport Taxi &amp; Transfers</h1>
       </div>
-      {page.introDocument ? <div className="airport-hero-intro"><TiptapRichText document={page.introDocument} /></div> : page.intro.map((paragraph) => <p key={paragraph} className="airport-hero-intro">{paragraph}</p>)}
+      <p className="airport-hero-intro">{airportCopy(page).heroSubhead ?? <>Fixed-price transfers to and from {page.terminals.length > 1 ? `every ${page.shortName} terminal` : `${page.shortName} Airport`}. We track your flight and confirm your fare before you pay.</>}</p>
       <div className="airport-hero-proof">
         <p className="airport-quote-notes">
-          <span>No account needed</span>
-          <span>No surge pricing</span>
-          <span>Free flight tracking</span>
+          {(airportCopy(page).heroNotes ?? ["No account needed", "No surge pricing", "Free flight tracking"]).map((note) => <span key={note}>{note}</span>)}
         </p>
         <p className="airport-hero-rating">
           {googleRating && <><span className="airport-hero-stars">{Array.from({ length: 5 }).map((_, i) => <Star aria-hidden="true" key={i} />)}</span><strong>Rated {googleRating.rating.toFixed(1)} on Google from {googleRating.reviewCount.toLocaleString("en-GB")} reviews</strong><span aria-hidden="true">·</span></>}
@@ -151,16 +249,18 @@ function AirportHeroCopy({ page, canonicalPath, googleRating }: { page: AirportP
   )
 }
 
-function StorySection({ section, index }: { section: AirportPageContentSection; index: number }) {
+function StorySection({ section, index, page }: { section: AirportPageContentSection; index: number; page: AirportPagePresentation }) {
   const Icon = storyIcons[index % storyIcons.length]
   const reversed = index % 2 === 1
+  const isCruise = section.type === "ferry_cruise"
 
   return (
     <section className={`airport-story ${reversed ? "airport-story-reversed" : ""}`} data-preview-section={section.type}>
       <div className="airport-container airport-story-grid">
         <div className="airport-story-copy">
-          <h2>{section.title}</h2>
-          <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>
+          {isCruise && <p className="airport-eyebrow">Fly-cruise transfers</p>}
+          <h2>{isCruise ? headingFor(section.title, `${page.shortName} to your cruise or ferry port`) : section.title}</h2>
+          <div className="mt-5">{isCruise ? <LeadAndMore blocks={section.body} document={section.bodyDocument} moreLabel="Ports and journey details" /> : <RichText blocks={section.body} document={section.bodyDocument} />}</div>
           {Object.entries(section.fields).filter(([, value]) => value.trim()).length > 0 && (
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {Object.entries(section.fields).filter(([, value]) => value.trim()).map(([key, value]) => (
@@ -173,6 +273,14 @@ function StorySection({ section, index }: { section: AirportPageContentSection; 
           <div className="airport-story-media">
             <ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} />
           </div>
+        ) : isCruise ? (
+          <aside className="airport-cruise-panel">
+            <span className="airport-cruise-icon"><Ship aria-hidden="true" /></span>
+            <h3>Your sailing matters more than your flight time.</h3>
+            <p>Tell us your boarding time and we&apos;ll plan the pickup around it.</p>
+            <p className="airport-cruise-tip"><Luggage aria-hidden="true" />Travelling with cruise luggage? An Estate Car or MPV gives you room for it.</p>
+            <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Get My Fixed Price <ArrowRight className="size-4" /></Button>
+          </aside>
         ) : (
           <div className="airport-story-placeholder" aria-hidden="true"><Icon /><span>{sectionLabels[section.type] ?? "Airport transfer"}</span></div>
         )}
@@ -183,7 +291,7 @@ function StorySection({ section, index }: { section: AirportPageContentSection; 
 
 function RouteSection({ page, title }: { page: AirportPagePresentation; title?: string }) {
   if (page.relatedDestinations.length === 0) return null
-  return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Most booked</p><h2>{headingFor(title, `Popular routes from ${page.shortName}`)}</h2></div><p>Airport-to-airport and city transfers at fixed prices.</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card">{related.image ? <ResilientImage className="airport-route-image" src={related.image} alt={related.displayName} /> : <div className="airport-route-image airport-route-placeholder"><Navigation aria-hidden="true" /></div>}<div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{page.shortName} to {related.displayName}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>See fares <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
+  return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Most booked</p><h2>{headingFor(title, `Popular routes from ${page.shortName}`)}</h2></div><p>{airportCopy(page).routesSubhead ?? "Airport-to-airport and city transfers at fixed prices."}</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card">{related.image ? <ResilientImage className="airport-route-image" src={related.image} alt={related.displayName} /> : <div className="airport-route-image airport-route-placeholder"><Navigation aria-hidden="true" /></div>}<div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{page.shortName} to {related.displayName}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>See fares <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
 }
 
 function ReviewSection({ title }: { page: AirportPagePresentation; title?: string }) {
@@ -191,14 +299,14 @@ function ReviewSection({ title }: { page: AirportPagePresentation; title?: strin
 }
 
 function FaqSection({ page, title }: { page: AirportPagePresentation; title?: string }) {
-  return <section className="airport-faq" data-preview-section="faq"><div className="airport-container airport-faq-grid"><div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2>{headingFor(title, `${page.shortName} Airport transfer FAQs`)}</h2><p>Quick answers before you fly into or out of {page.shortName}.</p><a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">Still have a question? WhatsApp us <ArrowRight aria-hidden="true" /></a></div><Accordion className="airport-faq-list" multiple defaultValue={["faq-0"]}>{page.faqs.map((faq, index) => <AccordionItem key={`${faq.question}-${index}`} value={`faq-${index}`}><AccordionTrigger>{faq.question}</AccordionTrigger><AccordionPanel>{faq.answer}</AccordionPanel></AccordionItem>)}</Accordion></div></section>
+  return <section className="airport-faq" data-preview-section="faq"><div className="airport-container airport-faq-grid"><div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2>{headingFor(title, `${page.shortName} Airport transfer FAQs`)}</h2><p>Quick answers before you fly into or out of {page.shortName}.</p><a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">Still have a question? WhatsApp us <ArrowRight aria-hidden="true" /></a></div><Accordion className="airport-faq-list" multiple defaultValue={["faq-0"]}>{page.faqs.map((faq, index) => <AccordionItem key={`${faq.question}-${index}`} value={`faq-${index}`}><AccordionTrigger>{faq.question}</AccordionTrigger><AccordionPanel>{faq.answer}{faq.link && <> <Link className="font-semibold text-primary underline underline-offset-4" href={faq.link.href}>{faq.link.label}</Link>.</>}</AccordionPanel></AccordionItem>)}</Accordion></div></section>
 }
 
-// Standard fact cards rather than per-page CMS copy, so every airport page states the same, accurate terms.
-function BenefitCards() {
+// Six short standard cards on every airport page, so each one states the same, accurate terms.
+function BenefitCards({ page }: { page: AirportPagePresentation }) {
   return (
     <div className="airport-facts-grid airport-benefit-card-grid">
-      {whyBookCards.map(({ icon: Icon, title, text }, index) => (
+      {whyBookCards(page).map(({ icon: Icon, title, text }, index) => (
         <Card key={title} className="airport-benefit-card">
           <CardHeader className="airport-benefit-card-header">
             <Icon aria-hidden="true" />
@@ -213,31 +321,29 @@ function BenefitCards() {
 
 function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation; fleetSection?: AirportPageContentSection }) {
   const fleetHasBody = fleetSection ? hasContent(fleetSection) : false
+  const copy = airportCopy(page)
+  const orderedVehicles = copy.vehicleFirst ? [...page.vehicles].sort((a, b) => Number(b.id === copy.vehicleFirst) - Number(a.id === copy.vehicleFirst)) : page.vehicles
 
   return (
     <section id="vehicles" className="airport-vehicles airport-vehicles-combined" data-preview-section="fleet_pricing">
       <div className="airport-container">
+        {/* The vehicle count sits at the bottom right of the intro, just above the cards. */}
         <div className="airport-vehicles-heading">
           <div>
-            <p className="airport-eyebrow">Our fleet</p>
+            <p className="airport-eyebrow airport-eyebrow-light">Our fleet</p>
             <h2 className="text-balance">{headingFor(fleetSection?.title, `The right car for your ${page.shortName} trip`)}</h2>
-            <p className="airport-vehicles-heading-copy">Compare seats and luggage space, then pick the car that fits your group.</p>
-            {fleetSection && fleetHasBody && <div className="mt-4"><RichText blocks={fleetSection.body} document={fleetSection.bodyDocument} /></div>}
+          </div>
+        </div>
+        <div className="airport-vehicles-intro">
+          <div className="airport-vehicles-intro-copy">
+          <p className="airport-vehicles-heading-copy">{airportCopy(page).vehiclesSubhead ?? "Compare seats and luggage space, then pick the car that fits your group."}</p>
+          {fleetSection && fleetHasBody && <div className="mt-4"><LeadAndMore blocks={fleetSection.body} document={fleetSection.bodyDocument} moreLabel={`More about ${page.shortName} fares and vehicles`} /></div>}
           </div>
           <p className="airport-vehicles-count">{page.vehicles.length} vehicles</p>
         </div>
 
-        <div className="airport-vehicle-grid">
-          {page.vehicles.map((vehicle, index) => (
-            <article key={vehicle.id} className="airport-vehicle-card">
-              <div className="airport-vehicle-top"><span>{String(index + 1).padStart(2, "0")}</span><span><UsersRound aria-hidden="true" /> Chauffeur driven</span></div>
-              <div className="airport-vehicle-image"><Image src={vehicle.image} alt={vehicle.name} fill sizes="(min-width: 900px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-contain" /></div>
-              <h3>{vehicle.name}</h3>
-              {VEHICLE_BEST_FOR[vehicle.id] && <p className="airport-vehicle-best">{VEHICLE_BEST_FOR[vehicle.id]}</p>}
-              <div className="airport-vehicle-meta"><span><UsersRound aria-hidden="true" />{vehicle.capacity} passengers</span><span><Luggage aria-hidden="true" />{vehicle.luggage} suitcases</span></div>
-              <div className="airport-vehicle-action"><Button size="sm" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Get a Price <ArrowRight className="size-3.5" /></Button></div>
-            </article>
-          ))}
+        <div className="landing-fleet-grid">
+          {orderedVehicles.map((vehicle, index) => <VehicleCard key={vehicle.id} vehicle={vehicle} index={index} href={page.bookingLinks.toAirport} bestFor={copy.bestFor?.[vehicle.id]} />)}
         </div>
       </div>
     </section>
@@ -247,7 +353,7 @@ function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation;
 // Arrival steps for the pickup guide; facts mirror the Terms and Help Centre.
 const arrivalSteps = [
   { title: "Land and clear passport control.", text: "We're already tracking your flight, so there's no need to call." },
-  { title: "Collect your bags.", text: "Your 45 minutes of free waiting starts when your flight lands." },
+  { title: "Collect your bags.", text: "Your 60 minutes of free waiting starts when your flight lands." },
   { title: "Head to the meeting point.", text: "The exact spot is in your booking details. With meet & greet, your driver waits inside arrivals." },
   { title: "Walk to the car together.", text: "Your driver takes you door to door at your fixed fare." },
 ]
@@ -255,23 +361,20 @@ const arrivalSteps = [
 function BuilderSection({ section, page, index }: { section: AirportPageContentSection; page: AirportPagePresentation; index: number }) {
   const reversed = index % 2 === 1
   if (section.type === "introduction") {
-    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">{page.shortName} transfers at a glance</p><h2>{headingFor(section.title, `${page.shortName} Airport transfers, priced before you book`)}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Get My Fixed Price <ArrowRight className="size-4" /></Button></div>{section.image ? <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" /><span>Door-to-door service<br /><small>Planned around your flight</small></span></div></div> : <div className="airport-introduction-media"><Image src="/hero-airport-transfer.png" alt="A driver beside an executive car outside an airport terminal" fill sizes="(min-width: 900px) 50vw, 100vw" className="object-cover" /></div>}</div></section>
+    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">{page.shortName} transfers at a glance</p><h2>{headingFor(section.title, `${page.shortName} Airport transfers, priced before you book`)}</h2><div className="mt-5"><LeadAndMore blocks={section.body} document={section.bodyDocument} moreLabel={`More about ${page.shortName} transfers`} extra={page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.length > 0 ? <div className="space-y-4 text-muted-foreground">{page.intro.map((paragraph) => <p key={paragraph} className="leading-7">{paragraph}</p>)}</div> : undefined} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Get My Fixed Price <ArrowRight className="size-4" /></Button></div>{section.image ? <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" />{terminalsSummary(page) ? <span>Meet &amp; greet at {terminalsSummary(page)}<br /><small>Add it when you book</small></span> : <span>Door-to-door service<br /><small>Planned around your flight</small></span>}</div></div> : <div className="airport-introduction-media"><Image src="/hero-airport-transfer.png" alt="A driver beside an executive car outside an airport terminal" fill sizes="(min-width: 900px) 50vw, 100vw" className="object-cover" /></div>}</div></section>
   }
 
   if (section.type === "benefits") {
-    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, `Why travellers choose us for ${page.shortName}`)}</h2></div><p>Everything that makes a {page.shortName} pickup easy.</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
+    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards page={page} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
   }
 
   if (section.type === "fleet_pricing") {
     return null
   }
 
-  if (section.type === "airport_guide") {
-    // An empty guide reads as a broken page, so it only renders once it has content.
-    if (!hasContent(section)) return null
-    const guideFields = Object.entries(section.fields).filter(([key, value]) => key !== "sourceNotes" && value.trim())
-    return <section className={`airport-guide ${reversed ? "airport-guide-reversed" : ""}`} data-preview-section="airport_guide"><div className="airport-container"><div className="airport-guide-lead"><div><p className="airport-eyebrow">Know before you land</p><h2>{headingFor(section.title, `Your ${page.shortName} Airport guide`)}</h2><div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div></div>{section.image && <div className="airport-guide-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /></div>}</div><div className="airport-guide-grid">{guideFields.map(([key, value], fieldIndex) => { const Icon = storyIcons[fieldIndex % storyIcons.length]; return <article key={key} className="airport-guide-card"><span>{String(fieldIndex + 1).padStart(2, "0")}</span><Icon aria-hidden="true" /><h3>{key.replace(/([A-Z])/g, " $1")}</h3><p>{value}</p></article> })}</div></div></section>
-  }
+  // Facility cards (food, hotels, Wi-Fi) don't help someone booking a transfer; the pickup guide in
+  // the map section answers "where do I meet my driver?" instead.
+  if (section.type === "airport_guide") return null
 
   if (section.type === "map") {
     return (
@@ -279,8 +382,9 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
         <div className="airport-container airport-map-grid">
           <div>
             <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
-            <h2>{headingFor(section.title, `Your ${page.shortName} pickup, step by step`)}</h2>
-            {page.terminals.length === 1 && <p className="airport-map-lead">{airportLabel(page)} has a single terminal: one meeting point, and no terminal to choose when you book.</p>}
+            <h2>{headingFor(section.title, airportCopy(page).guideHeading ?? (page.terminals.length > 1 ? `Meeting your driver at ${page.shortName}` : `Your ${page.shortName} pickup, step by step`))}</h2>
+            {page.terminals.length === 1 && <p className="airport-map-lead">{airportCopy(page).guideLead ?? `${airportLabel(page)} has a single terminal: one meeting point, and no terminal to choose when you book.`}</p>}
+            {page.terminals.length > 1 && <p className="airport-map-lead">{page.shortName} has {page.terminals.length} passenger terminals. Pick yours on the map to see exactly where it is before you land.</p>}
             {hasContent(section) && <div className="mt-5"><RichText blocks={section.body} document={section.bodyDocument} /></div>}
             <h3 className="airport-pickup-title">Arriving at {page.shortName}</h3>
             <ol className="airport-pickup-steps">
@@ -289,7 +393,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
             <h3 className="airport-pickup-title">Departing from {page.shortName}</h3>
             <p className="airport-pickup-depart">Your driver drops you at the terminal drop-off area. For a short-haul flight, plan to arrive at least 2 hours before departure.</p>
           </div>
-          {page.mapLocation && <AirportMapPreview location={page.mapLocation} />}
+          {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
         </div>
       </section>
     )
@@ -298,7 +402,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   if (section.type === "reviews") return <ReviewSection page={page} title={section.title} />
   if (section.type === "related_destinations") return <RouteSection page={page} title={section.title} />
   if (section.type === "faq") return <FaqSection page={page} title={section.title} />
-  return <StorySection section={section} index={index} />
+  return <StorySection section={section} index={index} page={page} />
 }
 
 // Fixed reading order: what it costs, why book, vehicles, how pickup works, routes, proof, then
@@ -313,10 +417,9 @@ const SECTION_ORDER: Partial<Record<AirportPageContentSection["type"], number>> 
   faq: 90,
 }
 const VEHICLES_ORDER = 30
-const TERMINALS_ORDER = 55
 const DEFAULT_ORDER = 60
 
-export function AirportPageRenderer({ page, canonicalPath, showFooter = true, googleRating }: { page: AirportPagePresentation; canonicalPath?: string; showFooter?: boolean; googleRating?: GoogleRating | null }) {
+export function AirportPageRenderer({ page, canonicalPath, showFooter = true, googleRating, stopPricing }: { page: AirportPagePresentation; canonicalPath?: string; showFooter?: boolean; googleRating?: GoogleRating | null; stopPricing?: StopPricing }) {
   const visibleSections = page.sections.filter((section) => section.visible)
   const configuredSectionTypes = new Set(page.sections.map((section) => section.type))
   const rank = (section: AirportPageContentSection) => SECTION_ORDER[section.type] ?? DEFAULT_ORDER
@@ -324,8 +427,6 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
 
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
   blocks.push([VEHICLES_ORDER, <VehicleSection key="vehicles" page={page} fleetSection={visibleSections.find((section) => section.type === "fleet_pricing")} />])
-  // A single terminal is covered by one line in the pickup guide; a full section is only worth it for several.
-  if (page.terminals.length > 1) blocks.push([TERMINALS_ORDER, <section key="terminals" className="airport-terminals"><div className="airport-container airport-terminal-grid"><div className="airport-terminal-heading"><p className="airport-eyebrow">Door to terminal</p><h2>Terminals we cover</h2><p>Choose your terminal while booking. We’ll plan the correct pickup point.</p></div><div className="airport-terminal-list">{page.terminals.map((terminal, index) => <div key={terminal.id} className="airport-terminal-card"><span><PlaneLanding aria-hidden="true" /></span><div><small>Terminal {String(index + 1).padStart(2, "0")}</small><h3>{terminal.name}</h3><p>{terminal.area}</p></div>{terminal.isPrimary && <strong>Primary</strong>}</div>)}</div></div></section>])
   if (!configuredSectionTypes.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
   if (!configuredSectionTypes.has("reviews")) blocks.push([SECTION_ORDER.reviews!, <ReviewSection key="reviews" page={page} />])
   if (!configuredSectionTypes.has("faq")) blocks.push([SECTION_ORDER.faq!, <FaqSection key="faq" page={page} />])
@@ -342,12 +443,12 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
             <div className="airport-hero-shade" />
             <div className="airport-container airport-hero-content">
               <AirportHeroCopy page={page} canonicalPath={canonicalPath} googleRating={googleRating} />
-              <AirportHeroQuote page={page} />
+              <AirportHeroQuote page={page} stopPricing={stopPricing} />
             </div>
             <div className="airport-trust-rail"><div className="airport-container airport-trust-grid">{trustItems.map(({ icon: TrustIcon, title, text }) => <div key={title}><TrustIcon aria-hidden="true" /><span><strong>{title}</strong><small>{text}</small></span></div>)}</div></div>
           </section>
         ) : (
-          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><AirportHeroCopy page={page} canonicalPath={canonicalPath} googleRating={googleRating} /><AirportHeroQuote page={page} /></div></section>
+          <section className="airport-hero airport-hero-fallback"><div className="airport-container airport-hero-content"><AirportHeroCopy page={page} canonicalPath={canonicalPath} googleRating={googleRating} /><AirportHeroQuote page={page} stopPricing={stopPricing} /></div></section>
         )}
 
         {blocks.map(([, block]) => block)}
@@ -357,12 +458,12 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
             <div className="airport-final-cta">
               <div className="airport-final-copy">
                 <p className="airport-eyebrow airport-eyebrow-light">{page.shortName} airport transfers</p>
-                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : headingFor(page.finalCta.heading, `Flying into ${page.shortName}? Your driver's ready.`)}</h2>
-                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : finalCtaHasBody ? <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div> : <p>Know where your driver will be and exactly what you&apos;ll pay, before you even pack. We track your flight and adjust your pickup if you land early or late.</p>}
+                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : headingFor(page.finalCta.heading, airportCopy(page).finalHeading ?? (page.terminals.length > 1 ? `Landing at ${page.shortName}? Your driver's ready.` : `Flying into ${page.shortName}? Your driver's ready.`))}</h2>
+                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : finalCtaHasBody ? <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div> : <p>{page.terminals.length > 1 ? "Know who's meeting you, at which terminal and exactly what you'll pay, before you fly." : "Know where your driver will be and exactly what you'll pay, before you even pack. We track your flight and adjust your pickup if you land early or late."}</p>}
                 <div className="airport-final-points">
                   <span><Check aria-hidden="true" /> Fixed fare</span>
                   <span><Check aria-hidden="true" /> Flight tracked</span>
-                  <span><Check aria-hidden="true" /> 45 min free waiting</span>
+                  <span><Check aria-hidden="true" /> {airportCopy(page).finalChip ?? (page.terminals.length > 1 ? "All terminals" : "60 min free waiting")}</span>
                 </div>
               </div>
               <div className="airport-final-action">

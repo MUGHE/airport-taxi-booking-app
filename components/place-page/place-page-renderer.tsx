@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import type { PlacePagePresentation } from "@/lib/place-page-data"
+import type { StopPricing } from "@/lib/types"
 import { PlaceQuoteForm } from "@/components/place-page/place-quote-form"
 import { PlacePageAnalytics } from "@/components/place-page/place-page-analytics"
 
@@ -14,7 +15,7 @@ function Blocks({ blocks }: { blocks: { text: string; type: string; href?: strin
   return <div className="space-y-3 text-muted-foreground">{blocks.map((block, index) => block.type === "link" && block.href ? <Link key={index} className="block font-semibold text-primary underline" href={block.href}>{block.label || block.text}</Link> : <p key={index} className={block.type === "bold" ? "font-semibold text-foreground" : "leading-7"}>{block.text}</p>)}</div>
 }
 
-export function PlacePageRenderer({ page, canonicalPath, showFooter = true, analyticsEnabled = true, fallback = false }: { page: PlacePagePresentation; canonicalPath?: string; showFooter?: boolean; analyticsEnabled?: boolean; fallback?: boolean }) {
+export function PlacePageRenderer({ page, canonicalPath, showFooter = true, analyticsEnabled = true, fallback = false, stopPricing }: { page: PlacePagePresentation; canonicalPath?: string; showFooter?: boolean; analyticsEnabled?: boolean; fallback?: boolean; stopPricing?: StopPricing }) {
   const visibleSections = page.sections.filter((section) => section.visible)
   return <div className="airport-page flex min-h-screen flex-col">{analyticsEnabled && <PlacePageAnalytics sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} fallback={fallback} />}<SiteHeader /><main className="flex-1">
     <section className={`airport-hero ${page.heroImage ? "place-hero-with-image" : "airport-hero-fallback"}`}>
@@ -26,7 +27,7 @@ export function PlacePageRenderer({ page, canonicalPath, showFooter = true, anal
           <div className="airport-hero-intro"><Blocks blocks={page.intro} /></div>
         </div>
         <div className="airport-quote-wrap place-hero-quote">
-          <PlaceQuoteForm place={page.displayName} sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} airports={page.supportedAirports} analyticsEnabled={analyticsEnabled} />
+          <PlaceQuoteForm sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} analyticsEnabled={analyticsEnabled} stopPricing={stopPricing} />
         </div>
       </div>
     </section>

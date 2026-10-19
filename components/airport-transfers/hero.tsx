@@ -1,72 +1,79 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { Star } from "lucide-react"
 import { FareEstimator } from "@/components/fare-estimator"
-import { Button } from "@/components/ui/button"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import type { GoogleRating } from "@/lib/google-rating"
 import type { StopPricing } from "@/lib/types"
 
-export function AirportTransfersHero({ stopPricing }: { stopPricing: StopPricing }) {
+// Same layout and styles as the homepage hero (landing-hero-*), so every hero on the site matches:
+// copy on the left, the booking form on the right, and the form first on phones.
+export function AirportTransfersHero({ stopPricing, googleRating }: { stopPricing: StopPricing; googleRating?: GoogleRating | null }) {
   return (
-    <section className="relative overflow-hidden bg-foreground">
-      <div className="absolute inset-0">
-        <Image
-          src="/airport-transfers/hero.webp"
-          alt="Chauffeur welcoming airport passengers beside a car"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/30" />
-      </div>
-
-      <div className="relative mx-auto max-w-6xl px-4 pt-8 sm:pt-10 lg:pt-12">
-        <div className="max-w-2xl text-background">
-          <Breadcrumbs
-            items={[{ label: "Home", href: "/" }, { label: "Airport Transfers" }]}
-            className="text-background/70 [&_span]:text-background/90 [&_svg]:text-background/40"
+    <div className="landing-page">
+      <section className="landing-hero">
+        <div className="landing-hero-image absolute inset-0" style={{ position: "absolute" }}>
+          <Image
+            src="/airport-transfers/hero.webp"
+            alt="A driver welcoming airport passengers beside a car"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
           />
-          <span className="text-xs font-semibold tracking-[0.14em] text-background/70 uppercase">
-            All London airports
-          </span>
-          <h1 className="mt-3 max-w-xl text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-            Fixed-price airport transfers across London
-          </h1>
-          <p className="mt-4 max-w-xl text-pretty text-base leading-relaxed text-background/80 sm:text-lg">
-            Choose your airport, get a fixed price for your route, and travel with
-            a professional chauffeur who tracks your flight.
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" nativeButton={false} render={<Link href="/book" />}>
-              Get your fixed price
-              <ArrowRight className="size-4" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background"
-              nativeButton={false}
-              render={<Link href="/track" />}
-            >
-              Track an existing booking
-            </Button>
-          </div>
         </div>
+        <div className="landing-hero-shade" />
 
-        <div className="relative z-10 mt-10 translate-y-10 lg:mt-12">
-          <div className="mb-3 px-1 text-lg font-semibold text-background">
-            Where are you travelling?
+        <div className="landing-container landing-hero-grid">
+          <div className="landing-hero-copy">
+            <Breadcrumbs
+              items={[{ label: "Home", href: "/" }, { label: "Airports" }]}
+              className="mb-4 [&_a]:text-white/70 [&_span]:text-white/90 [&_svg]:text-white/40"
+            />
+            <span className="landing-eyebrow landing-eyebrow-light">
+              All London airports · Fixed prices
+            </span>
+            <h1>Fixed-price airport transfers across London</h1>
+            <p className="landing-hero-intro">
+              Heathrow, Gatwick, Stansted, Luton, London City and Southend. We track your flight and
+              confirm your fare before you pay.
+            </p>
+
+            <div className="landing-hero-proof">
+              <div className="landing-quote-reassurance">
+                <p className="landing-quote-notes">
+                  <span>No account needed</span>
+                  <span>No surge pricing</span>
+                  <span>Free flight tracking</span>
+                </p>
+              </div>
+
+              <div className="landing-rating">
+                {googleRating && (
+                  <>
+                    <span className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star aria-hidden="true" key={i} className="fill-current" />
+                      ))}
+                    </span>
+                    <span className="font-semibold">
+                      Rated {googleRating.rating.toFixed(1)} on Google from {googleRating.reviewCount.toLocaleString("en-GB")} reviews
+                    </span>
+                    <span aria-hidden="true">·</span>
+                  </>
+                )}
+                <Link href="/track" className="font-medium underline-offset-4 hover:underline">
+                  Track an existing booking
+                </Link>
+              </div>
+            </div>
           </div>
-          <FareEstimator stopPricing={stopPricing} layout="hub" />
-          <div className="flex flex-wrap gap-x-5 gap-y-2 px-2 pb-1 pt-3 text-xs text-background/75">
-            <span>No account needed</span>
-            <span>No surge pricing</span>
-            <span>Free flight tracking</span>
+
+          <div className="landing-quote-wrap">
+            <div className="landing-quote-card"><FareEstimator stopPricing={stopPricing} /></div>
           </div>
         </div>
-      </div>
-      <div className="h-16 lg:h-20" aria-hidden="true" />
-    </section>
+      </section>
+    </div>
   )
 }

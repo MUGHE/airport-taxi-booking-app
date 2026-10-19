@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 const SITE_TITLE = 'London Airport Transfers at Fixed Prices | ONE Airport Taxi'
 const SITE_DESCRIPTION =
-  'Fixed-price airport taxis to and from Heathrow, Gatwick, Stansted, Luton, City and Southend. Live flight tracking, 45 minutes free waiting and 24/7 support.'
+  'Fixed-price airport taxis to and from Heathrow, Gatwick, Stansted, Luton, City and Southend. Live flight tracking, 60 minutes free waiting and 24/7 support.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

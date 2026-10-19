@@ -11,7 +11,7 @@ const FAQS = [
   },
   {
     q: "How long will my driver wait?",
-    a: "Airport pickups include 45 minutes of free waiting from when your flight actually lands, as long as you give us your flight number. Other pickups include 15 minutes from the scheduled time.",
+    a: "Airport pickups include 60 minutes of free waiting from when your flight actually lands, as long as you give us your flight number. Other pickups include 15 minutes from the scheduled time.",
   },
   {
     q: "Where will I meet my driver?",

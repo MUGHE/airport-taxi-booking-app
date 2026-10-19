@@ -67,7 +67,6 @@ export async function Hero() {
         </div>
 
         <div className="landing-quote-wrap">
-          <h2 className="landing-quote-heading">Get your fixed price in 30 seconds</h2>
           <div className="landing-quote-card"><FareEstimator stopPricing={stopPricing} /></div>
         </div>
       </div>

@@ -11,7 +11,7 @@ const INCLUDED = [
     text: "Add your flight number and we follow it live, moving your pickup if you land early or late.",
   },
   {
-    title: "45 minutes free waiting at the airport",
+    title: "60 minutes free waiting at the airport",
     text: "Counted from when your flight actually lands, so baggage reclaim and passport control are covered.",
   },
   {

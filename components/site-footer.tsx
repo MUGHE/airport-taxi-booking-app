@@ -8,6 +8,20 @@ import { cn } from "@/lib/utils"
 import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_LEGAL_PHONE, COMPANY_REGISTRATION_NUMBER, COMPANY_TRADING_NAME } from "@/lib/company"
 import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 
+const PAYMENT_BADGES = [
+  // zoom offsets the empty margin baked into some logo files so every mark reads at a similar size.
+  { src: "/payments/visa.webp", alt: "Visa", zoom: "scale-[2.2]" },
+  { src: "/payments/mastercard.webp", alt: "Mastercard" },
+  { src: "/payments/amex.webp", alt: "American Express" },
+  { src: "/payments/paypal.webp", alt: "PayPal", zoom: "scale-[1.6]" },
+]
+
+const TRUST_BADGES = [
+  { src: "/payments/safe-secure.png", alt: "Safe and secure payments" },
+  { src: "/payments/money-back.png", alt: "100% money back guarantee", zoom: "scale-[1.25]" },
+  { src: "/payments/trustwave.png", alt: "Trustwave" },
+]
+
 export function SiteFooter() {
   return (
     <footer className="site-footer footer-theme relative overflow-hidden bg-background text-foreground">
@@ -17,14 +31,12 @@ export function SiteFooter() {
       <div className="relative mx-auto max-w-6xl px-4">
         <div className="grid gap-8 py-10 lg:grid-cols-[minmax(18rem,.8fr)_minmax(0,1.2fr)] lg:items-center lg:py-12">
           <div className="max-w-lg">
-            <Link href="/" className="inline-flex items-center gap-3">
-              <span className="grid size-13 place-items-center rounded-full bg-card shadow-lg shadow-black/20">
-                <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={44} height={44} className="size-11" />
+            {/* Same lockup as the site header. */}
+            <Link href="/" className="inline-flex items-center gap-2 font-semibold">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/95 ring-1 ring-white/35 shadow-sm">
+                <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={32} height={32} className="size-8" />
               </span>
-              <span>
-                <strong className="block text-xl tracking-tight">ONE Airport Taxi</strong>
-                <small className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[.18em] text-primary">Driven by reliability</small>
-              </span>
+              <span className="text-lg tracking-tight">ONE Airport Taxi</span>
             </Link>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
               Fixed-price London airport transfers with licensed drivers, live flight tracking and 24/7 UK support.
@@ -63,6 +75,7 @@ export function SiteFooter() {
             { href: "/about", label: "About Us" },
             { href: "/contact", label: "Contact" },
             { href: "/help", label: "Help Centre" },
+            { href: "/blog", label: "Blog" },
           ]} />
           <FooterCol title="Information" links={[
             { href: "/#how", label: "How It Works" },
@@ -71,6 +84,17 @@ export function SiteFooter() {
           ]} />
           <FooterCompanyDetails />
         </div>
+
+        <Separator className="bg-border" />
+
+        {/* One evenly spaced row of equal tiles that spans the footer; wraps to a grid on smaller screens. */}
+        <ul className="flex flex-wrap justify-center gap-3 py-6" aria-label="Payment methods and security">
+          {[...PAYMENT_BADGES, ...TRUST_BADGES].map((badge: { src: string; alt: string; zoom?: string }) => (
+            <li key={badge.src} className="grid h-14 w-[calc((100%-2.25rem)/4)] place-items-center overflow-hidden rounded-lg bg-white px-3 ring-1 ring-border sm:w-auto sm:flex-1">
+              <Image src={badge.src} alt={badge.alt} width={120} height={40} className={`h-9 w-auto max-w-full object-contain ${badge.zoom ?? ""}`} />
+            </li>
+          ))}
+        </ul>
 
         <Separator className="bg-border" />
 
