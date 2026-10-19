@@ -10,7 +10,7 @@ export const ADMIN_ROLES: Record<AdminRole, { label: string; description: string
   super_admin: { label: "Super admin", description: "Everything, plus managing admin users", sections: ["bookings", "pricing", "content", "referrals", "users"] },
   admin: { label: "Admin", description: "Bookings, pricing, content and referrals", sections: ["bookings", "pricing", "content", "referrals"] },
   dispatcher: { label: "Dispatcher", description: "Bookings only", sections: ["bookings"] },
-  editor: { label: "Content editor", description: "Destination pages and media only", sections: ["content"] },
+  editor: { label: "Content editor", description: "Destination pages, blog and media only", sections: ["content"] },
 }
 
 export const ADMIN_TABS: { href: string; label: string; section: AdminSection }[] = [
@@ -18,6 +18,7 @@ export const ADMIN_TABS: { href: string; label: string; section: AdminSection }[
   { href: "/admin/pricing", label: "Pricing engine", section: "pricing" },
   { href: "/admin/destination-pages", label: "Destination Pages", section: "content" },
   { href: "/admin/airport-faqs", label: "Airport FAQs", section: "content" },
+  { href: "/admin/blog", label: "Blog", section: "content" },
   { href: "/admin/media-library", label: "Media Library", section: "content" },
   { href: "/admin/referrals", label: "Referrals", section: "referrals" },
   { href: "/admin/users", label: "Users", section: "users" },
