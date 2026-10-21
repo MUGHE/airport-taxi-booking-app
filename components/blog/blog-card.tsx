@@ -12,7 +12,7 @@ export function BlogCard({ post, priority = false }: { post: BlogPost; priority?
     <article className="blog-card">
       <Link href={`/blog/${post.slug}`} className="blog-card-image" tabIndex={-1} aria-hidden="true">
         {post.featuredImageUrl
-          ? <Image src={post.featuredImageUrl} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" priority={priority} />
+          ? <Image src={post.featuredImageUrl} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" preload={priority} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : undefined} />
           : <span className="blog-card-placeholder" />}
       </Link>
       <div className="blog-card-copy">

@@ -12,7 +12,9 @@ export async function Hero() {
           src="/hero-airport-transfer.webp"
           alt="Chauffeur standing beside a premium sedan outside an airport terminal at dusk"
           fill
-          priority
+          preload
+          loading="eager"
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover"
         />

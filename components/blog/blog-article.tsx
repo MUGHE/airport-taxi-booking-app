@@ -29,7 +29,7 @@ export function BlogArticle({ post, related = [] }: { post: BlogPost; related?: 
         {post.featuredImageUrl && (
           <div className="blog-container">
             <div className="blog-article-image">
-              <Image src={post.featuredImageUrl} alt={post.featuredImageAlt} fill priority sizes="(max-width: 900px) 100vw, 56rem" className="object-cover" />
+              <Image src={post.featuredImageUrl} alt={post.featuredImageAlt} fill preload loading="eager" fetchPriority="high" sizes="(max-width: 900px) 100vw, 56rem" className="object-cover" />
             </div>
           </div>
         )}

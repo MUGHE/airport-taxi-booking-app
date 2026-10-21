@@ -2,18 +2,23 @@
 
 import { useEffect, useState } from "react"
 import { ArrowRight, ArrowRightLeft, Calendar as CalendarIcon, MapPinPlus, X } from "lucide-react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { RouteCard } from "@/components/route-search"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
 import { TimePicker } from "@/components/ui/time-picker"
 import { formatCurrency } from "@/lib/fleet"
 import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import type { StopPricing } from "@/lib/types"
 import { toast } from "sonner"
+
+// The calendar (react-day-picker + date-fns, ~30 KB) only shows once the date popover opens, so it
+// is kept out of the first load and fetched as soon as the visitor reaches for the date button.
+const loadCalendar = () => import("@/components/ui/calendar").then((m) => m.Calendar)
+const Calendar = dynamic(loadCalendar, { ssr: false, loading: () => <div className="h-[18.5rem] w-[15.5rem]" aria-busy="true" /> })
 
 const NO_STOP_PRICING: StopPricing = { pricePerStop: 0, updatedAt: "" }
 // Mirrors the server-side cap in lib/actions.ts and the booking flow's Trip step — keep in sync.
@@ -120,7 +125,7 @@ export function FareEstimator({
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Date</Label>
           <Popover open={dateOpen} onOpenChange={setDateOpen}>
-            <PopoverTrigger render={<Button variant="outline" className="w-full justify-start gap-2 font-normal" />}>
+            <PopoverTrigger render={<Button variant="outline" className="w-full justify-start gap-2 font-normal" onPointerEnter={() => void loadCalendar()} onFocus={() => void loadCalendar()} />}>
               <CalendarIcon className="size-4 text-muted-foreground" />
               {pickupDate ? formatDate(pickupDate) : "Select date"}
             </PopoverTrigger>

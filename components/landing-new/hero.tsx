@@ -13,7 +13,9 @@ export async function Hero() {
           src="/airport-transfers/chauffeur-terminal-hero.webp"
           alt="A driver beside an executive car outside an airport terminal"
           fill
-          priority
+          preload
+          loading="eager"
+          fetchPriority="high"
           sizes="100vw"
           className="object-cover"
         />

@@ -34,7 +34,7 @@ export function SiteFooter() {
             {/* Same lockup as the site header. */}
             <Link href="/" className="inline-flex items-center gap-2 font-semibold">
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/95 ring-1 ring-white/35 shadow-sm">
-                <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={32} height={32} className="size-8" />
+                <Image src="/brand/logo-mark.png" alt="" width={32} height={32} className="size-8" />
               </span>
               <span className="text-lg tracking-tight">ONE Airport Taxi</span>
             </Link>
@@ -126,7 +126,7 @@ function FooterContact({ href, icon: Icon, label, value, target, noWrap = false 
 function FooterCol({ title, links }: { title: string; links: { href: string; label: string }[] }) {
   return (
     <div>
-      <h3 className="text-xs font-bold uppercase tracking-[.16em] text-foreground">{title}</h3>
+      <h2 className="text-xs font-bold uppercase tracking-[.16em] text-foreground">{title}</h2>
       <ul className="mt-5 flex flex-col gap-3">
         {links.map((link) => (
           <li key={link.href}>
@@ -143,7 +143,7 @@ function FooterCol({ title, links }: { title: string; links: { href: string; lab
 function FooterCompanyDetails() {
   return (
     <div>
-      <h3 className="text-xs font-bold uppercase tracking-[.16em] text-foreground">Company details</h3>
+      <h2 className="text-xs font-bold uppercase tracking-[.16em] text-foreground">Company details</h2>
       <dl className="mt-5 grid gap-3 text-sm">
         <div>
           <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Organisation</dt>

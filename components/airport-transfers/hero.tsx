@@ -17,7 +17,9 @@ export function AirportTransfersHero({ stopPricing, googleRating }: { stopPricin
             src="/airport-transfers/hero.webp"
             alt="A driver welcoming airport passengers beside a car"
             fill
-            priority
+            preload
+            loading="eager"
+            fetchPriority="high"
             sizes="100vw"
             className="object-cover"
           />
