@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     siteName: 'ONE Airport Taxi',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [{ url: '/hero-airport-transfer.png', alt: 'ONE Airport Taxi' }],
+    images: [{ url: '/hero-airport-transfer-og.jpg', alt: 'ONE Airport Taxi' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ['/hero-airport-transfer.png'],
+    images: ['/hero-airport-transfer-og.jpg'],
   },
 }
 
@@ -81,7 +81,8 @@ export default function RootLayout({
         <ReferralCapture />
         <Toaster position="top-center" />
         <ReactToastContainer />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {/* Vercel Analytics only works on Vercel hosting; on Netlify its script just 404s. */}
+        {process.env.NODE_ENV === 'production' && process.env.VERCEL && <Analytics />}
       </body>
     </html>
   )

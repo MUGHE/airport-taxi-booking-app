@@ -7,7 +7,13 @@ import { getPublishedPostBySlug, listRelatedPosts } from "@/lib/blog"
 import { serializeJsonLd } from "@/lib/json-ld"
 import { ORGANIZATION_ID, SITE_URL } from "@/lib/site"
 
-export const dynamic = "force-dynamic"
+// Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
+export const revalidate = 300
+
+// Nothing is pre-built at deploy time: each page is built on its first visit, then served from cache.
+export async function generateStaticParams() {
+  return []
+}
 
 type Params = Promise<{ slug: string }>
 

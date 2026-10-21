@@ -6,7 +6,13 @@ import { PlacePageStructuredData } from "@/components/place-page/place-page-stru
 import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
 import { getPublishedPlaceRedirect, readPublicPlacePage } from "@/lib/destination-pages"
 
-export const dynamic = "force-dynamic"
+// Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
+export const revalidate = 300
+
+// Nothing is pre-built at deploy time: each page is built on its first visit, then served from cache.
+export async function generateStaticParams() {
+  return []
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const result = await readPublicPlacePage((await params).slug)

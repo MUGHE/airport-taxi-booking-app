@@ -9,7 +9,7 @@ export async function Hero() {
     <section className="relative overflow-hidden">
       <div className="absolute inset-0 -z-10">
         <Image
-          src="/hero-airport-transfer.png"
+          src="/hero-airport-transfer.webp"
           alt="Chauffeur standing beside a premium sedan outside an airport terminal at dusk"
           fill
           priority

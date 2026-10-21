@@ -17,6 +17,12 @@ export interface VehicleClass {
   description: string
   capacity: number
   luggage: number
+  /** Hand bags carried as well as the suitcases; shown on fleet cards when set. */
+  handLuggage?: number
+  /** More passengers allowed when nobody brings a suitcase (hand luggage only). */
+  handLuggageOnlyCapacity?: number
+  /** Shown next to the suitcase count, e.g. "23kg max". */
+  luggageNote?: string
   image: string
   /** Minimum fare — covers up to MIN_DISTANCE_MILES of travel. */
   minFare: number

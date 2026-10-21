@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { PaymentMethodPicker } from "@/components/booking/booking-flow"
 import { updateBookingAction } from "@/lib/actions"
-import { formatCurrency } from "@/lib/fleet"
+import { formatCurrency, maxBags, seatCount } from "@/lib/fleet"
 import { formatDate, formatTimeLabel, localDate, TIME_SLOTS } from "@/lib/datetime"
 import type { Booking, BookingAddOn, PaymentMethod, VehicleClass } from "@/lib/types"
 import { toast } from "sonner"
@@ -62,8 +62,8 @@ export function EditBookingDialog({
   const [isPending, startTransition] = useTransition()
 
   const vehicle = vehicles.find((v) => v.id === vehicleId)
-  const maxCapacity = vehicle?.capacity ?? 6
-  const maxLuggage = vehicle?.luggage ?? 0
+  const maxCapacity = vehicle ? seatCount(vehicle) : 6
+  const maxLuggage = vehicle ? maxBags(vehicle, passengers) : 0
 
   function addStop() { if (stops.length < MAX_STOPS) setStops([...stops, emptyStop()]) }
   function updateStop(index: number, value: PlaceSelection) { setStops(stops.map((s, i) => (i === index ? value : s))) }

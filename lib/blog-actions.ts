@@ -1,7 +1,7 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-import { createCategory, deletePost, getPostById, savePost, setPostStatus, uploadBlogImage } from "@/lib/blog"
+import { revalidatePath, updateTag } from "next/cache"
+import { BLOG_TAG, createCategory, deletePost, getPostById, savePost, setPostStatus, uploadBlogImage } from "@/lib/blog"
 import { blogCategoryInputSchema, blogPostInputSchema, publishProblems, sanitizeBlogDocument, type BlogCategory, type BlogPost } from "@/lib/blog-schema"
 import { getAdminUser, isAdminAuthenticated } from "@/lib/session"
 
@@ -10,6 +10,7 @@ import { getAdminUser, isAdminAuthenticated } from "@/lib/session"
 const NOT_AUTHORIZED = { ok: false as const, error: "Not authorized." }
 
 function refreshBlog(slug?: string) {
+  updateTag(BLOG_TAG)
   revalidatePath("/blog")
   if (slug) revalidatePath(`/blog/${slug}`)
   revalidatePath("/sitemap.xml")

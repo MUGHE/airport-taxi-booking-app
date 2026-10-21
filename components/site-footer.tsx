@@ -17,9 +17,9 @@ const PAYMENT_BADGES = [
 ]
 
 const TRUST_BADGES = [
-  { src: "/payments/safe-secure.png", alt: "Safe and secure payments" },
-  { src: "/payments/money-back.png", alt: "100% money back guarantee", zoom: "scale-[1.25]" },
-  { src: "/payments/trustwave.png", alt: "Trustwave" },
+  { src: "/payments/safe-secure.webp", alt: "Safe and secure payments" },
+  { src: "/payments/money-back.webp", alt: "100% money back guarantee", zoom: "scale-[1.25]" },
+  { src: "/payments/trustwave.webp", alt: "Trustwave" },
 ]
 
 export function SiteFooter() {

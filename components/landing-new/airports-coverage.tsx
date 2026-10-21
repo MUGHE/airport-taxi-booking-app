@@ -2,15 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
-
-const AIRPORT_IMAGES: Record<string, string> = {
-  "heathrow-airport-taxi": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=70&auto=format&fit=crop",
-  "gatwick-airport-taxi": "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?w=800&q=70&auto=format&fit=crop",
-  "stansted-airport-taxi": "https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&q=70&auto=format&fit=crop",
-  "luton-airport-taxi": "https://images.unsplash.com/photo-1508444845599-5c89863b1c44?w=800&q=70&auto=format&fit=crop",
-  "london-city-airport-taxi": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&q=70&auto=format&fit=crop",
-  "southend-airport-taxi": "https://images.unsplash.com/photo-1520437358207-323b43b50729?w=800&q=70&auto=format&fit=crop",
-}
+import { AIRPORT_IMAGES } from "@/lib/airport-images"
 
 // Terminals travellers recognise, shown instead of the council-area service name.
 const AIRPORT_TERMINALS: Record<string, string> = {

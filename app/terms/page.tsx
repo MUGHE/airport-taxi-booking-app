@@ -94,9 +94,10 @@ function TermsBlockView({ block }: { block: TermsBlock }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[36rem] border-collapse text-left">
-        <thead>
+    // On phones each row becomes a small card with its headings inline, so nothing scrolls sideways.
+    <div className="rounded-xl border border-border sm:overflow-x-auto">
+      <table className="w-full border-collapse text-left sm:min-w-[36rem]">
+        <thead className="hidden sm:table-header-group">
           <tr className="bg-secondary/50">
             {block.headers.map((header) => (
               <th
@@ -110,9 +111,10 @@ function TermsBlockView({ block }: { block: TermsBlock }) {
         </thead>
         <tbody className="divide-y divide-border">
           {block.rows.map((row, i) => (
-            <tr key={i}>
+            <tr key={i} className="block p-4 sm:table-row sm:p-0">
               {row.map((cell, j) => (
-                <td key={j} className="px-4 py-3 align-top">
+                <td key={j} className="block py-1 align-top sm:table-cell sm:px-4 sm:py-3">
+                  <span className="block text-xs font-semibold tracking-wide text-foreground uppercase sm:hidden">{block.headers[j]}</span>
                   {cell}
                 </td>
               ))}

@@ -1,8 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { cloudinaryDeliveryUrl } from "@/lib/cloudinary-image-url"
 
-export function ResilientImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+// Cloudinary sends a resized WebP/AVIF for each width instead of the full-size upload (often a 2 MB PNG).
+const WIDTHS = [480, 800, 1200, 1600, 2000]
+
+export function ResilientImage({ src, alt, className, sizes = "(min-width: 900px) 50vw, 100vw", priority = false }: { src: string; alt: string; className?: string; sizes?: string; priority?: boolean }) {
   const [failed, setFailed] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
 
@@ -16,5 +20,20 @@ export function ResilientImage({ src, alt, className }: { src: string; alt: stri
     return <div role="img" aria-label={alt} className={`flex items-center justify-center bg-primary/10 text-center text-sm font-medium text-primary ${className ?? ""}`}><span>ONE Airport Taxi</span></div>
   }
 
-  return <img ref={imgRef} className={className} src={src} alt={alt} onError={() => setFailed(true)} />
+  const isCloudinary = src.includes("res.cloudinary.com") && src.includes("/upload/")
+  const srcSet = isCloudinary ? WIDTHS.map((width) => `${cloudinaryDeliveryUrl(src, width)} ${width}w`).join(", ") : undefined
+  return (
+    <img
+      ref={imgRef}
+      className={className}
+      src={isCloudinary ? cloudinaryDeliveryUrl(src, 1200) : src}
+      srcSet={srcSet}
+      sizes={srcSet ? sizes : undefined}
+      alt={alt}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : undefined}
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  )
 }

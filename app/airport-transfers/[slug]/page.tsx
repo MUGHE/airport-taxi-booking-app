@@ -7,7 +7,13 @@ import { PublicPageServiceError } from "@/components/airport-page/public-page-se
 import { getGoogleRating } from "@/lib/google-rating"
 import { getStopPricing } from "@/lib/actions"
 
-export const dynamic = "force-dynamic"
+// Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
+export const revalidate = 300
+
+// Nothing is pre-built at deploy time: each page is built on its first visit, then served from cache.
+export async function generateStaticParams() {
+  return []
+}
 
 // CMS titles often already end in the brand; strip it so the layout template adds it once.
 function pageTitle(title: string) {

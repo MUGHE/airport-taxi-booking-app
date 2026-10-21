@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache"
 import { createClient } from "@supabase/supabase-js"
 import { BLOG_IMAGE_MAX_BYTES, BLOG_IMAGE_TYPES, BLOG_POSTS_PER_PAGE, EMPTY_BLOG_DOCUMENT, sanitizeBlogDocument, slugify, type BlogCategory, type BlogPost, type BlogPostInput, type BlogStatus } from "@/lib/blog-schema"
 
@@ -57,7 +58,16 @@ function isSlugConflict(error: { code?: string; message?: string }) {
 
 // ---- Public reads (published only) ----
 
-export async function listPublishedPosts({ page = 1, categorySlug }: { page?: number; categorySlug?: string } = {}): Promise<{ posts: BlogPost[]; total: number; pageCount: number; page: number }> {
+/** Cache tag for public blog lists; every blog change clears it (see lib/blog-actions.ts). */
+export const BLOG_TAG = "blog"
+
+const cachedPublishedPosts = unstable_cache((page: number, categorySlug: string) => loadPublishedPosts({ page, categorySlug: categorySlug || undefined }), ["blog-posts"], { revalidate: 300, tags: [BLOG_TAG] })
+
+export async function listPublishedPosts({ page = 1, categorySlug }: { page?: number; categorySlug?: string } = {}) {
+  return cachedPublishedPosts(page, categorySlug ?? "")
+}
+
+async function loadPublishedPosts({ page = 1, categorySlug }: { page?: number; categorySlug?: string } = {}): Promise<{ posts: BlogPost[]; total: number; pageCount: number; page: number }> {
   const supabase = getSupabase()
   const empty = { posts: [], total: 0, pageCount: 0, page: 1 }
   if (!supabase) return empty
@@ -102,7 +112,9 @@ export async function listRelatedPosts(post: BlogPost, limit = 3): Promise<BlogP
   return ((data ?? []) as PostRow[]).map(toPost)
 }
 
-export async function listCategories(): Promise<BlogCategory[]> {
+export const listCategories = unstable_cache(loadCategories, ["blog-categories"], { revalidate: 300, tags: [BLOG_TAG] })
+
+async function loadCategories(): Promise<BlogCategory[]> {
   const supabase = getSupabase()
   if (!supabase) return []
   const { data } = await supabase.from("blog_categories").select("id, name, slug").order("name")

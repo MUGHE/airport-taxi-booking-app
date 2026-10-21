@@ -897,12 +897,10 @@
   .landing-rating { margin-top: 1rem; }
   .landing-quote-wrap { max-width: none; }
   .landing-quote-notes { padding: .75rem; font-size: .7rem; }
-  /* Swipeable rows instead of long stacks on phones. */
-  .landing-trust-grid { display: flex; gap: .75rem; overflow-x: auto; scroll-snap-type: x mandatory; padding-block: .25rem; scrollbar-width: none; }
-  .landing-trust-grid::-webkit-scrollbar, .landing-fleet-grid::-webkit-scrollbar { display: none; }
-  .landing-trust-item { flex: 0 0 auto; scroll-snap-align: start; padding: 1rem .25rem; border-bottom: 0; }
-  .landing-fleet-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: .75rem; margin-inline: -.75rem; padding: .25rem .75rem 1rem; scrollbar-width: none; }
-  .landing-vehicle-card { flex: 0 0 82%; scroll-snap-align: start; }
+  /* Two columns of tiles on phones, with no sideways swipe. */
+  .landing-trust-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; padding-block: .25rem; }
+  .landing-trust-item { align-items: flex-start; gap: .6rem; padding: .75rem .8rem; border: 1px solid rgba(255,255,255,.11); border-radius: .85rem; }
+  .landing-trust-item:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .landing-process-card h3 { margin-top: 1.25rem; }
   .landing-airport-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
   .landing-airport-card.is-wide, .landing-airport-card.is-side { grid-column: 1 / -1; min-height: 16rem; }
@@ -1188,18 +1186,18 @@
 }
 
 /* ---- Airport page: quote heading, comfort cards, travel info, driver checks ---- */
-/* Phones: fleet cards stack one under another (image on top, details below) instead of a swipe row. */
+/* Phones: fleet cards stack one under another (image on top, details below), on every page. */
 @media (max-width: 639px) {
-  .airport-page .landing-fleet-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; overflow: visible; margin-inline: 0; padding: 0; }
-  .airport-page .landing-vehicle-card { flex: none; }
-  .airport-page .landing-vehicle-top { padding: .7rem 1rem; }
-  .airport-page .landing-vehicle-image { height: 9.5rem; }
-  .airport-page .landing-vehicle-image img { padding: .6rem; }
-  .airport-page .landing-vehicle-copy { padding: .9rem 1rem 1rem; }
-  .airport-page .landing-vehicle-copy h3 { font-size: 1rem; }
-  .airport-page .landing-vehicle-best { font-size: .75rem; }
-  .airport-page .landing-vehicle-meta { gap: .3rem .75rem; margin-bottom: .75rem; }
-  .airport-page .landing-vehicle-button { height: 2.25rem; }
+  .landing-fleet-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; overflow: visible; margin-inline: 0; padding: 0; }
+  .landing-vehicle-card { flex: none; }
+  .landing-vehicle-top { padding: .7rem 1rem; }
+  .landing-vehicle-image { height: 9.5rem; }
+  .landing-vehicle-image img { padding: .6rem; }
+  .landing-vehicle-copy { padding: .9rem 1rem 1rem; }
+  .landing-vehicle-copy h3 { font-size: 1rem; }
+  .landing-vehicle-best { font-size: .75rem; }
+  .landing-vehicle-meta { gap: .3rem .75rem; margin-bottom: .75rem; }
+  .landing-vehicle-button { height: 2.25rem; }
 }
 @media (min-width: 640px) and (max-width: 899px) {
   .airport-benefit-card-grid:has(> :nth-child(5):last-child) > :last-child { grid-column: 1 / -1; }
@@ -1232,3 +1230,4 @@
   .airport-benefit-card-grid:has(> :nth-child(5):last-child) > * { grid-column: span 2; }
   .airport-benefit-card-grid:has(> :nth-child(5):last-child) > :nth-child(n+4) { grid-column: span 3; }
 }
+.landing-vehicle-alt { margin: -.6rem 0 1rem; line-height: 1.4; color: #617285; font-size: .72rem; font-style: italic; }

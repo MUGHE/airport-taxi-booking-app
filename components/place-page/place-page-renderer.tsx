@@ -19,7 +19,7 @@ export function PlacePageRenderer({ page, canonicalPath, showFooter = true, anal
   const visibleSections = page.sections.filter((section) => section.visible)
   return <div className="airport-page flex min-h-screen flex-col">{analyticsEnabled && <PlacePageAnalytics sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} fallback={fallback} />}<SiteHeader /><main className="flex-1">
     <section className={`airport-hero ${page.heroImage ? "place-hero-with-image" : "airport-hero-fallback"}`}>
-      {page.heroImage && <><div className="airport-hero-image"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} /></div><div className="airport-hero-shade" /></>}
+      {page.heroImage && <><div className="airport-hero-image"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} sizes="100vw" priority /></div><div className="airport-hero-shade" /></>}
       <div className="airport-container airport-hero-content place-hero-content">
         <div className="airport-hero-copy place-hero-copy">
           <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Destinations", href: "/destinations" }, { label: page.displayName, href: canonicalPath }]} includeStructuredData={false} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
