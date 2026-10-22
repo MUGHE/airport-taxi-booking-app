@@ -28,11 +28,13 @@ export async function Hero() {
             London airport transfers · Fixed prices
           </span>
           <h1>
-            London airport transfers, priced before you book.
+            <span className="landing-hero-line">Flight delayed?</span>{" "}
+            <span className="landing-hero-line">Your driver still waits.</span>{" "}
+            <span className="landing-hero-line">Your fare stays the same.</span>
           </h1>
           <p className="landing-hero-intro">
-            Door-to-door transfers to and from every London airport. We track your flight
-            and confirm your fare before you pay.
+            <span className="landing-hero-line">Tackles the biggest worry head-on.</span>{" "}
+            <span className="landing-hero-line">Good for anxious travellers and families.</span>
           </p>
 
           <div className="landing-hero-proof">

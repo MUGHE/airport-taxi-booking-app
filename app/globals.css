@@ -250,7 +250,8 @@
   color: var(--airport-ink);
 }
 .airport-container { width: min(100% - 2rem, 72rem); margin-inline: auto; }
-.airport-page h2 { max-width: 18ch; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 680; line-height: 1.03; letter-spacing: -.045em; }
+/* balance: split headings into even lines rather than leaving one or two words alone on the last line. */
+.airport-page h2 { max-width: 18ch; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 680; line-height: 1.03; letter-spacing: -.045em; text-wrap: balance; }
 .airport-page h3 { letter-spacing: -.015em; }
 .airport-eyebrow { color: var(--airport-blue); font-size: .7rem; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .airport-eyebrow-light { color: #8bc7ff; }
@@ -1232,3 +1233,44 @@
   .airport-benefit-card-grid:has(> :nth-child(5):last-child) > :nth-child(n+4) { grid-column: span 3; }
 }
 .landing-vehicle-alt { margin: -.6rem 0 1rem; line-height: 1.4; color: #617285; font-size: .72rem; font-style: italic; }
+
+/* Footer column titles are h2s (for heading order); keep them small even on pages that style h2 as a big section title. */
+footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weight: 700; line-height: 1rem; letter-spacing: .16em; text-wrap: nowrap; }
+
+/* ---- Destination (place) page sections: copy on one side and a matching photo or card on the other ---- */
+.place-story { padding-block: clamp(3.5rem, 7vw, 6rem); }
+.place-story:nth-of-type(even) { background: #f9fbfd; }
+.place-story-grid { display: grid; gap: 2.25rem; align-items: start; }
+.place-story-copy { min-width: 0; }
+/* Section titles sit in a half-width column, so they are smaller and wider than page-level h2s. */
+.place-story-copy h2 { max-width: 24ch; color: var(--airport-ink); font-size: clamp(1.75rem, 2.9vw, 2.6rem); line-height: 1.1; letter-spacing: -.035em; text-wrap: balance; }
+.place-story-copy .airport-rich-list { margin-top: .25rem; }
+.place-story-photo { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: var(--airport-radius-xl); background: #eef4f9; box-shadow: 0 25px 60px rgba(7,29,51,.14); }
+.place-story-card { display: flex; flex-direction: column; align-items: flex-start; gap: .85rem; padding: clamp(1.5rem, 3vw, 2.25rem); border: 1px solid #e1e8ef; border-radius: var(--airport-radius-xl); background: #fff; box-shadow: 0 20px 50px rgba(7,29,51,.08); }
+.place-story-card-icon { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: 999px; background: #eaf3fc; color: var(--airport-blue); }
+.place-story-card-icon svg { width: 1.35rem; height: 1.35rem; }
+.place-story-card h3 { color: var(--airport-ink); font-size: clamp(1.2rem, 2vw, 1.45rem); font-weight: 700; line-height: 1.25; letter-spacing: -.015em; }
+.place-story-card ul { display: grid; gap: .65rem; width: 100%; }
+.place-story-card li { display: flex; gap: .6rem; align-items: flex-start; color: #3d5266; line-height: 1.5; }
+.place-story-card li > svg { flex: none; width: 1.05rem; height: 1.05rem; margin-top: .2rem; color: var(--airport-blue); }
+.place-story-airports li a { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: .75rem; padding: .7rem .9rem; border: 1px solid #e1e8ef; border-radius: .75rem; color: var(--airport-ink); font-weight: 600; transition: border-color .2s ease, color .2s ease; }
+.place-story-airports li a:hover { border-color: var(--airport-blue); color: var(--airport-blue); }
+.place-story-airports li a svg { width: 1rem; height: 1rem; flex: none; }
+.place-story-card-note { color: #5d6f82; font-size: .85rem; line-height: 1.5; }
+@media (min-width: 900px) {
+  .place-story-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(2.5rem, 5vw, 4.5rem); }
+  .place-story-reversed .place-story-copy { order: 2; }
+  .place-story-reversed .place-story-aside { order: 1; }
+  /* The partner follows the reader down long sections instead of leaving empty space. */
+  .place-story-aside { position: sticky; top: 6.5rem; }
+}
+/* Destination FAQ title sits in a narrow column: same scale as the section titles, so it stays on two lines. */
+.airport-faq-heading h2.place-faq-title { max-width: 16ch; font-size: clamp(1.75rem, 2.9vw, 2.6rem); line-height: 1.1; letter-spacing: -.035em; text-wrap: balance; }
+/* Homepage H1: one sentence per line from tablet width up (on phones the sentences flow).
+   The subheading balances into even lines. */
+.landing-hero-intro { text-wrap: balance; }
+@media (min-width: 640px) {
+  .landing-hero-copy h1 { max-width: none; font-size: clamp(2.5rem, 3.5vw, 3.2rem); line-height: 1.06; }
+  .landing-hero-intro { max-width: 34rem; }
+  .landing-hero-line { display: block; }
+}

@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
+import { AIRPORT_IMAGES } from "@/lib/airport-images"
 import { CALL_NUMBER, WHATSAPP_LINK } from "@/lib/contact"
 import type { GoogleRating } from "@/lib/google-rating"
 import type { StopPricing } from "@/lib/types"
@@ -60,7 +61,7 @@ function InlineNode({ node }: { node: TiptapNode }) {
   return <>{(node.content ?? []).map((child, index) => <InlineNode key={`${child.type}-${index}`} node={child} />)}</>
 }
 
-function TiptapRichText({ document }: { document: TiptapDocument }) {
+export function TiptapRichText({ document }: { document: TiptapDocument }) {
   function renderNode(node: TiptapNode, index: number): React.ReactNode {
     const content = (node.content ?? []).map((child, childIndex) => renderNode(child, childIndex))
     if (node.type === "paragraph") return <p key={index} className="leading-7"><InlineNode node={node} /></p>
@@ -132,7 +133,7 @@ function iataCode(page: AirportPagePresentation) {
 
 /** Shows the opening paragraph and folds the rest into "Read more", so long CMS copy stays on the
  *  page (and in search) without becoming a wall of text. */
-function LeadAndMore({ blocks, document, extra, moreLabel }: { blocks: RichTextBlock[]; document?: TiptapDocument; extra?: React.ReactNode; moreLabel: string }) {
+export function LeadAndMore({ blocks, document, extra, moreLabel }: { blocks: RichTextBlock[]; document?: TiptapDocument; extra?: React.ReactNode; moreLabel: string }) {
   let lead: React.ReactNode = null
   let rest: React.ReactNode = null
   let hasRest = false
@@ -208,7 +209,7 @@ const AIRPORT_COPY: Record<string, AirportCopy> = {
       { icon: UsersRound, title: "Meet & Greet", text: "Drivers wait inside the airport up to 60 minutes; flight delays monitored." },
     ],
     comfort: {
-      heading: "Comfort, every step of the way",
+      heading: "Comfort, every step of the way",
       subhead: "Small touches that make your Heathrow transfer feel effortless.",
       cards: [
         { icon: DoorOpen, title: "A Welcome Like No Other", text: "From the moment you arrive, the door is opened for you, and your luggage is taken care of — every detail considered to ensure your journey begins in comfort." },
@@ -228,11 +229,11 @@ const AIRPORT_COPY: Record<string, AirportCopy> = {
           "Drop-off charges included: Heathrow charges £7 per drop-off at the terminal forecourts (10-minute max stay). When you book with us, the drop-off charge is already included in your fixed fare — no surprise fees at the airport.",
         ] },
         { icon: Car, title: "Driving Times to Major Cities", items: [
-          "Oxford: 1 hour 40 minutes – 2 hours 15 minutes (65 miles)",
-          "Cambridge: 1 hour 5 minutes – 1 hour 25 minutes (56 miles)",
-          "Brighton: 1 hour 45 minutes – 2 hours 20 minutes (74 miles)",
-          "Southampton: 2 hours 10 minutes – 2 hours 50 minutes (88 miles)",
-          "Bristol: 2 hours 30 minutes – 3 hours 20 minutes (134 miles)",
+          "Oxford: 1 hour 10 minutes – 1 hour 40 minutes (51 miles)",
+          "Cambridge: 1 hour 25 minutes – 2 hours 20 minutes (70 miles)",
+          "Brighton: 1 hour 10 minutes – 1 hour 40 minutes (64 miles)",
+          "Southampton: 1 hour 10 minutes – 1 hour 50 minutes (64 miles)",
+          "Bristol: 1 hour 40 minutes – 2 hours 20 minutes (105 miles)",
         ] },
       ],
       closing: "From early morning departures at Terminal 5 to late-night long-haul arrivals, book your Heathrow Airport taxi in advance for a fixed fare and a driver ready and waiting — no matter what time you fly.",
@@ -359,9 +360,15 @@ function StorySection({ section, index, page }: { section: AirportPageContentSec
   )
 }
 
+/** The airport's own photo (or a chauffeur photo for a town route): used when the route has no CMS image, or it fails to load. */
+function localRouteImage(related: AirportPagePresentation["relatedDestinations"][number]) {
+  const slug = related.href.split("/").filter(Boolean).pop() ?? ""
+  return AIRPORT_IMAGES[slug] ?? "/hero-airport-transfer.webp"
+}
+
 function RouteSection({ page, title }: { page: AirportPagePresentation; title?: string }) {
   if (page.relatedDestinations.length === 0) return null
-  return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Most booked</p><h2>{headingFor(title, `Popular routes from ${page.shortName}`)}</h2></div><p>{airportCopy(page).routesSubhead ?? "Airport-to-airport and city transfers at fixed prices."}</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card">{related.image ? <ResilientImage className="airport-route-image" src={related.image} alt={related.displayName} sizes="(min-width: 900px) 33vw, 100vw" /> : <div className="airport-route-image airport-route-placeholder"><Navigation aria-hidden="true" /></div>}<div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{page.shortName} to {related.displayName}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>See fares <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
+  return <section className="airport-routes" data-preview-section="related_destinations"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Most booked</p><h2>{headingFor(title, `Popular routes from ${page.shortName}`)}</h2></div><p>{airportCopy(page).routesSubhead ?? "Airport-to-airport and city transfers at fixed prices."}</p></div><div className="airport-route-grid">{page.relatedDestinations.map((related, index) => <article key={related.id} className="airport-route-card"><ResilientImage className="airport-route-image" src={related.image ?? localRouteImage(related)} fallbackSrc={localRouteImage(related)} alt={related.displayName} sizes="(min-width: 900px) 33vw, 100vw" /><div className="airport-route-overlay" /><div className="airport-route-content"><span>Route {String(index + 1).padStart(2, "0")}</span><h3><Link href={related.href}>{page.shortName} to {related.displayName}</Link></h3><p>{related.description}</p><Link className="airport-route-link" href={related.bookingLinks.toAirport}>See fares <ArrowRight aria-hidden="true" /></Link></div></article>)}</div></div></section>
 }
 
 function ReviewSection({ title }: { page: AirportPagePresentation; title?: string }) {
