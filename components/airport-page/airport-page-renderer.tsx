@@ -188,11 +188,11 @@ type AirportCopy = {
   bestFor?: Record<string, string>
   finalHeading?: string
   finalChip?: string
-  /** On-board comfort cards, shown after "Why book with us". */
+  /** Overrides the default on-board comfort cards shown after "Why book with us". */
   comfort?: { heading: string; subhead: string; cards: { icon: typeof Banknote; title: string; text: string }[] }
   /** Local travel facts as cards, shown before the pickup guide. */
   travelInfo?: { heading: string; lead: string; cards: InfoCard[]; closing: string }
-  /** Driver vetting, shown after the pickup guide. */
+  /** Overrides the default driver vetting section shown after the pickup guide. */
   drivers?: { heading: string; paragraphs: string[]; checks: string[] }
 }
 
@@ -208,16 +208,6 @@ const AIRPORT_COPY: Record<string, AirportCopy> = {
       { icon: PlaneTakeoff, title: "Flight tracking", text: "We track your flight status in real time to ensure timely pickups, even if your flight is delayed." },
       { icon: UsersRound, title: "Meet & Greet", text: "Drivers wait inside the airport up to 60 minutes; flight delays monitored." },
     ],
-    comfort: {
-      heading: "Comfort, every step of the way",
-      subhead: "Small touches that make your Heathrow transfer feel effortless.",
-      cards: [
-        { icon: DoorOpen, title: "A Welcome Like No Other", text: "From the moment you arrive, the door is opened for you, and your luggage is taken care of — every detail considered to ensure your journey begins in comfort." },
-        { icon: SlidersHorizontal, title: "You Set the Tone", text: "Settle back and relax. Where available, you’re welcome to adjust the cabin temperature, connect to onboard Wi-Fi, and play your own music to suit your preferences." },
-        { icon: BatteryCharging, title: "Stay Connected on the Go", text: "Your devices stay powered throughout the journey, with iOS and Android charging options available in selected vehicles." },
-        { icon: GlassWater, title: "The Little Extras", text: "Thoughtful touches come as standard — bottled water and tissues are provided to keep you refreshed and comfortable along the way." },
-      ],
-    },
     travelInfo: {
       heading: "Heathrow Airport Taxis and Transfers",
       lead: "Located in West London, Heathrow is the UK’s busiest airport and one of the busiest in the world, serving over 80 million passengers a year across four terminals. Book online for a reliable ride, Meet and Greet service, and free waiting time for flight delays.",
@@ -237,14 +227,6 @@ const AIRPORT_COPY: Record<string, AirportCopy> = {
         ] },
       ],
       closing: "From early morning departures at Terminal 5 to late-night long-haul arrivals, book your Heathrow Airport taxi in advance for a fixed fare and a driver ready and waiting — no matter what time you fly.",
-    },
-    drivers: {
-      heading: "DBS Checked Drivers",
-      paragraphs: [
-        "Safety comes first. Every one of our drivers goes through a full Enhanced DBS background check before they start — no shortcuts. They also pass a medical, a local knowledge test, and a practical driving test to earn their private hire license. All checks are kept up to date, and every driver is fully insured.",
-        "But there’s more to it than paperwork. Our drivers know the area really well, and they’re friendly faces who genuinely enjoy helping out. Need a restaurant tip? Wondering what to see? Just ask — they’re always happy to help.",
-      ],
-      checks: ["Enhanced DBS background check", "Medical assessment", "Local knowledge test", "Practical driving test", "Fully insured, checks kept up to date"],
     },
   },
   // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
@@ -427,9 +409,30 @@ function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation;
   )
 }
 
+/** On-board comfort cards shown on every airport and destination page; an airport can override them in AIRPORT_COPY. */
+function defaultComfort(placeName: string): NonNullable<AirportCopy["comfort"]> {
+  return {
+    heading: "Comfort, every step of the way",
+    subhead: `Small touches that make your ${placeName} transfer feel effortless.`,
+    cards: [
+      { icon: DoorOpen, title: "A Welcome Like No Other", text: "From the moment you arrive, the door is opened for you, and your luggage is taken care of — every detail considered to ensure your journey begins in comfort." },
+      { icon: SlidersHorizontal, title: "You Set the Tone", text: "Settle back and relax. Where available, you’re welcome to adjust the cabin temperature, connect to onboard Wi-Fi, and play your own music to suit your preferences." },
+      { icon: BatteryCharging, title: "Stay Connected on the Go", text: "Your devices stay powered throughout the journey, with iOS and Android charging options available in selected vehicles." },
+      { icon: GlassWater, title: "The Little Extras", text: "Thoughtful touches come as standard — bottled water and tissues are provided to keep you refreshed and comfortable along the way." },
+    ],
+  }
+}
+
 function ComfortSection({ page }: { page: AirportPagePresentation }) {
-  const comfort = airportCopy(page).comfort
-  if (!comfort) return null
+  return <ComfortCards comfort={airportCopy(page).comfort ?? defaultComfort(page.shortName)} />
+}
+
+/** The on-board comfort section for a destination (place) page. */
+export function PlaceComfortSection({ placeName }: { placeName: string }) {
+  return <ComfortCards comfort={defaultComfort(placeName)} />
+}
+
+function ComfortCards({ comfort }: { comfort: NonNullable<AirportCopy["comfort"]> }) {
   return (
     <section className="airport-comfort" data-preview-section="comfort">
       <div className="airport-container">
@@ -473,9 +476,26 @@ function TravelInfoSection({ page }: { page: AirportPagePresentation }) {
   )
 }
 
+/** Driver vetting, shown on every airport and destination page; an airport can override it in AIRPORT_COPY. */
+const DEFAULT_DRIVERS: NonNullable<AirportCopy["drivers"]> = {
+  heading: "DBS Checked Drivers",
+  paragraphs: [
+    "Safety comes first. Every one of our drivers goes through a full Enhanced DBS background check before they start — no shortcuts. They also pass a medical, a local knowledge test, and a practical driving test to earn their private hire license. All checks are kept up to date, and every driver is fully insured.",
+    "But there’s more to it than paperwork. Our drivers know the area really well, and they’re friendly faces who genuinely enjoy helping out. Need a restaurant tip? Wondering what to see? Just ask — they’re always happy to help.",
+  ],
+  checks: ["Enhanced DBS background check", "Medical assessment", "Local knowledge test", "Practical driving test", "Fully insured, checks kept up to date"],
+}
+
 function DriversSection({ page }: { page: AirportPagePresentation }) {
-  const drivers = airportCopy(page).drivers
-  if (!drivers) return null
+  return <DriversPanel drivers={airportCopy(page).drivers ?? DEFAULT_DRIVERS} />
+}
+
+/** The driver vetting section for a destination (place) page. */
+export function PlaceDriversSection() {
+  return <DriversPanel drivers={DEFAULT_DRIVERS} />
+}
+
+function DriversPanel({ drivers }: { drivers: NonNullable<AirportCopy["drivers"]> }) {
   return (
     <section className="airport-story" data-preview-section="drivers">
       <div className="airport-container airport-story-grid">
