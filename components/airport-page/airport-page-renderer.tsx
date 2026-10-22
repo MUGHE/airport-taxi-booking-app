@@ -7,7 +7,6 @@ import {
   BatteryCharging,
   Car,
   Check,
-  Clock3,
   DoorOpen,
   GlassWater,
   Headphones,
@@ -17,7 +16,6 @@ import {
   PlaneLanding,
   PlaneTakeoff,
   ShieldCheck,
-  Baby,
   Ship,
   SlidersHorizontal,
   Star,
@@ -201,13 +199,6 @@ const AIRPORT_COPY: Record<string, AirportCopy> = {
     heroHeading: "Reliable Heathrow Transfers - to and from Airport",
     heroSubhead: "Book a reliable taxi to Heathrow Airport with One Airport Taxi and travel at a fixed price agreed in advance. Whether you need a Heathrow airport taxi to Terminal 2, 3, 4 or 5, or a taxi from Heathrow to London and beyond, we track your flight, meet you on arrival and include up to 60 minutes of complimentary waiting time. Choose from saloon cars, executive cars, MPVs and 8-seater minibuses, with no hidden fees.",
     heroCallLine: true,
-    benefitCards: [
-      { icon: Banknote, title: "Fixed Fare", text: "Your quoted fare includes pickup/drop-off charges, tolls, parking, and congestion charges. Optional Meet & Greet and additional waiting time are extra." },
-      { icon: Headphones, title: "24/7 Support", text: "Our dedicated support team is available around the clock to assist you with any inquiries or issues." },
-      { icon: ShieldCheck, title: "Licensed drivers", text: "Ride with confidence knowing our experienced and courteous drivers are committed to your comfort and safety." },
-      { icon: PlaneTakeoff, title: "Flight tracking", text: "We track your flight status in real time to ensure timely pickups, even if your flight is delayed." },
-      { icon: UsersRound, title: "Meet & Greet", text: "Drivers wait inside the airport up to 60 minutes; flight delays monitored." },
-    ],
     travelInfo: {
       heading: "Heathrow Airport Taxis and Transfers",
       lead: "Located in West London, Heathrow is the UK’s busiest airport and one of the busiest in the world, serving over 80 million passengers a year across four terminals. Book online for a reliable ride, Meet and Greet service, and free waiting time for flight delays.",
@@ -256,17 +247,17 @@ function airportCopy(page: AirportPagePresentation): AirportCopy {
   return AIRPORT_COPY[page.shortName] ?? {}
 }
 
+/** "Why book with us" cards on every airport and destination page; an airport can override them in AIRPORT_COPY. */
+const DEFAULT_BENEFIT_CARDS: { icon: typeof Banknote; title: string; text: string }[] = [
+  { icon: Banknote, title: "Fixed Fare", text: "Your quoted fare includes pickup/drop-off charges, tolls, parking, and congestion charges. Optional Meet & Greet and additional waiting time are extra." },
+  { icon: Headphones, title: "24/7 Support", text: "Our dedicated support team is available around the clock to assist you with any inquiries or issues." },
+  { icon: ShieldCheck, title: "Licensed drivers", text: "Ride with confidence knowing our experienced and courteous drivers are committed to your comfort and safety." },
+  { icon: PlaneTakeoff, title: "Flight tracking", text: "We track your flight status in real time to ensure timely pickups, even if your flight is delayed." },
+  { icon: UsersRound, title: "Meet & Greet", text: "Drivers wait inside the airport up to 60 minutes; flight delays monitored." },
+]
+
 function whyBookCards(page: AirportPagePresentation) {
-  const custom = airportCopy(page).benefitCards
-  if (custom) return custom
-  return [
-    { icon: Banknote, title: "A fixed fare, confirmed before you pay", text: "Set by your exact route, with no surge pricing and no meter running in traffic." },
-    { icon: PlaneTakeoff, title: "Flight tracking", text: "We follow your flight live and adjust your pickup if you land early or late." },
-    { icon: UsersRound, title: page.terminals.length > 1 ? "Meet & greet at every terminal" : "Meet & greet in arrivals", text: "Add it when you book and your driver waits for you inside arrivals with your name." },
-    { icon: Clock3, title: "60 minutes free waiting", text: "Counted from landing, so passport control and baggage reclaim are covered." },
-    { icon: Baby, title: "Child seats on request", text: "Add a child seat when you book and it's fitted before pickup." },
-    { icon: Headphones, title: "24/7 UK support", text: "Call or WhatsApp a real person, day or night." },
-  ]
+  return airportCopy(page).benefitCards ?? DEFAULT_BENEFIT_CARDS
 }
 
 function AirportHeroQuote({ page, stopPricing }: { page: AirportPagePresentation; stopPricing?: StopPricing }) {
@@ -362,10 +353,10 @@ function FaqSection({ page, title }: { page: AirportPagePresentation; title?: st
 }
 
 // Six short standard cards on every airport page, so each one states the same, accurate terms.
-function BenefitCards({ page }: { page: AirportPagePresentation }) {
+function BenefitCards({ cards }: { cards: { icon: typeof Banknote; title: string; text: string }[] }) {
   return (
     <div className="airport-facts-grid airport-benefit-card-grid">
-      {whyBookCards(page).map(({ icon: Icon, title, text }, index) => (
+      {cards.map(({ icon: Icon, title, text }, index) => (
         <Card key={title} className="airport-benefit-card">
           <CardHeader className="airport-benefit-card-header">
             <Icon aria-hidden="true" />
@@ -425,6 +416,18 @@ function defaultComfort(placeName: string): NonNullable<AirportCopy["comfort"]> 
 
 function ComfortSection({ page }: { page: AirportPagePresentation }) {
   return <ComfortCards comfort={airportCopy(page).comfort ?? defaultComfort(page.shortName)} />
+}
+
+/** The "Why book with us" section for a destination (place) page. */
+export function PlaceWhyBookSection({ placeName }: { placeName: string }) {
+  return (
+    <section className="airport-benefits" data-preview-section="benefits">
+      <div className="airport-container">
+        <div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>Why travellers choose us for {placeName}</h2></div><p>Everything that makes a {placeName} pickup easy.</p></div>
+        <div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={DEFAULT_BENEFIT_CARDS} /></div></div>
+      </div>
+    </section>
+  )
 }
 
 /** The on-board comfort section for a destination (place) page. */
@@ -530,7 +533,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   }
 
   if (section.type === "benefits") {
-    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards page={page} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
+    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={whyBookCards(page)} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
   }
 
   if (section.type === "fleet_pricing") {

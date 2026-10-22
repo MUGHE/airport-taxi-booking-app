@@ -1,3 +1,4 @@
+import { Fragment } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Check, MapPin, PlaneTakeoff } from "lucide-react"
@@ -13,7 +14,7 @@ import type { StopPricing } from "@/lib/types"
 import { PlaceQuoteForm } from "@/components/place-page/place-quote-form"
 import { PlacePageAnalytics } from "@/components/place-page/place-page-analytics"
 import { PlaceStorySection } from "@/components/place-page/place-story-section"
-import { PlaceComfortSection, PlaceDriversSection } from "@/components/airport-page/airport-page-renderer"
+import { PlaceComfortSection, PlaceDriversSection, PlaceWhyBookSection } from "@/components/airport-page/airport-page-renderer"
 
 function Blocks({ blocks }: { blocks: { text: string; type: string; href?: string; label?: string }[] }) {
   return <div className="space-y-3 text-muted-foreground">{blocks.map((block, index) => block.type === "link" && block.href ? <Link key={index} className="block font-semibold text-primary underline" href={block.href}>{block.label || block.text}</Link> : <p key={index} className={block.type === "bold" ? "font-semibold text-foreground" : "leading-7"}>{block.text}</p>)}</div>
@@ -35,7 +36,9 @@ export function PlacePageRenderer({ page, canonicalPath, showFooter = true, anal
         </div>
       </div>
     </section>
-    {visibleSections.map((section, index) => <PlaceStorySection key={section.id} section={section} page={page} index={index} />)}
+    {/* "Why book with us" follows the introduction, as on airport pages. */}
+    {visibleSections.map((section, index) => <Fragment key={section.id}><PlaceStorySection section={section} page={page} index={index} />{index === 0 && <PlaceWhyBookSection placeName={page.displayName.replace(/\s+taxi$/i, "")} />}</Fragment>)}
+    {visibleSections.length === 0 && <PlaceWhyBookSection placeName={page.displayName.replace(/\s+taxi$/i, "")} />}
     <PlaceComfortSection placeName={page.displayName.replace(/\s+taxi$/i, "")} />
     <PlaceDriversSection />
     <section className="airport-routes"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Supported Airports</p><h2>Book from {page.displayName.replace(/\s+taxi$/i, "")}</h2></div></div><div className="airport-route-grid">{page.supportedAirports.map((airport) => <article key={airport.id} className="airport-route-card">{AIRPORT_IMAGES[airport.slug] && <Image className="airport-route-image" src={AIRPORT_IMAGES[airport.slug]} alt="" fill sizes="(min-width: 900px) 40vw, 100vw" />}<div className="airport-route-overlay" /><div className="airport-route-content"><PlaneTakeoff aria-hidden="true" /><h3><Link href={`/airport-transfers/${airport.slug}`}>{airport.displayName}</Link></h3><p>{airport.description}</p>{airport.bookingAvailable && airport.primaryTerminal ? <p className="mt-3 text-sm text-muted-foreground">Online booking is available.</p> : <p className="mt-3 text-sm text-muted-foreground">Online booking is temporarily unavailable. <Link className="underline" href="/contact">Contact our team</Link>.</p>}</div></article>)}</div></div></section>
