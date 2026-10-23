@@ -25,7 +25,7 @@ export async function Hero() {
       <div className="landing-container landing-hero-grid">
         <div className="landing-hero-copy">
           <span className="landing-eyebrow landing-eyebrow-light">
-            London airport transfers · Fixed prices
+            Taxi transfers to and from all UK airports
           </span>
           <h1>
             <span className="landing-hero-line">Flight delayed?</span>{" "}
@@ -33,8 +33,8 @@ export async function Hero() {
             <span className="landing-hero-line">Your fare stays the same.</span>
           </h1>
           <p className="landing-hero-intro">
-            <span className="landing-hero-line">Tackles the biggest worry head-on.</span>{" "}
-            <span className="landing-hero-line">Good for anxious travellers and families.</span>
+            We track your flight and adjust your pickup, with 60 minutes&apos; free waiting from
+            landing. The price you book is the price you pay.
           </p>
 
           <div className="landing-hero-proof">
