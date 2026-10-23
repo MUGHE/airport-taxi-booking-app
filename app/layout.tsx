@@ -7,6 +7,9 @@ import { HelpButton } from '@/components/help-button'
 import { ReferralCapture } from '@/components/referral-capture'
 import { SiteBackdrop } from '@/components/site-backdrop'
 import { SITE_URL } from '@/lib/site'
+
+// Google Analytics (GA4) property for oneairporttaxi.com.
+const GA_MEASUREMENT_ID = 'G-VM77B6T3ND'
 import './globals.css'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -74,6 +77,18 @@ export default function RootLayout({
       lang="en-GB"
       className={`${geistSans.variable} ${geistMono.variable} bg-background`}
     >
+      <head>
+        {/* Google tag (gtag.js), in <head> as Google asks (Search Console verification looks for it here).
+            The library loads async, so it never blocks the page from rendering. */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+        <script
+          id="google-analytics"
+          dangerouslySetInnerHTML={{ __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_MEASUREMENT_ID}');` }}
+        />
+      </head>
       <body className="font-sans antialiased">
         <SiteBackdrop />
         {children}
