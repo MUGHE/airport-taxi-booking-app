@@ -13,7 +13,7 @@ export const COMPANY_PHONE = process.env.COMPANY_PHONE?.trim() || CALL_NUMBER
 export const COMPANY_EMAIL = process.env.COMPANY_EMAIL?.trim() || CONTACT_EMAIL
 /** Company registration / VAT number, if applicable. Left blank hides the line entirely. */
 export const COMPANY_REGISTRATION_NUMBER = process.env.COMPANY_REGISTRATION_NUMBER?.trim() || "17337703"
-export const COMPANY_LEGAL_PHONE = process.env.COMPANY_LEGAL_PHONE?.trim() || "+44 7546 624242"
+export const COMPANY_LEGAL_PHONE = process.env.COMPANY_LEGAL_PHONE?.trim() || "+4474441485225"
 
 // Structured address fields for the LocalBusiness JSON-LD schema (components/local-business-schema.tsx).
 // Kept separate from COMPANY_ADDRESS above since that's a single free-text line for invoices.
