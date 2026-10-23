@@ -6,7 +6,6 @@ import { SiteFooter } from "@/components/site-footer"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { BookingFlow } from "@/components/booking/booking-flow"
 import { getBookingAddOns, getCongestionZones, getReturnTripDiscount, getSitePromotion, getStopPricing, getVehicleFleet } from "@/lib/actions"
-import { getCustomer } from "@/lib/session"
 
 export const metadata: Metadata = {
   title: "Book Your Airport Transfer",
@@ -15,8 +14,12 @@ export const metadata: Metadata = {
   alternates: { canonical: "/book" },
 }
 
+// Cached (rebuilt at most every 5 minutes, and straight away when prices change in admin) so it can be
+// prefetched and opens instantly; the signed-in customer is loaded by the form in the browser.
+export const revalidate = 300
+
 export default async function BookPage() {
-  const [vehicles, addOns, promotion, returnDiscount, stopPricing, congestionZones, customer] = await Promise.all([getVehicleFleet(), getBookingAddOns(), getSitePromotion(), getReturnTripDiscount(), getStopPricing(), getCongestionZones(), getCustomer()])
+  const [vehicles, addOns, promotion, returnDiscount, stopPricing, congestionZones] = await Promise.all([getVehicleFleet(), getBookingAddOns(), getSitePromotion(), getReturnTripDiscount(), getStopPricing(), getCongestionZones()])
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -36,7 +39,7 @@ export default async function BookPage() {
             </div>
           }
         >
-          <BookingFlow vehicles={vehicles} addOns={addOns} promotion={promotion} returnDiscount={returnDiscount} stopPricing={stopPricing} congestionZones={congestionZones} customer={customer} />
+          <BookingFlow vehicles={vehicles} addOns={addOns} promotion={promotion} returnDiscount={returnDiscount} stopPricing={stopPricing} congestionZones={congestionZones} />
         </Suspense>
       </main>
       <SiteFooter />

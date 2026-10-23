@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { TimePicker } from "@/components/ui/time-picker"
 import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, formatCurrency, maxBags, seatCount } from "@/lib/fleet"
-import { createBooking, createReturnBooking, getDistanceQuote, previewPromoCode } from "@/lib/actions"
+import { createBooking, createReturnBooking, getDistanceQuote, getSignedInCustomer, previewPromoCode } from "@/lib/actions"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { RouteCard } from "@/components/route-search"
 import { TripMap } from "@/components/trip-map"
@@ -64,7 +64,7 @@ const NO_STOP_PRICING: StopPricing = { pricePerStop: 0, updatedAt: "" }
 const NO_CONGESTION_ZONES: CongestionZone[] = []
 // Mirrors the server-side cap in lib/actions.ts — keep the two in sync.
 const MAX_STOPS = 3
-export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTION, returnDiscount = NO_RETURN_DISCOUNT, stopPricing = NO_STOP_PRICING, congestionZones = NO_CONGESTION_ZONES, customer = null }: { vehicles: VehicleClass[]; addOns: BookingAddOn[]; promotion?: SitePromotion; returnDiscount?: ReturnTripDiscount; stopPricing?: StopPricing; congestionZones?: CongestionZone[]; customer?: Customer | null }) {
+export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTION, returnDiscount = NO_RETURN_DISCOUNT, stopPricing = NO_STOP_PRICING, congestionZones = NO_CONGESTION_ZONES, customer: initialCustomer = null }: { vehicles: VehicleClass[]; addOns: BookingAddOn[]; promotion?: SitePromotion; returnDiscount?: ReturnTripDiscount; stopPricing?: StopPricing; congestionZones?: CongestionZone[]; customer?: Customer | null }) {
   const router = useRouter()
   const params = useSearchParams()
   const direction = params.get("direction") === "to-airport" || params.get("direction") === "from-airport" ? params.get("direction") as "to-airport" | "from-airport" : "custom"
@@ -93,9 +93,24 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const [bags, setBags] = useState(1)
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([])
   // A signed-in customer books under their account details (the server enforces the same).
-  const [customerName, setCustomerName] = useState(customer?.name ?? "")
-  const [email, setEmail] = useState(customer?.email ?? "")
-  const [phone, setPhone] = useState(customer?.phone ?? "")
+  const [customer, setCustomer] = useState<Customer | null>(initialCustomer)
+  const [customerName, setCustomerName] = useState(initialCustomer?.name ?? "")
+  const [email, setEmail] = useState(initialCustomer?.email ?? "")
+  const [phone, setPhone] = useState(initialCustomer?.phone ?? "")
+
+  // /book is cached, so the signed-in customer (if any) is looked up after the page loads.
+  useEffect(() => {
+    if (initialCustomer) return
+    let cancelled = false
+    getSignedInCustomer().then((signedIn) => {
+      if (cancelled || !signedIn) return
+      setCustomer(signedIn)
+      setCustomerName((current) => current || signedIn.name)
+      setEmail((current) => current || signedIn.email)
+      setPhone((current) => current || (signedIn.phone ?? ""))
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [initialCustomer])
   const [notes, setNotes] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card")
   const [distanceMiles, setDistanceMiles] = useState<number | null>(null)

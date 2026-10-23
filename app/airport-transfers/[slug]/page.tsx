@@ -6,13 +6,15 @@ import { getPublishedAirportRedirect, readPublicAirportPage, type AirportPageSeo
 import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
 import { getGoogleRating } from "@/lib/google-rating"
 import { getStopPricing } from "@/lib/actions"
+import { listPublishedAirportDirectory } from "@/lib/airport-directory"
 
 // Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
 export const revalidate = 300
 
-// Nothing is pre-built at deploy time: each page is built on its first visit, then served from cache.
+// Published airports are built at deploy time so even the first visit is instant; airports published
+// later are built on their first visit. If the database is unreachable at build time this is empty.
 export async function generateStaticParams() {
-  return []
+  return (await listPublishedAirportDirectory()).map((airport) => ({ slug: airport.slug }))
 }
 
 // CMS titles often already end in the brand; strip it so the layout template adds it once.

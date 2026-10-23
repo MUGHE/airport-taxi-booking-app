@@ -5,13 +5,15 @@ import { getStopPricing } from "@/lib/actions"
 import { PlacePageStructuredData } from "@/components/place-page/place-page-structured-data"
 import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
 import { getPublishedPlaceRedirect, readPublicPlacePage } from "@/lib/destination-pages"
+import { listPublishedPlaceDirectory } from "@/lib/place-directory"
 
 // Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
 export const revalidate = 300
 
-// Nothing is pre-built at deploy time: each page is built on its first visit, then served from cache.
+// Published places are built at deploy time so even the first visit is instant; places published
+// later are built on their first visit. If the database is unreachable at build time this is empty.
 export async function generateStaticParams() {
-  return []
+  return (await listPublishedPlaceDirectory()).places.map((place) => ({ slug: place.slug }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

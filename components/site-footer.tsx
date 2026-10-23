@@ -130,7 +130,8 @@ function FooterCol({ title, links }: { title: string; links: { href: string; lab
       <ul className="mt-5 flex flex-col gap-3">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary">
+            {/* /blog is rendered per request, so prefetch the full page rather than just the shell. */}
+            <Link href={link.href} prefetch={link.href === "/blog" ? true : undefined} className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary">
               {link.label}
             </Link>
           </li>

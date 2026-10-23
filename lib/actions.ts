@@ -1590,3 +1590,11 @@ export async function getDistanceQuote(
     return { ok: false, error: "Distance service is temporarily unavailable." }
   }
 }
+
+/**
+ * The signed-in customer for the booking form. /book is a cached page, so the form asks for this
+ * after it loads instead of the page reading the session cookie on the server.
+ */
+export async function getSignedInCustomer(): Promise<Customer | null> {
+  return getCustomer()
+}
