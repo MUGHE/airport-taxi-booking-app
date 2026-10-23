@@ -1274,3 +1274,10 @@ footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weig
   .landing-hero-intro { max-width: 34rem; }
   .landing-hero-line { display: block; }
 }
+/* Google reviews: masonry columns, so each card is as tall as its review and no grid cell is left empty.
+   Also cancels the old tall first-card rule from the featured-review layout. */
+.google-review-grid { columns: 1; column-gap: 1.5rem; }
+.google-review-grid > * { break-inside: avoid; width: 100%; margin-bottom: 1.5rem; }
+.google-review-grid > .landing-review-card, .google-review-grid > .airport-review-card { min-height: 0; }
+@media (min-width: 640px) { .google-review-grid { columns: 2; } }
+@media (min-width: 1024px) { .google-review-grid { columns: 3; } }
