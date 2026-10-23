@@ -9,7 +9,7 @@ export function FleetGuidance() {
       <div className="grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
         <div className="relative aspect-[16/9] overflow-hidden rounded-2xl">
           <Image
-            src="/hero-airport-transfer.png"
+            src="/hero-airport-transfer.webp"
             alt="Chauffeur loading luggage beside an airport transfer car"
             fill
             className="object-cover"

@@ -262,9 +262,10 @@ export function DestinationPicker({
     sheetInputRef.current?.focus()
   }
 
-  const disabled = !ready && !error
-  const showInlineSpinner = disabled || loadingSuggestions
+  // The field works before Google Maps arrives (it loads on first interaction): what the visitor
+  // types is searched as soon as the places library lands, so the field is never locked.
   const trimmed = value.trim()
+  const showInlineSpinner = (!ready && !error && trimmed.length > 0) || loadingSuggestions
 
   return (
     <div ref={wrapperRef} className="relative min-w-0">
@@ -275,7 +276,6 @@ export function DestinationPicker({
         // no keyboard to scroll clear of — the sheet takes the screen and the list has all of it.
         <button
           type="button"
-          disabled={disabled}
           onClick={openSheet}
           className={cn(
             "flex h-8 w-full items-center rounded-lg border border-input bg-transparent pl-8 pr-8 text-left text-base transition-colors",
@@ -290,7 +290,6 @@ export function DestinationPicker({
           ref={inlineInputRef}
           value={value}
           placeholder={placeholder}
-          disabled={disabled}
           className="pl-8 pr-8"
           role="combobox"
           aria-expanded={dropdownOpen}

@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-const SITE_TITLE = 'ONE Airport Taxi | Premium Airport Taxi & Transfers in London'
+const SITE_TITLE = 'London Airport Transfers at Fixed Prices | ONE Airport Taxi'
 const SITE_DESCRIPTION =
-  'Book reliable, fixed-price airport taxi transfers with professional chauffeurs. Instant fare estimates, flight tracking, and 24/7 meet & greet service.'
+  'Fixed-price airport taxis to and from Heathrow, Gatwick, Stansted, Luton, City and Southend. Live flight tracking, 60 minutes free waiting and 24/7 support.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     siteName: 'ONE Airport Taxi',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: [{ url: '/hero-airport-transfer.png', alt: 'ONE Airport Taxi' }],
+    images: [{ url: '/hero-airport-transfer-og.jpg', alt: 'ONE Airport Taxi' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ['/hero-airport-transfer.png'],
+    images: ['/hero-airport-transfer-og.jpg'],
   },
 }
 
@@ -71,7 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="en-GB"
       className={`${geistSans.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">
@@ -81,7 +81,8 @@ export default function RootLayout({
         <ReferralCapture />
         <Toaster position="top-center" />
         <ReactToastContainer />
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {/* Vercel Analytics only works on Vercel hosting; on Netlify its script just 404s. */}
+        {process.env.NODE_ENV === 'production' && process.env.VERCEL && <Analytics />}
       </body>
     </html>
   )

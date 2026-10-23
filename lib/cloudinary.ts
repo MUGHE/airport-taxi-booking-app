@@ -37,11 +37,4 @@ export function createCloudinarySignature(params: Record<string, string | number
   return createHash("sha1").update(`${serialized}${apiSecret}`).digest("hex")
 }
 
-/** Builds the public responsive URL without changing the stored Cloudinary identity. */
-export function cloudinaryDeliveryUrl(secureUrl: string, width: number): string {
-  if (!secureUrl.startsWith("https://")) return secureUrl
-  const marker = "/upload/"
-  const index = secureUrl.indexOf(marker)
-  if (index < 0) return secureUrl
-  return `${secureUrl.slice(0, index + marker.length)}f_auto,q_auto,c_limit,w_${Math.max(320, Math.round(width))}/${secureUrl.slice(index + marker.length)}`
-}
+export { cloudinaryDeliveryUrl } from "@/lib/cloudinary-image-url"

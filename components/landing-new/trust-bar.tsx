@@ -1,11 +1,11 @@
 import { Banknote, Handshake, Headset, Lock, ShieldCheck } from "lucide-react"
 
 const ITEMS = [
-  { icon: Banknote, title: "Fixed price", text: "Know the price upfront" },
-  { icon: Handshake, title: "Meet & greet", text: "At arrivals, we'll be there" },
-  { icon: ShieldCheck, title: "Licensed drivers", text: "Professional and vetted" },
-  { icon: Headset, title: "24/7 support", text: "Help whenever you need it" },
-  { icon: Lock, title: "Secure payment", text: "Safe and encrypted" },
+  { icon: Banknote, title: "Fixed fares", text: "No meters, no surge" },
+  { icon: Handshake, title: "Meet & greet", text: "Add it when you book" },
+  { icon: ShieldCheck, title: "Licensed drivers", text: "Licensed and vetted" },
+  { icon: Headset, title: "24/7 support", text: "Phone or WhatsApp" },
+  { icon: Lock, title: "Secure payment", text: "Pay securely by card" },
 ]
 
 export function TrustBar() {

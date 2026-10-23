@@ -1,11 +1,20 @@
 import type { Metadata } from "next"
 import { notFound, permanentRedirect } from "next/navigation"
 import { PlacePageRenderer } from "@/components/place-page/place-page-renderer"
+import { getStopPricing } from "@/lib/actions"
 import { PlacePageStructuredData } from "@/components/place-page/place-page-structured-data"
 import { PublicPageServiceError } from "@/components/airport-page/public-page-service-error"
 import { getPublishedPlaceRedirect, readPublicPlacePage } from "@/lib/destination-pages"
+import { listPublishedPlaceDirectory } from "@/lib/place-directory"
 
-export const dynamic = "force-dynamic"
+// Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
+export const revalidate = 300
+
+// Published places are built at deploy time so even the first visit is instant; places published
+// later are built on their first visit. If the database is unreachable at build time this is empty.
+export async function generateStaticParams() {
+  return (await listPublishedPlaceDirectory()).places.map((place) => ({ slug: place.slug }))
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const result = await readPublicPlacePage((await params).slug)
@@ -35,8 +44,8 @@ export default async function PlacePage({ params }: { params: Promise<{ slug: st
   const redirectSlug = await getPublishedPlaceRedirect(slug)
   if (redirectSlug === "destinations") permanentRedirect("/destinations")
   if (redirectSlug) permanentRedirect(`/destinations/${redirectSlug}`)
-  const result = await readPublicPlacePage(slug)
-  if (result.status === "published" || result.status === "fallback") return <><PlacePageStructuredData page={result.page} /><PlacePageRenderer page={result.page.presentation} canonicalPath={result.page.metadata.canonical} fallback={result.status === "fallback"} /></>
+  const [result, stopPricing] = await Promise.all([readPublicPlacePage(slug), getStopPricing()])
+  if (result.status === "published" || result.status === "fallback") return <><PlacePageStructuredData page={result.page} /><PlacePageRenderer page={result.page.presentation} canonicalPath={result.page.metadata.canonical} fallback={result.status === "fallback"} stopPricing={stopPricing} /></>
   if (result.status === "unavailable") return <PublicPageServiceError pageType="place" retryHref={`/destinations/${slug}`} />
   notFound()
 }

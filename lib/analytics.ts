@@ -11,7 +11,8 @@ export type PublicAnalyticsEvent =
   | { name: "destination_directory_search"; queryLength: number; resultCount: number }
   | { name: "place_page_view"; sourcePlaceId?: string; sourcePlaceSlug?: string; fallback: boolean }
   | { name: "supported_airport_selected"; sourcePlaceId?: string; sourcePlaceSlug?: string; airportId: string; direction: TripDirection }
-  | { name: "quote_started"; sourcePlaceId?: string; sourcePlaceSlug?: string; airportId: string; direction: TripDirection }
+  // The shared booking form has no airport picker, so a quote can start before an airport is known.
+  | { name: "quote_started"; sourcePlaceId?: string; sourcePlaceSlug?: string; airportId?: string; direction?: TripDirection }
   | { name: "booking_handoff"; sourcePlaceId?: string; sourcePlaceSlug?: string; airportId: string; direction: TripDirection }
 
 export function publicAnalyticsProperties(event: PublicAnalyticsEvent): Record<string, string | number | boolean | undefined> {

@@ -126,7 +126,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: "list",
         items: [
           "Pick-ups from homes, apartments, offices, hotels, stations and any other non-airport location (including departures to an airport): 15 minutes free from the scheduled pick-up time.",
-          "Airport arrivals: 45 minutes free from the actual flight landing time, provided you supplied a correct flight number and we accepted it in the confirmation.",
+          "Airport arrivals: 60 minutes free from the actual flight landing time, provided you supplied a correct flight number and we accepted it in the confirmation.",
         ],
       },
       {
@@ -139,7 +139,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       },
       {
         type: "p",
-        text: "We track flights only if you provide a correct flight number. If you supply an incorrect or incomplete flight number, or if your flight details change, you must inform us as soon as possible. In these cases, we may not be able to track your flight or offer the 45-minute airport arrival waiting period. You will be responsible for any additional waiting, parking, dispatch, or rebooking costs resulting from incorrect information.",
+        text: "We track flights only if you provide a correct flight number. If you supply an incorrect or incomplete flight number, or if your flight details change, you must inform us as soon as possible. In these cases, we may not be able to track your flight or offer the 60-minute airport arrival waiting period. You will be responsible for any additional waiting, parking, dispatch, or rebooking costs resulting from incorrect information.",
       },
       {
         type: "p",

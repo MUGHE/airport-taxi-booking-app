@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache"
 import { createClient } from "@supabase/supabase-js"
 import { readPublishedAirportFacts } from "@/lib/published-airport-facts"
 
@@ -51,7 +52,21 @@ function toEntry(row: DirectoryRow, snapshot: PublishedSnapshotRow): AirportDire
   }
 }
 
-export async function listPublishedAirportDirectory(): Promise<AirportDirectoryEntry[]> {
+/** Heathrow leads every airport list (header menu, homepage, airports hub); the rest stay A–Z. */
+const PRIORITY_IATA = ["LHR"]
+
+function byAirportPriority(left: AirportDirectoryEntry, right: AirportDirectoryEntry) {
+  const rank = (entry: AirportDirectoryEntry) => { const index = PRIORITY_IATA.indexOf(entry.iataCode); return index === -1 ? PRIORITY_IATA.length : index }
+  return rank(left) - rank(right) || left.displayName.localeCompare(right.displayName)
+}
+
+/** Cache tag for the airport list; publishing, featuring or archiving an airport clears it. */
+export const AIRPORT_DIRECTORY_TAG = "airport-directory"
+
+// The header shows this list on every page, so it is cached instead of queried per visit.
+export const listPublishedAirportDirectory = unstable_cache(loadPublishedAirportDirectory, ["airport-directory"], { revalidate: 300, tags: [AIRPORT_DIRECTORY_TAG] })
+
+async function loadPublishedAirportDirectory(): Promise<AirportDirectoryEntry[]> {
   const supabase = getSupabase()
   if (!supabase) return []
 
@@ -68,18 +83,18 @@ export async function listPublishedAirportDirectory(): Promise<AirportDirectoryE
   if (pages.length === 0) return []
   const { data: snapshots, error: snapshotError } = await supabase
     .from("destination_page_snapshots")
-    .select("id, content")
+    .select("id, publishedFacts:content->publishedFacts")
     .eq("snapshot_kind", "published")
     .in("id", pages.map((page) => page.current_published_snapshot_id as string))
   if (snapshotError) return []
-  const snapshotsById = new Map(((snapshots ?? []) as PublishedSnapshotRow[]).map((snapshot) => [snapshot.id, snapshot]))
+  const snapshotsById = new Map(((snapshots ?? []) as { id: string; publishedFacts: unknown }[]).map((snapshot) => [snapshot.id, { id: snapshot.id, content: { publishedFacts: snapshot.publishedFacts } } as PublishedSnapshotRow]))
   return pages
     .flatMap((page) => {
       const snapshot = snapshotsById.get(page.current_published_snapshot_id as string)
       const entry = snapshot ? toEntry(page, snapshot) : null
       return entry ? [entry] : []
     })
-    .sort((left, right) => left.displayName.localeCompare(right.displayName))
+    .sort(byAirportPriority)
 }
 
 export async function listFeaturedAirports(): Promise<AirportDirectoryEntry[]> {

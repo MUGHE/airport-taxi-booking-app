@@ -1,7 +1,7 @@
 "use server"
 
 import { cookies, headers } from "next/headers"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, unstable_cache, updateTag } from "next/cache"
 import {
   findActivePromoCode,
   findBooking,
@@ -71,7 +71,7 @@ import { isAdminRole, type AdminRole } from "./admin-roles"
 import type { AdminUser, Booking, Customer, BookingAddOn, BookingStatus, CongestionZone, Destination, NewBookingInput, PaymentMethod, PromoCode, PromoDiscountType, ReturnTripDiscount, SitePromotion, StopPricing, VehicleClass } from "./types"
 import { getStripeClient } from "./stripe"
 import { calculateDrivingRoute } from "./google-distance"
-import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, MIN_DISTANCE_MILES, referralCommission } from "./fleet"
+import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, maxBags, maxPassengers, MIN_DISTANCE_MILES, referralCommission } from "./fleet"
 import { getGoogleReviewUrl, REVIEW_PUBLISH_THRESHOLD } from "./company"
 import {
   sendBookingNotificationEmails,
@@ -88,7 +88,7 @@ import { cloudinaryConfigError, createCloudinarySignature, getCloudinaryConfig }
 import { deleteCloudinaryAsset, listCloudinaryAssetUsage, listCloudinaryAssets, saveCloudinaryAsset, type CloudinaryAsset } from "./cloudinary-assets"
 import type { CloudinaryImageKind } from "./cloudinary-validation"
 import { listPublishedDestinationCandidates } from "./related-destinations"
-import { setAirportFeatured } from "./airport-directory"
+import { AIRPORT_DIRECTORY_TAG, setAirportFeatured } from "./airport-directory"
 import { archiveAdminDestinationPage, deleteAdminDestinationDraft, publishAdminDestinationPage, restoreAdminDestinationPage, setAdminBookingAvailability, promoteCoveredLocalityToPlace } from "./admin-destination-pages"
 import { invalidateSafePublishedAirportPageCache } from "./public-airport-page-cache"
 import { invalidateSafePublishedPlacePageCache } from "./public-place-page-cache"
@@ -533,6 +533,7 @@ export async function setAirportFeaturedAction(pageId: string, featured: boolean
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
     invalidateSafePublishedPlacePageCache()
+    updateTag(AIRPORT_DIRECTORY_TAG)
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath("/admin/destination-pages")
@@ -567,6 +568,7 @@ export async function publishAdminDestinationPageAction(pageId: string, override
     console.info(`${trace} Refreshing public and admin page caches.`)
     invalidateSafePublishedAirportPageCache()
     invalidateSafePublishedPlacePageCache()
+    updateTag(AIRPORT_DIRECTORY_TAG)
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath(`/airport-transfers/${result.slug}`)
@@ -592,6 +594,7 @@ export async function bulkPublishPlaceDraftsAction(selections: BulkPublishSelect
   if (report.some((item) => item.status === "published")) {
     invalidateSafePublishedAirportPageCache()
     invalidateSafePublishedPlacePageCache()
+    updateTag(AIRPORT_DIRECTORY_TAG)
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath("/destinations", "layout")
@@ -631,6 +634,7 @@ export async function archiveAdminDestinationPageAction(pageId: string, replacem
   if (result.ok) {
     invalidateSafePublishedAirportPageCache()
     invalidateSafePublishedPlacePageCache()
+    updateTag(AIRPORT_DIRECTORY_TAG)
     revalidatePath("/", "layout")
     revalidatePath("/airport-transfers", "layout")
     revalidatePath("/destinations", "layout")
@@ -803,7 +807,7 @@ async function buildAndSaveBooking(
   const vehicles = await listVehiclesWithPricing()
   const vehicle = vehicles.find((v) => v.id === input.vehicleId)
   if (!vehicle) return { ok: false, error: "Unknown vehicle." }
-  if (input.passengers > vehicle.capacity || input.bags > vehicle.luggage) {
+  if (input.passengers > maxPassengers(vehicle, input.bags) || input.bags > maxBags(vehicle, input.passengers)) {
     return { ok: false, error: "Passenger or bag count exceeds this vehicle's capacity." }
   }
 
@@ -1227,7 +1231,7 @@ export async function updateBookingAction(reference: string, input: BookingEditI
   const vehicles = await listVehiclesWithPricing()
   const vehicle = vehicles.find((v) => v.id === input.vehicleId)
   if (!vehicle) return { ok: false, error: "Unknown vehicle." }
-  if (input.passengers > vehicle.capacity || input.bags > vehicle.luggage) {
+  if (input.passengers > maxPassengers(vehicle, input.bags) || input.bags > maxBags(vehicle, input.passengers)) {
     return { ok: false, error: "Passenger or bag count exceeds this vehicle's capacity." }
   }
 
@@ -1447,8 +1451,12 @@ export async function updateReturnTripDiscountAction(active: boolean, discountPe
   return { ok: true, discount }
 }
 
+const STOP_PRICING_TAG = "stop-pricing"
+const cachedStopPricing = unstable_cache(() => getStoredStopPricing(), ["stop-pricing"], { revalidate: 300, tags: [STOP_PRICING_TAG] })
+
+/** The per-stop price shown in booking forms. Fares are always calculated from the live value. */
 export async function getStopPricing(): Promise<StopPricing> {
-  return getStoredStopPricing()
+  return cachedStopPricing()
 }
 
 export interface UpdateStopPricingResult {
@@ -1463,7 +1471,9 @@ export async function updateStopPricingAction(pricePerStop: number): Promise<Upd
     return { ok: false, error: "Enter a valid price per stop." }
   }
   const pricing = await setStopPricing(pricePerStop)
-  revalidatePath("/admin"); revalidatePath("/book")
+  // The per-stop price shows in the booking form on cached public pages too.
+  updateTag(STOP_PRICING_TAG)
+  revalidatePath("/admin"); revalidatePath("/", "layout")
   return { ok: true, pricing }
 }
 
@@ -1579,4 +1589,12 @@ export async function getDistanceQuote(
     }
     return { ok: false, error: "Distance service is temporarily unavailable." }
   }
+}
+
+/**
+ * The signed-in customer for the booking form. /book is a cached page, so the form asks for this
+ * after it loads instead of the page reading the session cookie on the server.
+ */
+export async function getSignedInCustomer(): Promise<Customer | null> {
+  return getCustomer()
 }

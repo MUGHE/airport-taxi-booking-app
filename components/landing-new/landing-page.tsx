@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { LocalBusinessSchema } from "@/components/local-business-schema"
 import { Hero } from "@/components/landing-new/hero"
 import { TrustBar } from "@/components/landing-new/trust-bar"
+import { TransferIntro } from "@/components/landing-new/transfer-intro"
 import { ProcessSteps } from "@/components/landing-new/process-steps"
 import { ConfidenceBanner } from "@/components/landing-new/confidence-banner"
 import { AirportsCoverage } from "@/components/landing-new/airports-coverage"
@@ -19,6 +20,7 @@ export function LandingPage() {
       <main className="flex-1">
         <Hero />
         <TrustBar />
+        <TransferIntro />
         <ProcessSteps />
         <ConfidenceBanner />
         <AirportsCoverage />

@@ -1,50 +1,61 @@
 "use client"
 
 import { useState } from "react"
-import { ExternalLink, MapPin } from "lucide-react"
+import { ExternalLink, MapPin, Plane } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createGoogleMapsEmbedUrl, createGoogleMapsUrl, type AirportMapLocation } from "@/lib/google-maps-links"
+import { createGoogleMapsUrl, type AirportMapLocation } from "@/lib/google-maps-links"
 
-export function AirportMapPreview({ location }: { location: AirportMapLocation }) {
-  const [showInteractiveMap, setShowInteractiveMap] = useState(false)
-  const [mapFailed, setMapFailed] = useState(false)
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-  const mapsUrl = createGoogleMapsUrl(location)
+export type MapTerminal = { id: string; label: string; latitude: number; longitude: number }
 
-  if (showInteractiveMap && apiKey && !mapFailed) {
-    return (
-      <div className="mt-6 overflow-hidden rounded-xl border border-border/70 bg-secondary">
-        <iframe
-          allowFullScreen
-          className="h-80 w-full border-0"
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          src={createGoogleMapsEmbedUrl(location, apiKey)}
-          title={`Google map of ${location.address}`}
-          onError={() => setMapFailed(true)}
-        />
-        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">{location.address}</p>
-          <a className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline" href={mapsUrl} rel="noreferrer" target="_blank">Open in Google Maps <ExternalLink className="size-4" /></a>
-        </div>
-      </div>
-    )
-  }
+// One clear action: at the airport, "Open in Google Maps" is the button people need. Airports with
+// several terminals get a tab per terminal, and the button follows the selected one. The map visual
+// is decorative, so no Maps request runs on page load.
+export function AirportMapPreview({ location, terminals = [] }: { location: AirportMapLocation; terminals?: MapTerminal[] }) {
+  const [selectedId, setSelectedId] = useState(terminals[0]?.id)
+  const selected = terminals.find((terminal) => terminal.id === selectedId)
+  const mapsUrl = selected
+    ? createGoogleMapsUrl({ ...location, placeId: undefined, latitude: selected.latitude, longitude: selected.longitude })
+    : createGoogleMapsUrl(location)
+  const placeName = selected?.label ?? location.address.split(",")[0]
 
   return (
-    <div className="relative mt-6 overflow-hidden rounded-xl border border-border/70 bg-secondary p-5">
-      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:32px_32px]" />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><MapPin className="size-5" /></span>
-          <div><p className="font-medium">Airport location</p><p className="mt-1 text-sm text-muted-foreground">{location.address}</p></div>
+    <div className="airport-map-card">
+      {terminals.length > 0 && (
+        <div className="airport-map-tabs" role="tablist" aria-label="Choose your terminal">
+          {terminals.map((terminal) => (
+            <button
+              key={terminal.id}
+              id={`terminal-${terminal.label.toLowerCase().replace(/^terminal\s+/, "").replace(/\s+/g, "-")}`}
+              type="button"
+              role="tab"
+              aria-selected={terminal.id === selectedId}
+              className="airport-map-tab"
+              onClick={() => setSelectedId(terminal.id)}
+            >
+              {terminal.label.replace(/^Terminal\s+/i, "T")}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => setShowInteractiveMap(true)}>View interactive map</Button>
-          <Button variant="outline" nativeButton={false} render={<a href={mapsUrl} rel="noreferrer" target="_blank" />}>Open in Google Maps</Button>
+      )}
+      <div className="airport-map-visual" aria-hidden="true">
+        <span className="airport-map-road airport-map-road-a" />
+        <span className="airport-map-road airport-map-road-b" />
+        <span className="airport-map-road airport-map-road-c" />
+        <div className="airport-map-pin">
+          <span className="airport-map-pulse" />
+          <span className="airport-map-pin-icon"><Plane /></span>
+          <span className="airport-map-pin-label">{placeName}</span>
         </div>
       </div>
-      {showInteractiveMap && (mapFailed || !apiKey) && <p className="relative mt-4 text-sm text-muted-foreground">The map preview could not load. Use “Open in Google Maps” instead.</p>}
+      <div className="airport-map-card-footer">
+        <div>
+          <p className="airport-map-title">{selected ? "Your terminal on the map" : "Airport location"}</p>
+          <p className="airport-map-address"><MapPin aria-hidden="true" />{selected ? `${selected.label}, ${location.address}` : location.address}</p>
+        </div>
+        <Button size="lg" nativeButton={false} render={<a href={mapsUrl} rel="noreferrer" target="_blank" />}>
+          {selected ? `Open ${selected.label} in Google Maps` : "Open in Google Maps"} <ExternalLink aria-hidden="true" />
+        </Button>
+      </div>
     </div>
   )
 }

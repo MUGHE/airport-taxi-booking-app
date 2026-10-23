@@ -4,6 +4,8 @@ import { LEGACY_AIRPORT_REDIRECTS } from './lib/legacy-airport-redirects.mjs'
 const nextConfig = {
   // 127.0.0.1: the Playwright configs use it, and dev assets are only served to listed origins.
   allowedDevOrigins: ['192.168.1.10', '127.0.0.1'],
+  // Blog images (up to 5 MB, validated in lib/blog.ts) are uploaded through a Server Action.
+  experimental: { serverActions: { bodySizeLimit: '6mb' } },
   // Account pages (sign-in, codes, password reset) can't be framed by another site
   // (clickjacking), leak nothing via the Referer header, and are never cached.
   async headers() {
@@ -30,6 +32,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+      // Blog images uploaded to the public Supabase Storage bucket.
+      { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/blog-images/**' },
     ],
   },
 }

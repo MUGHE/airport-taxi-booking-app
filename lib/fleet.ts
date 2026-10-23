@@ -29,14 +29,25 @@ export const AIRPORTS: ServiceLocation[] = [
 // is charged at the vehicle's perMileAfter rate.
 export const MIN_DISTANCE_MILES = 10
 
+/** One short line per vehicle class, shown on fleet cards so visitors can pick by group and luggage. */
+export const VEHICLE_BEST_FOR: Record<string, string> = {
+  standard: "Best for solo travellers and couples",
+  executive: "Best for business and premium travel",
+  estate: "Best for small groups with luggage",
+  mpv_4seater: "Best for families who want legroom",
+  mpv: "Best for larger families and sports kit",
+  minibus_8seater: "Best for groups, teams and events",
+}
+
 export const VEHICLE_CLASSES: VehicleClass[] = [
   {
     id: "standard",
     name: "Saloon Car",
-    description: "Up to 3 passengers with 2 standard suitcases (up to 23kg each), or 4 passengers with hand luggage only.",
-    capacity: 3,
+    description: "Up to 4 passengers with 2 standard suitcases (up to 23kg each) and 2 hand luggage.",
+    capacity: 4,
     luggage: 2,
-    image: "/vehicles/standard-sedan.png",
+    handLuggage: 2,
+    image: "/vehicles/standard-sedan.webp",
     minFare: 40,
     perMileAfter: 1.7,
     perMinuteRate: 0.5,
@@ -46,11 +57,12 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
   },
   {
     id: "executive",
-    name: "Executive Car",
-    description: "Travel in premium comfort with our Executive Car. Accommodates up to 3 passengers with 3 standard suitcases (23kg each), or 4 passengers with hand luggage only.",
+    name: "Executive E-Class",
+    description: "Travel in premium comfort with our Executive E-Class. Accommodates up to 3 passengers with 2 standard suitcases (23kg each) and 2 hand luggage.",
     capacity: 3,
-    luggage: 3,
-    image: "/vehicles/executive-sedan.png",
+    luggage: 2,
+    handLuggage: 2,
+    image: "/vehicles/executive-sedan.webp",
     minFare: 55,
     perMileAfter: 2.2,
     perMinuteRate: 0.5,
@@ -61,10 +73,11 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
   {
     id: "estate",
     name: "Estate Car",
-    description: "Comfortably accommodates up to 4 passengers with space for 3 standard suitcases (up to 23kg each).",
+    description: "Comfortably accommodates up to 4 passengers with space for 3 standard suitcases (up to 23kg each) and 1 hand luggage.",
     capacity: 4,
     luggage: 3,
-    image: "/vehicles/estate-car.png",
+    handLuggage: 1,
+    image: "/vehicles/estate-car.webp",
     minFare: 60,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
@@ -75,10 +88,11 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
   {
     id: "mpv_4seater",
     name: "4 Seater MPV",
-    description: "Comfortably accommodates up to 4 passengers, 4 standard suitcases (23kg each) and 4 backpacks — with plenty of space for a relaxed, stress-free journey.",
+    description: "Comfortably accommodates up to 4 passengers, 4 standard suitcases (23kg each) and 2 hand luggage — with plenty of space for a relaxed, stress-free journey.",
     capacity: 4,
     luggage: 4,
-    image: "/vehicles/mpv-4seater.png",
+    handLuggage: 2,
+    image: "/vehicles/mpv-4seater.webp",
     minFare: 62,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
@@ -92,7 +106,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     description: "Comfortably accommodates up to 5 passengers with 5 standard suitcases (23kg each), or up to 6 passengers with hand luggage only. Ideal for families, airport transfers, and small groups, offering generous space for both passengers and luggage without compromising on comfort.",
     capacity: 5,
     luggage: 5,
-    image: "/vehicles/mpv-6seater.png",
+    handLuggageOnlyCapacity: 6,
+    image: "/vehicles/mpv-6seater.webp",
     minFare: 65,
     perMileAfter: 2.5,
     perMinuteRate: 0.5,
@@ -106,7 +121,8 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     description: "Comfortably seats up to 8 passengers with space for up to 8 standard suitcases (23kg max). Ideal for airport transfers and group travel.",
     capacity: 8,
     luggage: 8,
-    image: "/vehicles/minibus-8seater.png",
+    luggageNote: "23kg max",
+    image: "/vehicles/minibus-8seater.webp",
     minFare: 95,
     perMileAfter: 2.8,
     perMinuteRate: 0.5,
@@ -115,6 +131,21 @@ export const VEHICLE_CLASSES: VehicleClass[] = [
     features: ["Meet & greet", "Free 60 min wait", "Extra luggage", "Group travel specialist"],
   },
 ]
+
+/** Seats to advertise: includes the extra hand-luggage-only seats where a vehicle has them. */
+export function seatCount(vehicle: Pick<VehicleClass, "capacity" | "handLuggageOnlyCapacity">): number {
+  return vehicle.handLuggageOnlyCapacity ?? vehicle.capacity
+}
+
+/** Most passengers for a booking: the hand-luggage-only seats can be used only with no suitcases. */
+export function maxPassengers(vehicle: Pick<VehicleClass, "capacity" | "handLuggageOnlyCapacity">, bags: number): number {
+  return bags === 0 && vehicle.handLuggageOnlyCapacity ? vehicle.handLuggageOnlyCapacity : vehicle.capacity
+}
+
+/** Most suitcases for a booking: none once the hand-luggage-only seats are in use. */
+export function maxBags(vehicle: Pick<VehicleClass, "capacity" | "luggage">, passengers: number): number {
+  return passengers > vehicle.capacity ? 0 : vehicle.luggage
+}
 
 export function getVehicle(id: string): VehicleClass | undefined {
   return VEHICLE_CLASSES.find((v) => v.id === id)

@@ -4,15 +4,7 @@ import Link from "next/link"
 import { ArrowRight, PlaneTakeoff } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { AirportDirectoryEntry } from "@/lib/airport-directory"
-
-const AIRPORT_IMAGES: Record<string, string> = {
-  "heathrow-airport-taxi": "/hero-airport-transfer.png",
-  "gatwick-airport-taxi": "/airport-transfers/gatwick.webp",
-  "stansted-airport-taxi": "/airport-transfers/gatwick.webp",
-  "luton-airport-taxi": "/airport-transfers/luton.webp",
-  "london-city-airport-taxi": "/airport-transfers/london-city.webp",
-  "southend-airport-taxi": "/airport-transfers/southend.webp",
-}
+import { AIRPORT_IMAGES } from "@/lib/airport-images"
 
 function matchesSearch(airport: AirportDirectoryEntry, query: string) {
   const searchable = `${airport.displayName} ${airport.iataCode} ${airport.serviceArea}`.toLowerCase()

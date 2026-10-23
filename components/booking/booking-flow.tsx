@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
-import { ArrowLeft, ArrowRight, Banknote, Briefcase, Calendar as CalendarIcon, Check, ChevronUp, CreditCard, Loader2, MapPin, MapPinPlus, Repeat, Sparkles, TicketPercent, Users, X } from "lucide-react"
+import { ArrowLeft, ArrowRight, Backpack, Banknote, Briefcase, Calendar as CalendarIcon, Check, ChevronUp, CreditCard, Loader2, MapPin, MapPinPlus, Repeat, Sparkles, TicketPercent, Users, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { TimePicker } from "@/components/ui/time-picker"
-import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, formatCurrency } from "@/lib/fleet"
-import { createBooking, createReturnBooking, getDistanceQuote, previewPromoCode } from "@/lib/actions"
+import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, formatCurrency, maxBags, seatCount } from "@/lib/fleet"
+import { createBooking, createReturnBooking, getDistanceQuote, getSignedInCustomer, previewPromoCode } from "@/lib/actions"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { RouteCard } from "@/components/route-search"
 import { TripMap } from "@/components/trip-map"
@@ -64,7 +64,7 @@ const NO_STOP_PRICING: StopPricing = { pricePerStop: 0, updatedAt: "" }
 const NO_CONGESTION_ZONES: CongestionZone[] = []
 // Mirrors the server-side cap in lib/actions.ts — keep the two in sync.
 const MAX_STOPS = 3
-export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTION, returnDiscount = NO_RETURN_DISCOUNT, stopPricing = NO_STOP_PRICING, congestionZones = NO_CONGESTION_ZONES, customer = null }: { vehicles: VehicleClass[]; addOns: BookingAddOn[]; promotion?: SitePromotion; returnDiscount?: ReturnTripDiscount; stopPricing?: StopPricing; congestionZones?: CongestionZone[]; customer?: Customer | null }) {
+export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTION, returnDiscount = NO_RETURN_DISCOUNT, stopPricing = NO_STOP_PRICING, congestionZones = NO_CONGESTION_ZONES, customer: initialCustomer = null }: { vehicles: VehicleClass[]; addOns: BookingAddOn[]; promotion?: SitePromotion; returnDiscount?: ReturnTripDiscount; stopPricing?: StopPricing; congestionZones?: CongestionZone[]; customer?: Customer | null }) {
   const router = useRouter()
   const params = useSearchParams()
   const direction = params.get("direction") === "to-airport" || params.get("direction") === "from-airport" ? params.get("direction") as "to-airport" | "from-airport" : "custom"
@@ -93,9 +93,24 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   const [bags, setBags] = useState(1)
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([])
   // A signed-in customer books under their account details (the server enforces the same).
-  const [customerName, setCustomerName] = useState(customer?.name ?? "")
-  const [email, setEmail] = useState(customer?.email ?? "")
-  const [phone, setPhone] = useState(customer?.phone ?? "")
+  const [customer, setCustomer] = useState<Customer | null>(initialCustomer)
+  const [customerName, setCustomerName] = useState(initialCustomer?.name ?? "")
+  const [email, setEmail] = useState(initialCustomer?.email ?? "")
+  const [phone, setPhone] = useState(initialCustomer?.phone ?? "")
+
+  // /book is cached, so the signed-in customer (if any) is looked up after the page loads.
+  useEffect(() => {
+    if (initialCustomer) return
+    let cancelled = false
+    getSignedInCustomer().then((signedIn) => {
+      if (cancelled || !signedIn) return
+      setCustomer(signedIn)
+      setCustomerName((current) => current || signedIn.name)
+      setEmail((current) => current || signedIn.email)
+      setPhone((current) => current || (signedIn.phone ?? ""))
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [initialCustomer])
   const [notes, setNotes] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card")
   const [distanceMiles, setDistanceMiles] = useState<number | null>(null)
@@ -117,8 +132,8 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   }, [step])
 
   useEffect(() => {
-    if (vehicle && bags > vehicle.luggage) setBags(vehicle.luggage)
-  }, [bags, vehicle])
+    if (vehicle && bags > maxBags(vehicle, passengers)) setBags(maxBags(vehicle, passengers))
+  }, [bags, passengers, vehicle])
 
   useEffect(() => {
     if (pickupDate && pickupDate < today) setPickupDate(today)
@@ -245,7 +260,7 @@ export function BookingFlow({ vehicles = [], addOns = [], promotion = NO_PROMOTI
   return <><div className="grid gap-8 pb-24 lg:grid-cols-[1fr_340px] lg:pb-0"><div className="min-w-0">{promotion.active && <PromotionBanner percent={promotion.discountPercent} />}<MobileStepHeader step={step} onBack={() => setStep((value) => Math.max(value - 1, 0))} /><div className="hidden sm:block"><Stepper step={step} /></div><div className="mt-8">
     {step === 0 && <TripStep pickup={pickup} setPickup={setPickup} dropoff={dropoff} setDropoff={setDropoff} pickupDate={pickupDate} setPickupDate={setPickupDate} pickupTime={pickupTime} setPickupTime={setPickupTime} today={today} stops={stops} setStops={setStops} stopPricing={stopPricing} />}
     {step === 1 && <VehicleStep vehicleId={vehicleId} setVehicleId={setVehicleId} distanceMiles={distanceMiles} durationMinutes={durationMinutes} vehicles={vehicles} loading={distanceLoading} promotion={promotion} congestionCharge={congestionCharge} />}
-    {step === 2 && <DetailsStep {...{ customer, customerName, setCustomerName, email, setEmail, phone, setPhone, passengers, setPassengers, bags, setBags, notes, setNotes, flightNumber, setFlightNumber, addOns, selectedAddOnIds, setSelectedAddOnIds, pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare: returnFareEstimate, returnFareFull }} maxCapacity={vehicle?.capacity ?? 6} maxLuggage={vehicle?.luggage ?? 0} />}
+    {step === 2 && <DetailsStep {...{ customer, customerName, setCustomerName, email, setEmail, phone, setPhone, passengers, setPassengers, bags, setBags, notes, setNotes, flightNumber, setFlightNumber, addOns, selectedAddOnIds, setSelectedAddOnIds, pickup, dropoff, pickupDate, pickupTime, today, wantsReturn, setWantsReturn, returnDate, setReturnDate, returnTime, setReturnTime, returnDiscount, returnAddressSame, setReturnAddressSame, returnPickup, setReturnPickup, returnDropoff, setReturnDropoff, vehicleFare, returnFare: returnFareEstimate, returnFareFull }} maxCapacity={vehicle ? seatCount(vehicle) : 6} maxLuggage={vehicle ? maxBags(vehicle, passengers) : 0} />}
     {step === 3 && <ReviewStep pickup={pickup?.address || ""} dropoff={dropoff?.address || ""} stops={stops} stopsTotal={stopsTotal} vehicle={vehicle?.name || ""} pickupDate={pickupDate} pickupTime={pickupTime} flightNumber={flightNumber} passengers={passengers} bags={bags} customerName={customerName} email={email} phone={phone} notes={notes} addOns={addOns.filter((addOn) => selectedAddOnIds.includes(addOn.id))} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} wantsReturn={wantsReturn} returnDate={returnDate} returnTime={returnTime} returnFare={returnFareEstimate} returnDiscount={returnDiscount} returnPickupAddress={effectiveReturnPickup?.address || ""} returnDropoffAddress={effectiveReturnDropoff?.address || ""} />}
   </div><div className="mt-8 hidden justify-between gap-3 sm:flex"><Button variant="ghost" onClick={() => setStep((value) => Math.max(value - 1, 0))} disabled={step === 0 || isPending}><ArrowLeft className="size-4" />Back</Button>{step < 3 ? <Button onClick={next}>Continue<ArrowRight className="size-4" /></Button> : <Button onClick={submit} disabled={isPending}>{isPending && <Loader2 className="size-4 animate-spin" />}Confirm booking</Button>}</div></div>
     <div className="hidden sm:block">{summaryPanel(true)}</div></div>
@@ -576,6 +591,7 @@ function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, 
             <span className="flex items-center gap-2.5 text-[12.5px] text-muted-foreground">
               <span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span>
               <span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span>
+              {item.handLuggage ? <span className="flex items-center gap-1" title="Hand bags"><Backpack className="size-3.5" />{item.handLuggage}</span> : null}
             </span>
           </span>
           <span className="flex shrink-0 flex-col items-end gap-1">
@@ -602,7 +618,7 @@ function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, 
             <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-contain p-1.5" sizes="(max-width: 640px) 100vw, 320px" />
             {selected && <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-primary shadow-sm"><Check className="size-3.5 text-primary-foreground" strokeWidth={3} /></span>}
           </div>
-          <div className="p-4"><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span></div><div className="my-3 border-t border-border" /><div className="flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(original)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quoted ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div>
+          <div className="p-4"><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span>{item.handLuggage ? <span className="flex items-center gap-1" title="Hand bags"><Backpack className="size-3.5" />{item.handLuggage}</span> : null}</div><div className="my-3 border-t border-border" /><div className="flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(original)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quoted ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div>
         </button>
       })}
     </div>

@@ -10,6 +10,41 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
+export type AirportPageFaq = { question: string; answer: string; link?: { href: string; label: string } }
+
+/** The FAQs shown on every airport page (and in its FAQPage schema), named for that airport.
+ *  Fees here (meet & greet, extra waiting) are set by the business; keep the Terms in step. */
+export function airportPageFaqs(airportName: string): AirportPageFaq[] {
+  const airport = `${airportName} Airport`
+  return [
+    {
+      question: `How do I book a ${airport} transfer with One Airport Taxi?`,
+      answer: "You can book your airport transfer directly through our website by entering your pickup and drop-off details, travel date and time, and passenger and luggage requirements. You can request a quote and complete your booking online. We recommend booking in advance, especially for early-morning, late-night and busy travel periods.",
+    },
+    {
+      question: "What does the price include?",
+      answer: "Your quoted transfer fare includes airport pickup and drop-off charges, tolls, parking and congestion charges. Optional meet & greet costs £7 extra. Airport pickups include 60 minutes of free waiting from the actual landing time; additional waiting costs £15 per 30 minutes. Customer-requested changes may change the fare.",
+      link: { href: "/terms", label: "See our terms and conditions" },
+    },
+    {
+      question: `Where will my driver meet me at ${airport}?`,
+      answer: `For airport pickups, you can find the pickup points at ${airport} in the pickup guide above. For home pickups, enter your door number and postcode in the pickup address field on this page.`,
+    },
+    {
+      question: "What happens if my flight is delayed or arrives early?",
+      answer: "We monitor your flight once flight details are provided, to track any delays or changes to the scheduled arrival time. Your driver can adjust the pickup accordingly to help avoid unnecessary waiting or missed pickups. Please make sure your correct flight number is included with your booking.",
+    },
+    {
+      question: `Can I book a ${airport} transfer for someone else?`,
+      answer: "Yes. You can make a booking on behalf of another passenger. We provide airport transfers for colleagues, employees, students, corporate travellers, family members and other guests. Please provide the passenger's correct name, contact details and travel information when making the booking.",
+    },
+    {
+      question: `Can I change or cancel my ${airport} transfer?`,
+      answer: "Yes, you can contact us if you need to make changes to your booking. Cancellation terms depend on how much notice is given before the scheduled pickup time. We recommend contacting us as soon as possible if your plans change, so we can confirm the available options and any applicable refund.",
+    },
+  ]
+}
+
 function toAdminFaq(row: { id: string; question: string; answer: string; approved: boolean; updated_at: string }): AdminAirportFaq {
   return { id: row.id, question: row.question, answer: row.answer, approved: row.approved, updatedAt: row.updated_at }
 }

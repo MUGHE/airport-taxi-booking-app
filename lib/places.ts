@@ -22,6 +22,30 @@ export type PlacesLibrary = {
 }
 
 let mapsPromise: Promise<void> | null = null
+let engagedPromise: Promise<void> | null = null
+
+/**
+ * Resolves on the visitor's first tap, key press, focus or scroll, or 3.5s after the page has
+ * loaded. Google Maps (~1 MB) waits for this so it never slows down the first paint, and is still
+ * ready by the time someone types an address.
+ */
+export function whenVisitorEngages(): Promise<void> {
+  if (engagedPromise) return engagedPromise
+  engagedPromise = new Promise((resolve) => {
+    const events = ["pointerdown", "keydown", "focusin", "touchstart", "scroll"] as const
+    let timer = 0
+    const done = () => {
+      events.forEach((name) => window.removeEventListener(name, done, true))
+      window.clearTimeout(timer)
+      resolve()
+    }
+    events.forEach((name) => window.addEventListener(name, done, { capture: true, passive: true, once: true }))
+    const startTimer = () => { timer = window.setTimeout(done, 3500) }
+    if (document.readyState === "complete") startTimer()
+    else window.addEventListener("load", startTimer, { once: true })
+  })
+  return engagedPromise
+}
 
 export function loadGoogleMaps(apiKey: string): Promise<void> {
   if (mapsPromise) {
@@ -107,6 +131,8 @@ export function usePlacesLibrary(): { library: PlacesLibrary | null; error: stri
 
     ;(async () => {
       try {
+        await whenVisitorEngages()
+        if (cancelled) return
         await loadGoogleMaps(apiKey)
         if (cancelled) return
         const { AutocompleteSuggestion, AutocompleteSessionToken } = await (window as any).google.maps.importLibrary(

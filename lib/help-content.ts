@@ -39,7 +39,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
         id: "vehicles",
         q: "What vehicles can I choose from?",
         a: [
-          "Six classes, from a Saloon Car for up to 3 passengers with 2 suitcases, through Executive and Estate cars, 4- and 6-seat MPVs, up to an 8-seat Minibus for larger groups.",
+          "Six classes, from a Saloon Car for up to 4 passengers with 2 suitcases and 2 hand luggage, through Executive and Estate cars, 4- and 6-seat MPVs, up to an 8-seat Minibus for larger groups.",
           "Each option on the Pick your vehicle step shows its passenger and luggage capacity plus its price for your exact route, so you can compare before choosing.",
         ],
       },
@@ -61,7 +61,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
         q: "Do you track my flight?",
         a: [
           "Yes — add your flight number when you book and we monitor it, adjusting your driver's pickup automatically if your flight is early or delayed, at no extra charge.",
-          "For airport arrivals with a correct flight number, you get 45 minutes of free waiting time from the actual landing time. Pickups from any other location get 15 minutes of free waiting from the scheduled time.",
+          "For airport arrivals with a correct flight number, you get 60 minutes of free waiting time from the actual landing time. Pickups from any other location get 15 minutes of free waiting from the scheduled time.",
         ],
       },
       {
