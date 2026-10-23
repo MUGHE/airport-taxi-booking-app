@@ -109,8 +109,8 @@ export function GoogleBusinessReviewsWidget({
         </div>
         {business.attributions.length > 0 && <p className="mt-3 text-center text-xs text-muted-foreground">{business.attributions.join(" · ")}</p>}
         <div className="relative mt-12">
-          {/* A grid, not a carousel: every review is visible without sideways scrolling. */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="region" aria-label="Google customer reviews">
+          {/* Masonry columns, not a carousel: every review is visible without sideways scrolling. */}
+          <div className="google-review-grid" role="region" aria-label="Google customer reviews">
             {business.reviews.map((review, index) => (
             <article data-review-card key={review.id} className={`${airport ? "airport-review-card" : "landing-review-card"} min-w-0`} aria-label={`Review ${index + 1} of ${business.reviews.length}`}>
               <Quote aria-hidden="true" className={airport ? undefined : "landing-review-quote"} />
