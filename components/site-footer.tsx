@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buttonVariants } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_LEGAL_PHONE, COMPANY_REGISTRATION_NUMBER, COMPANY_TRADING_NAME } from "@/lib/company"
+import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_REGISTRATION_NUMBER, COMPANY_TRADING_NAME } from "@/lib/company"
 import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 
 const PAYMENT_BADGES = [
@@ -164,7 +164,8 @@ function FooterCompanyDetails() {
         </div>
         <div>
           <dt className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">Phone</dt>
-          <dd className="mt-1"><a className="text-muted-foreground transition-colors hover:text-primary" href={`tel:${COMPANY_LEGAL_PHONE.replace(/[^+\d]/g, "")}`}>{COMPANY_LEGAL_PHONE}</a></dd>
+          {/* Same number as the 24/7 call links (NEXT_PUBLIC_CALL_NUMBER), so the footer can never show a different one. */}
+          <dd className="mt-1"><a className="text-muted-foreground transition-colors hover:text-primary" href={CALL_LINK}>{CALL_NUMBER}</a></dd>
         </div>
       </dl>
     </div>
