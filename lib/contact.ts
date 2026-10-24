@@ -6,8 +6,8 @@
 //   NEXT_PUBLIC_WHATSAPP_NUMBER — digits only, with country code, no "+" or spaces
 //   NEXT_PUBLIC_CALL_NUMBER     — digits only, with country code, no "+" or spaces
 
-const DEFAULT_WHATSAPP_NUMBER = "10000000000"
-const DEFAULT_CALL_NUMBER = "+10000000000"
+const DEFAULT_WHATSAPP_NUMBER = "447546624242"
+const DEFAULT_CALL_NUMBER = "+447441485225"
 
 /** Digits-only number (with country code) used to build the wa.me link. */
 export const WHATSAPP_NUMBER =
