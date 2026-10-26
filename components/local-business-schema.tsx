@@ -1,4 +1,4 @@
-import { CALL_NUMBER, CONTACT_EMAIL } from "@/lib/contact"
+import { CALL_NUMBER, CONTACT_EMAIL, SOCIAL_PROFILE_URLS } from "@/lib/contact"
 import {
   COMPANY_CITY,
   COMPANY_COUNTRY,
@@ -21,6 +21,7 @@ export function LocalBusinessSchema() {
     image: `${SITE_URL}/icon-96x96.png`,
     telephone: CALL_NUMBER,
     email: CONTACT_EMAIL,
+    sameAs: SOCIAL_PROFILE_URLS,
     // Empty strings are invalid structured data, so only send the address parts that are set.
     address: {
       "@type": "PostalAddress",

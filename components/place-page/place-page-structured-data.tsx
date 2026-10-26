@@ -1,4 +1,5 @@
 import { COMPANY_NAME } from "@/lib/company"
+import { SOCIAL_PROFILE_URLS } from "@/lib/contact"
 import type { PublishedPlacePage } from "@/lib/destination-pages"
 import { serializeJsonLd } from "@/lib/json-ld"
 import { ORGANIZATION_ID, SITE_URL } from "@/lib/site"
@@ -21,6 +22,7 @@ export function PlacePageStructuredData({ page }: { page: PublishedPlacePage }) 
       name: COMPANY_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icon-96x96.png`,
+      sameAs: SOCIAL_PROFILE_URLS,
     },
     {
       "@type": "WebPage",

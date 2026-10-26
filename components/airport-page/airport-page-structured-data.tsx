@@ -1,4 +1,5 @@
 import { COMPANY_NAME } from "@/lib/company"
+import { SOCIAL_PROFILE_URLS } from "@/lib/contact"
 import type { AirportPageSeo } from "@/lib/destination-pages"
 import { serializeJsonLd } from "@/lib/json-ld"
 import { ORGANIZATION_ID, SITE_URL } from "@/lib/site"
@@ -16,6 +17,7 @@ export function AirportPageStructuredData({ seo }: { seo: AirportPageSeo }) {
       name: COMPANY_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icon-96x96.png`,
+      sameAs: SOCIAL_PROFILE_URLS,
     },
     {
       "@type": "Airport",
