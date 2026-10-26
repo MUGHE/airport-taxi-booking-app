@@ -6,7 +6,10 @@ import { buttonVariants } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_REGISTRATION_NUMBER, COMPANY_TRADING_NAME } from "@/lib/company"
-import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
+import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, SOCIAL_LINKS, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
+import { FacebookIcon, InstagramIcon, YouTubeIcon } from "@/components/social-icons"
+
+const SOCIAL_ICONS = { Facebook: FacebookIcon, Instagram: InstagramIcon, YouTube: YouTubeIcon }
 
 const PAYMENT_BADGES = [
   // zoom offsets the empty margin baked into some logo files so every mark reads at a similar size.
@@ -41,6 +44,18 @@ export function SiteFooter() {
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
               Fixed-price London airport transfers with licensed drivers, live flight tracking and 24/7 UK support.
             </p>
+            <ul className="mt-5 flex items-center gap-2" aria-label="ONE Airport Taxi on social media">
+              {SOCIAL_LINKS.map((link) => {
+                const Icon = SOCIAL_ICONS[link.name]
+                return (
+                  <li key={link.name}>
+                    <a href={link.href} target="_blank" rel="noopener noreferrer" aria-label={`ONE Airport Taxi on ${link.name}`} title={link.name} className="grid size-10 place-items-center rounded-full border border-border bg-card/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+                      <Icon className="size-[18px]" />
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[minmax(0,.9fr)_minmax(13rem,1.2fr)_minmax(0,.9fr)]">

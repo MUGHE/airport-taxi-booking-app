@@ -22,3 +22,12 @@ export const CALL_LINK = `tel:${CALL_NUMBER}`
 
 export const CONTACT_EMAIL = "contact@oneairporttaxi.com"
 export const EMAIL_LINK = `mailto:${CONTACT_EMAIL}`
+
+/** Official social profiles: footer icons and the schema.org `sameAs` list. */
+export const SOCIAL_LINKS = [
+  { name: "Facebook", href: "https://www.facebook.com/profile.php?id=61593948787388" },
+  { name: "Instagram", href: "https://www.instagram.com/oneairporttaxi/" },
+  { name: "YouTube", href: "https://www.youtube.com/@OneAirportTaxi" },
+] as const
+
+export const SOCIAL_PROFILE_URLS = SOCIAL_LINKS.map((link) => link.href)
