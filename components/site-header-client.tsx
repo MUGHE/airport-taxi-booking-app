@@ -28,6 +28,8 @@ const NAV = [
   { href: "/#fleet", label: "Fleet" },
   { href: "/#how", label: "How It Works" },
   { href: "/blog", label: "Blog" },
+  // Shown in the desktop bar from lg up only; between md and lg the bar has no room for it.
+  { href: "/faqs", label: "FAQs", desktopClass: "hidden lg:inline-flex" },
   { href: "/track", label: "Track Booking" },
 ]
 
@@ -119,11 +121,11 @@ export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry
       usesDarkHeader ? "landing-header bg-background text-foreground" : "bg-background/80 backdrop-blur-md"
     )}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/95 ring-1 ring-white/35 shadow-sm"><Image src="/brand/logo-mark.png" alt="" width={32} height={32} className="size-8" /></span><span className="text-lg tracking-tight">ONE Airport Taxi</span></Link>
+        <Link href="/" className="flex items-center gap-2 font-semibold"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/95 ring-1 ring-white/35 shadow-sm"><Image src="/brand/logo-mark.png" alt="" width={32} height={32} className="size-8" /></span>{/* Between md and lg the full nav needs the room, so only the logo mark shows there. */}<span className="text-lg tracking-tight md:max-lg:sr-only">ONE Airport Taxi</span></Link>
         <nav className="hidden items-center gap-1 md:flex">
           <DesktopAirportNavigation airports={airports} />
           <Link href="/destinations" className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === "/destinations" && "text-foreground")}>Destinations</Link>
-          {NAV.map((item) => <Link key={item.href} href={item.href} prefetch={FULL_PREFETCH.has(item.href) ? true : undefined} className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === item.href && "text-foreground")}>{item.label}</Link>)}
+          {NAV.map((item) => <Link key={item.href} href={item.href} prefetch={FULL_PREFETCH.has(item.href) ? true : undefined} className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === item.href && "text-foreground", "desktopClass" in item && item.desktopClass)}>{item.label}</Link>)}
         </nav>
         <div className="hidden items-center gap-3 md:flex">
           <a href={CALL_LINK} className="hidden items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground lg:inline-flex"><Phone aria-hidden="true" className="size-4" />Call 24/7: {CALL_NUMBER}</a>

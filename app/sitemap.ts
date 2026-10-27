@@ -36,6 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     { url: `${SITE_URL}/about`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/contact`, lastModified, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/faqs`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/help`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/track`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/terms`, lastModified, changeFrequency: "monthly", priority: 0.3 },
