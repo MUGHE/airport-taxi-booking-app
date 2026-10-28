@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { FAQ_PAGE_CATEGORIES } from "@/lib/faqs"
 
-// The FAQs live in lib/faqs.ts, grouped by topic for /faqs; shown here as one list.
+// The FAQs live in lib/faqs.ts, grouped by topic for /help; shown here as one list.
 const FAQS = FAQ_PAGE_CATEGORIES.flatMap((category) => category.items).map((item) => ({ q: item.q, a: item.a.join(" ") }))
 
 export function FAQ() {

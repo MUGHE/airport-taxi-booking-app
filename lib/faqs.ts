@@ -1,4 +1,4 @@
-// The site FAQs, grouped by topic: shown in full on /faqs and as one list on the homepage.
+// The site FAQs, grouped by topic: shown on /help after the Help Centre topics, and as one list on the homepage.
 import { CALL_NUMBER, WHATSAPP_NUMBER } from "@/lib/contact"
 
 const CALL_DISPLAY = CALL_NUMBER
