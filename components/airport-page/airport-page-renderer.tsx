@@ -158,7 +158,7 @@ export function LeadAndMore({ blocks, document, extra, moreLabel }: { blocks: Ri
   )
 }
 
-// Facts here mirror the Terms and Help Centre; keep them in step.
+// Facts here mirror the Terms and FAQs; keep them in step.
 const trustItems = [
   { icon: Banknote, title: "Fixed fares", text: "No meters, no surge" },
   { icon: PlaneTakeoff, title: "Flight tracking", text: "Moves with your flight" },
@@ -517,7 +517,7 @@ function DriversPanel({ drivers }: { drivers: NonNullable<AirportCopy["drivers"]
   )
 }
 
-// Arrival steps for the pickup guide; facts mirror the Terms and Help Centre.
+// Arrival steps for the pickup guide; facts mirror the Terms and FAQs.
 const arrivalSteps = [
   { title: "Land and clear passport control.", text: "We're already tracking your flight, so there's no need to call." },
   { title: "Collect your bags.", text: "Your 60 minutes of free waiting starts when your flight lands." },

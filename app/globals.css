@@ -1282,3 +1282,5 @@ footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weig
 .google-review-grid > .landing-review-card, .google-review-grid > .airport-review-card { min-height: 0; }
 @media (min-width: 640px) { .google-review-grid { columns: 2; } }
 @media (min-width: 1024px) { .google-review-grid { columns: 3; } }
+
+html:has(.faq-page) { scroll-behavior: smooth; }

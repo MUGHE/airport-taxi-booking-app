@@ -21,11 +21,15 @@ const nextConfig = {
     ]
   },
   async redirects() {
-    return LEGACY_AIRPORT_REDIRECTS.map(([source, destination]) => ({
-      source: `/airport-transfers/${source}`,
-      destination: `/airport-transfers/${destination}`,
-      permanent: true,
-    }))
+    return [
+      // The Help Centre was replaced by the FAQs page.
+      { source: '/help', destination: '/faqs', permanent: true },
+      ...LEGACY_AIRPORT_REDIRECTS.map(([source, destination]) => ({
+        source: `/airport-transfers/${source}`,
+        destination: `/airport-transfers/${destination}`,
+        permanent: true,
+      })),
+    ]
   },
   images: {
     // images.unsplash.com hosts the placeholder photography for the /landing-page-new preview.
