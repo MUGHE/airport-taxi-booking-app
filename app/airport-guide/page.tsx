@@ -9,7 +9,7 @@ import { FareEstimator } from "@/components/fare-estimator"
 import { FaqCategorySection } from "@/components/faq-page/faq-category-section"
 import { buttonVariants } from "@/components/ui/button"
 import { getStopPricing } from "@/lib/actions"
-import { AIRPORT_GUIDE_FAQS, CHOOSE_AIRPORT_TIPS, GUIDE_AIRPORTS, PICKUP_STEPS, TRAVEL_TIPS } from "@/lib/airport-guide"
+import { AIRPORT_GUIDE_FAQS, CHOOSE_AIRPORT_TIPS, GUIDE_AIRPORTS, PICKUP_STEPS, TRAVEL_TIPS, UK_GUIDE_AIRPORTS, type GuideAirport } from "@/lib/airport-guide"
 import { serializeJsonLd } from "@/lib/json-ld"
 import { cn } from "@/lib/utils"
 
@@ -123,32 +123,48 @@ export default async function AirportGuidePage() {
             </section>
 
             {GUIDE_AIRPORTS.map((airport) => (
-              <section key={airport.id} id={airport.id} className="scroll-mt-24" aria-labelledby={`${airport.id}-title`}>
-                <div className="grid gap-6 rounded-2xl border border-border bg-card p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_17rem]">
-                  <div>
-                    <h2 id={`${airport.id}-title`} className="text-xl font-semibold tracking-tight sm:text-2xl">{airport.heading}</h2>
-                    <p className="mt-3 leading-7 text-muted-foreground">{airport.intro}</p>
-                    <h3 className="mt-5 font-semibold">Good to know:</h3>
-                    <ul className="mt-2 space-y-2">
-                      {airport.goodToKnow.map((tip) => (
-                        <li key={tip} className="flex gap-2.5 leading-7 text-muted-foreground">
-                          <Check aria-hidden="true" className="mt-1.5 size-4 shrink-0 text-primary" />
-                          <span>{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Link href={airport.href} className={cn(buttonVariants({ variant: "outline" }), "mt-5")}>
-                      {airport.bookLabel} <ArrowRight aria-hidden="true" className="size-4" />
-                    </Link>
-                  </div>
-                  {/* The 1000x625 landscape photo is cover-cropped into a 4:5 box, so it is drawn at about
-                      twice the box width: request that, and keep the box short enough for the source on 2x screens. */}
-                  <div className="relative hidden aspect-[4/5] self-center overflow-hidden rounded-xl md:block">
-                    <Image src={airport.image} alt={`${airport.name} Airport`} fill sizes="34rem" className="object-cover" />
-                  </div>
-                </div>
-              </section>
+              <AirportCard key={airport.id} airport={airport} />
             ))}
+
+            <section id="other-uk-airports" className="scroll-mt-24 space-y-14" aria-labelledby="other-uk-airports-title">
+              <div>
+                <h2 id="other-uk-airports-title" className="text-2xl font-semibold tracking-tight">Other UK airports: Birmingham, Bristol and Manchester</h2>
+                <p className="mt-3 leading-7 text-muted-foreground">
+                  We also run fixed-price transfers to and from major airports outside London. Here is where each one is, how long it takes to reach its city centre and how far it is from central London.
+                </p>
+                <div className="mt-5 overflow-x-auto rounded-2xl border border-border bg-card">
+                  <table className="w-full min-w-[40rem] text-left text-sm">
+                    <thead className="bg-secondary/60 text-foreground">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 font-semibold">Airport</th>
+                        <th scope="col" className="px-4 py-3 font-semibold">Where it is</th>
+                        <th scope="col" className="px-4 py-3 font-semibold">Terminals</th>
+                        <th scope="col" className="px-4 py-3 font-semibold">Typical journey to the city centre</th>
+                        <th scope="col" className="px-4 py-3 font-semibold">Typical journey to central London</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border text-muted-foreground">
+                      {UK_GUIDE_AIRPORTS.map((airport) => (
+                        <tr key={airport.id}>
+                          <th scope="row" className="px-4 py-3 font-medium text-foreground">
+                            <a href={`#${airport.id}`} className="hover:text-primary">{airport.name} ({airport.code})</a>
+                          </th>
+                          <td className="px-4 py-3">{airport.where}</td>
+                          <td className="px-4 py-3">{airport.terminals}</td>
+                          <td className="px-4 py-3">{airport.journey} to {airport.city}</td>
+                          <td className="px-4 py-3">{airport.londonJourney}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-sm italic text-muted-foreground">Journey times are typical estimates and change with traffic, time of day and your exact destination.</p>
+              </div>
+
+              {UK_GUIDE_AIRPORTS.map((airport) => (
+                <AirportCard key={airport.id} airport={airport} />
+              ))}
+            </section>
 
             <section aria-labelledby="choose-title">
               <h2 id="choose-title" className="text-2xl font-semibold tracking-tight">How to choose the right London airport</h2>
@@ -227,5 +243,37 @@ export default async function AirportGuidePage() {
       </main>
       <SiteFooter />
     </div>
+  )
+}
+
+function AirportCard({ airport }: { airport: GuideAirport }) {
+  return (
+    <section id={airport.id} className="scroll-mt-24" aria-labelledby={`${airport.id}-title`}>
+      <div className={cn("grid gap-6 rounded-2xl border border-border bg-card p-5 sm:p-6", airport.image && "md:grid-cols-[minmax(0,1fr)_17rem]")}>
+        <div>
+          <h2 id={`${airport.id}-title`} className="text-xl font-semibold tracking-tight sm:text-2xl">{airport.heading}</h2>
+          <p className="mt-3 leading-7 text-muted-foreground">{airport.intro}</p>
+          <h3 className="mt-5 font-semibold">Good to know:</h3>
+          <ul className="mt-2 space-y-2">
+            {airport.goodToKnow.map((tip) => (
+              <li key={tip} className="flex gap-2.5 leading-7 text-muted-foreground">
+                <Check aria-hidden="true" className="mt-1.5 size-4 shrink-0 text-primary" />
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+          <Link href={airport.href} className={cn(buttonVariants({ variant: "outline" }), "mt-5")}>
+            {airport.bookLabel} <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
+        {/* The 1000x625 landscape photo is cover-cropped into a 4:5 box, so it is drawn at about
+            twice the box width: request that, and keep the box short enough for the source on 2x screens. */}
+        {airport.image && (
+          <div className="relative hidden aspect-[4/5] self-center overflow-hidden rounded-xl md:block">
+            <Image src={airport.image} alt={`${airport.name} Airport`} fill sizes="34rem" className="object-cover" />
+          </div>
+        )}
+      </div>
+    </section>
   )
 }

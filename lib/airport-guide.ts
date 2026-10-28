@@ -13,7 +13,16 @@ export type GuideAirport = {
   goodToKnow: string[]
   bookLabel: string
   href: string
-  image: string
+  image?: string
+}
+
+// Airports outside London: the journey column is to their own city centre, with central London alongside.
+export type GuideUkAirport = GuideAirport & { city: string; londonJourney: string }
+
+// These airports have no airport page yet, so their booking links open /book with the airport as pickup,
+// in the same format as an airport page's "from the airport" link.
+function bookFromAirport(name: string, lat: number, lng: number) {
+  return `/book?${new URLSearchParams({ pickupAddress: name, pickupLat: String(lat), pickupLng: String(lng) }).toString()}`
 }
 
 export const GUIDE_AIRPORTS: GuideAirport[] = [
@@ -127,6 +136,70 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     bookLabel: "Book a Southend airport taxi",
     href: "/airport-transfers/southend-airport-taxi",
     image: "/airport-transfers/southend.webp",
+  },
+]
+
+// Drive times are from the booking calculator (Google Routes) to the city centre and to Charing Cross, rounded to 5 minutes.
+export const UK_GUIDE_AIRPORTS: GuideUkAirport[] = [
+  {
+    id: "birmingham",
+    name: "Birmingham",
+    code: "BHX",
+    city: "Birmingham",
+    heading: "Birmingham Airport (BHX): taxi transfers and tips",
+    where: "Solihull, east of Birmingham",
+    terminals: "One terminal",
+    journey: "About 25 minutes",
+    londonJourney: "About 2 hours 25 minutes",
+    intro:
+      "Birmingham is the main airport for the Midlands, in Solihull to the east of the city. It has one terminal, right next to the NEC and Birmingham International railway station, and is a short drive from the M42.",
+    goodToKnow: [
+      "It suits Birmingham, Solihull, Coventry, Warwickshire and the wider West Midlands.",
+      "Big events at the NEC can make the roads around the airport busy, so allow extra time on event days.",
+      "The M42 and M6 can be slow at peak times, so leave a comfortable margin for early-morning and evening flights.",
+    ],
+    bookLabel: "Book a Birmingham airport taxi",
+    href: bookFromAirport("Birmingham Airport (BHX)", 52.4531, -1.734),
+  },
+  {
+    id: "bristol",
+    name: "Bristol",
+    code: "BRS",
+    city: "Bristol",
+    heading: "Bristol Airport (BRS): taxi transfers and tips",
+    where: "South-west of Bristol, North Somerset",
+    terminals: "One terminal",
+    journey: "About 30 minutes",
+    londonJourney: "About 2 hours 45 minutes",
+    intro:
+      "Bristol is the main airport for the South West, on the A38 south-west of the city. It has one terminal and no railway station, so most passengers arrive and leave by road.",
+    goodToKnow: [
+      "It suits Bristol, Bath, Somerset, Gloucestershire and South Wales.",
+      "The A38 is the main route in and can be slow at peak times, so build in extra time.",
+      "With no rail link, a pre-booked taxi is one of the simplest ways to reach the terminal with luggage.",
+    ],
+    bookLabel: "Book a Bristol airport taxi",
+    href: bookFromAirport("Bristol Airport (BRS)", 51.3827, -2.7191),
+  },
+  {
+    id: "manchester",
+    name: "Manchester",
+    code: "MAN",
+    city: "Manchester",
+    heading: "Manchester Airport (MAN): terminals, taxi transfers and tips",
+    where: "South of Manchester, near the M56",
+    terminals: "More than one",
+    journey: "About 25 minutes",
+    londonJourney: "About 3 hours 45 minutes",
+    intro:
+      "Manchester is the UK's busiest airport outside London and the main hub for the North of England, with short-haul and long-haul flights. It sits south of the city next to the M56, and has more than one terminal.",
+    goodToKnow: [
+      "Check your booking or airline ticket for your terminal before you travel.",
+      "It suits Greater Manchester, Cheshire, Lancashire, Yorkshire and North Wales.",
+      "The M56 and M60 can be busy at peak times, so allow extra time for early-morning and evening flights.",
+    ],
+    bookLabel: "Book a Manchester airport taxi",
+    href: bookFromAirport("Manchester Airport (MAN)", 53.3655, -2.2703),
   },
 ]
 
