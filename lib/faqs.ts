@@ -1,4 +1,5 @@
-// The site FAQs, grouped by topic: shown on /help after the Help Centre topics, and as one list on the homepage.
+// The site FAQs, grouped by topic: listed in full on the homepage, and on /help after the Help Centre
+// minus the topics the Help Centre already answers (HELP_PAGE_FAQ_CATEGORIES).
 import { CALL_NUMBER, WHATSAPP_NUMBER } from "@/lib/contact"
 
 const CALL_DISPLAY = CALL_NUMBER
@@ -26,7 +27,6 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         q: "How can I make a booking?",
         a: [
           `You can book in three ways: use our online booking form, message us on WhatsApp at ${WHATSAPP_DISPLAY}, or call ${CALL_DISPLAY}. Enter your pickup and drop-off details and follow the steps provided.`,
-          "Online, you see a fixed price for every vehicle class before choosing one, and no account is needed. Your booking reference is emailed to you as soon as you confirm.",
         ],
       },
       {
@@ -37,10 +37,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
       {
         id: "return-journey",
         q: "Can I book a return journey?",
-        a: [
-          "Yes. You can book a one-way or return trip in a single booking, or add the return journey later.",
-          "Booked together, the return leg is added on the Details step and is often discounted.",
-        ],
+        a: ["Yes. You can book a one-way or return trip in a single booking, or add the return journey later."],
       },
       {
         id: "payment-methods",
@@ -64,7 +61,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         id: "flight-delayed",
         q: "Will I be charged extra if my flight is delayed?",
         a: [
-          "No. We track every flight and dispatch your driver based on the actual arrival time, with no extra cost for delays. Just add your flight number when you book. Changes requested by you at short notice may incur an additional charge. Contact our team to discuss.",
+          "No. A delayed flight never adds to your fare. Changes requested by you at short notice may incur an additional charge. Contact our team to discuss.",
         ],
       },
       {
@@ -189,3 +186,20 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
     ],
   },
 ]
+
+// Answered by the Help Centre (lib/help-content.ts), so /help leaves them out of its FAQ section.
+const ANSWERED_BY_HELP_CENTRE = new Set(["how-to-book", "return-journey", "find-driver", "payment-methods"])
+
+// The FAQ section on /help. Once the Help Centre topics are out, Booking & Payment is down to two
+// questions, so it is folded into the airport category.
+export const HELP_PAGE_FAQ_CATEGORIES: FaqCategory[] = (() => {
+  const remaining = FAQ_PAGE_CATEGORIES.map((category) => ({
+    ...category,
+    items: category.items.filter((item) => !ANSWERED_BY_HELP_CENTRE.has(item.id)),
+  }))
+  const items = (id: string) => remaining.find((category) => category.id === id)?.items ?? []
+  return [
+    { id: "booking-airport", title: "Booking & Airport", items: [...items("booking"), ...items("airport")] },
+    ...remaining.filter((category) => category.id !== "booking" && category.id !== "airport"),
+  ]
+})()
