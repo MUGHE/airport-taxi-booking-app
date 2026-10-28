@@ -124,7 +124,7 @@ export default async function AirportGuidePage() {
 
             {GUIDE_AIRPORTS.map((airport) => (
               <section key={airport.id} id={airport.id} className="scroll-mt-24" aria-labelledby={`${airport.id}-title`}>
-                <div className="grid gap-6 rounded-2xl border border-border bg-card p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_14rem]">
+                <div className="grid gap-6 rounded-2xl border border-border bg-card p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_17rem]">
                   <div>
                     <h2 id={`${airport.id}-title`} className="text-xl font-semibold tracking-tight sm:text-2xl">{airport.heading}</h2>
                     <p className="mt-3 leading-7 text-muted-foreground">{airport.intro}</p>
@@ -141,8 +141,10 @@ export default async function AirportGuidePage() {
                       {airport.bookLabel} <ArrowRight aria-hidden="true" className="size-4" />
                     </Link>
                   </div>
-                  <div className="relative hidden overflow-hidden rounded-xl md:block">
-                    <Image src={airport.image} alt={`${airport.name} Airport`} fill sizes="14rem" className="object-cover" />
+                  {/* The 1000x625 landscape photo is cover-cropped into a 4:5 box, so it is drawn at about
+                      twice the box width: request that, and keep the box short enough for the source on 2x screens. */}
+                  <div className="relative hidden aspect-[4/5] self-center overflow-hidden rounded-xl md:block">
+                    <Image src={airport.image} alt={`${airport.name} Airport`} fill sizes="34rem" className="object-cover" />
                   </div>
                 </div>
               </section>

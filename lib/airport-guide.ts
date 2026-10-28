@@ -34,7 +34,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     ],
     bookLabel: "Book a Heathrow airport taxi",
     href: "/airport-transfers/heathrow-airport-taxi",
-    image: "/airport-transfers/heathrow.webp",
+    image: "/hero-airport-transfer.webp",
   },
   {
     id: "gatwick",
