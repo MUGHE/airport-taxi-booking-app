@@ -29,7 +29,7 @@ const NAV = [
   { href: "/#how", label: "How It Works" },
   { href: "/blog", label: "Blog" },
   // Shown in the desktop bar from lg up only; between md and lg the bar has no room for it.
-  { href: "/help", label: "Help Centre", desktopClass: "hidden lg:inline-flex" },
+  { href: "/faqs", label: "FAQs", desktopClass: "hidden lg:inline-flex" },
   { href: "/track", label: "Track Booking" },
 ]
 

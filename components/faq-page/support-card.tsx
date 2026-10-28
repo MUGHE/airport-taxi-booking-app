@@ -3,7 +3,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 import { cn } from "@/lib/utils"
 
-// "Still have questions?" card with call, WhatsApp and email buttons, closing /help.
+// "Still have questions?" card with call, WhatsApp and email buttons, closing /faqs.
 export function SupportCard() {
   return (
     <section className="mx-auto max-w-7xl px-4 pb-14 lg:pb-20" aria-labelledby="still-questions">

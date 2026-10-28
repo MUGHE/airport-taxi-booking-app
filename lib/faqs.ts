@@ -1,5 +1,5 @@
-// The site FAQs, grouped by topic: listed in full on the homepage, and on /help after the Help Centre
-// minus the topics the Help Centre already answers (HELP_PAGE_FAQ_CATEGORIES).
+// The site FAQs, word for word from the client's FAQ document, grouped by topic: shown in full
+// on /faqs and as one list on the homepage.
 import { CALL_NUMBER, WHATSAPP_NUMBER } from "@/lib/contact"
 
 const CALL_DISPLAY = CALL_NUMBER
@@ -32,7 +32,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
       {
         id: "book-by-phone",
         q: "Can I book by phone?",
-        a: [`Yes. Call us anytime on ${CALL_DISPLAY}. Our control team is available 24/7.`],
+        a: [`Yes. Call us anytime on ${CALL_DISPLAY} — our control team is available 24/7.`],
       },
       {
         id: "return-journey",
@@ -43,7 +43,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         id: "payment-methods",
         q: "How can I pay for my booking?",
         a: [
-          "We accept Visa, MasterCard, American Express and cash to the driver. You can pay in full in cash for airport pickups. For home pickups paid in cash, a deposit may be required. Contact our office for the applicable amount.",
+          "We accept Visa, MasterCard, American Express and cash to the driver. You can pay in full in cash for airport pickups. For home pickups paid in cash, a deposit may be required — contact our office for the applicable amount.",
         ],
       },
       {
@@ -61,7 +61,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         id: "flight-delayed",
         q: "Will I be charged extra if my flight is delayed?",
         a: [
-          "No. A delayed flight never adds to your fare. Changes requested by you at short notice may incur an additional charge. Contact our team to discuss.",
+          "No. We track every flight and dispatch your driver based on the actual arrival time, with no extra cost for delays. Changes requested by you at short notice may incur an additional charge — contact our team to discuss.",
         ],
       },
       {
@@ -94,9 +94,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
       {
         id: "vehicle-types",
         q: "What vehicle types do you offer?",
-        a: [
-          "We offer six classes to suit all group sizes: Saloon Car (up to 4 passengers, 2 suitcases), Executive E-Class (up to 3 passengers, 2 suitcases), Estate Car (up to 4 passengers, 3 suitcases), 4 Seater MPV (up to 4 passengers, 4 suitcases), 6 Seater MPV (up to 5 passengers with 5 suitcases, or 6 with hand luggage only) and 8 Seater Minibus (up to 8 passengers, 8 suitcases).",
-        ],
+        a: ["We offer Standard Cars, Business Class, MPV 6-seaters and MPV 8-seaters to suit all group sizes."],
       },
       {
         id: "choose-vehicle",
@@ -147,7 +145,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         id: "fare-includes",
         q: "What's included in the fare?",
         a: [
-          "Your quoted fare includes airport pickup and drop-off charges, tolls, parking and congestion charges. Optional Meet & Greet costs £7 extra, and additional waiting costs £15 per 30 minutes after the free airport waiting allowance. Changes requested by you may also affect the fare. Please see our terms and conditions.",
+          "Your quoted fare includes airport pickup and drop-off charges, tolls, parking and congestion charges. Optional Meet & Greet costs £7 extra, and additional waiting costs £15 per 30 minutes after the free airport waiting allowance. Changes requested by you may also affect the fare — please see our terms and conditions.",
         ],
       },
       {
@@ -165,7 +163,6 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         q: "What is your cancellation policy?",
         a: [
           "If you wish to cancel your booking, you must notify us as soon as possible. Cancellations made more than 6 hours before the scheduled pickup time will be refunded, with only the 5% payment gateway processing fee deducted from the refund amount.",
-          "Cancellations within 6 hours of pickup, and no-shows, are non-refundable, as a driver has usually been allocated by then. If we cancel, or the service isn't provided through our fault, you get a full refund with no fee deducted. Our Terms set out the full policy.",
         ],
       },
       {
@@ -187,19 +184,3 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
   },
 ]
 
-// Answered by the Help Centre (lib/help-content.ts), so /help leaves them out of its FAQ section.
-const ANSWERED_BY_HELP_CENTRE = new Set(["how-to-book", "return-journey", "find-driver", "payment-methods"])
-
-// The FAQ section on /help. Once the Help Centre topics are out, Booking & Payment is down to two
-// questions, so it is folded into the airport category.
-export const HELP_PAGE_FAQ_CATEGORIES: FaqCategory[] = (() => {
-  const remaining = FAQ_PAGE_CATEGORIES.map((category) => ({
-    ...category,
-    items: category.items.filter((item) => !ANSWERED_BY_HELP_CENTRE.has(item.id)),
-  }))
-  const items = (id: string) => remaining.find((category) => category.id === id)?.items ?? []
-  return [
-    { id: "booking-airport", title: "Booking & Airport", items: [...items("booking"), ...items("airport")] },
-    ...remaining.filter((category) => category.id !== "booking" && category.id !== "airport"),
-  ]
-})()

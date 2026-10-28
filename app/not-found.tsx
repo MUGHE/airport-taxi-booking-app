@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 const HELPFUL_LINKS = [
   { href: "/book", label: "Book an airport transfer", icon: CarFront },
   { href: "/track", label: "Track an existing booking", icon: Search },
-  { href: "/help", label: "Visit the Help Center", icon: LifeBuoy },
+  { href: "/faqs", label: "Read our FAQs", icon: LifeBuoy },
   { href: "/contact", label: "Contact our team", icon: Headset },
 ]
 

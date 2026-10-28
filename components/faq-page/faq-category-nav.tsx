@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 type NavGroup = { title: string; categories: { id: string; title: string }[] }
 
-// Category tabs for /help: a sticky sidebar on wide screens, a wrapping row of chips on smaller ones.
+// Category tabs for /faqs: a sticky sidebar on wide screens, a wrapping row of chips on smaller ones.
 // The tab for the section currently in view is highlighted.
 export function FaqCategoryNav({ groups }: { groups: NavGroup[] }) {
   const categories = useMemo(() => groups.flatMap((group) => group.categories), [groups])
