@@ -1,136 +1,127 @@
-// Structured content for the Help Center (app/help/page.tsx). Every answer describes how
-// this website actually handles the topic — kept in sync with the booking flow, tracking
-// page, and cancellation policy (lib/terms-content.ts) rather than generic boilerplate.
+// The Help Centre quick guide on /help (app/help/page.tsx): short, task-based answers that point to
+// the matching FAQ (lib/faqs.ts) for the detail, so the two sections never repeat each other.
+// Every answer describes how this website actually handles the topic — kept in sync with the
+// booking flow, tracking page, and cancellation policy (lib/terms-content.ts).
 
-export type FaqItem = {
-  id: string
-  q: string
-  a: string[]
-}
-
-export type FaqCategory = {
+export type HelpGuideItem = {
   id: string
   title: string
-  items: FaqItem[]
+  body: string[]
+  /** Id of the FAQ in lib/faqs.ts that answers this topic in full. */
+  faq?: string
 }
 
-export const FAQ_CATEGORIES: FaqCategory[] = [
+export type HelpGuideCategory = {
+  id: string
+  title: string
+  items: HelpGuideItem[]
+}
+
+export const HELP_GUIDE: HelpGuideCategory[] = [
   {
-    id: "booking",
-    title: "Booking & fares",
+    id: "plan",
+    title: "Plan your trip",
     items: [
       {
-        id: "how-to-book",
-        q: "How do I book a ride?",
-        a: [
-          "Enter your pickup and drop-off on the homepage or the Book a Ride page, then choose a date and time. You'll see a fixed price for every vehicle class before you pick one — no need to create an account.",
-          "From there you add passenger details, choose how you'd like to pay, and confirm. You'll get a booking reference and a confirmation email straight away.",
-        ],
+        id: "booking-steps",
+        title: "Booking steps",
+        body: ["Enter your route, pick a date, time and vehicle, then add passenger details and confirm."],
+        faq: "how-to-book",
       },
       {
         id: "fixed-price",
-        q: "Are your prices fixed, or can they change?",
-        a: [
+        title: "Are your prices fixed, or can they change?",
+        body: [
           "The fare shown when you pick your vehicle is the fare you pay — it's calculated from your route and locked in at booking, so it doesn't change for traffic, time of day, or demand.",
           "The only things that add to it are choices you make at checkout: extra stops along the route, optional add-ons, or a return leg — each is shown as a separate line before you pay.",
         ],
       },
       {
-        id: "vehicles",
-        q: "What vehicles can I choose from?",
-        a: [
-          "Six classes, from a Saloon Car for up to 4 passengers with 2 suitcases and 2 hand luggage, through Executive and Estate cars, 4- and 6-seat MPVs, up to an 8-seat Minibus for larger groups.",
-          "Each option on the Pick your vehicle step shows its passenger and luggage capacity plus its price for your exact route, so you can compare before choosing.",
-        ],
+        id: "choosing-vehicle",
+        title: "Choosing a vehicle",
+        body: ["Compare seats, bags and the price for your route side by side on the Pick your vehicle step."],
+        faq: "vehicle-types",
       },
       {
-        id: "stops-addons-return",
-        q: "Can I add extra stops, add-ons, or a return trip?",
-        a: [
-          "Yes. On the Trip step you can add up to 3 extra stops along your route. On the Details step you can select optional add-ons (for example a child seat or meet & greet) and add a return trip in the same booking, often at a discount.",
-        ],
+        id: "trip-extras",
+        title: "Stops, extras and returns",
+        body: ["Add up to 3 stops on the Trip step. Child seats, meet & greet and a return leg go on the Details step."],
+        faq: "return-journey",
       },
     ],
   },
   {
-    id: "airport",
-    title: "Airport pickup & flight tracking",
+    id: "at-the-airport",
+    title: "At the airport",
     items: [
       {
         id: "flight-tracking",
-        q: "Do you track my flight?",
-        a: [
-          "Yes — add your flight number when you book and we monitor it, adjusting your driver's pickup automatically if your flight is early or delayed, at no extra charge.",
-          "For airport arrivals with a correct flight number, you get 60 minutes of free waiting time from the actual landing time. Pickups from any other location get 15 minutes of free waiting from the scheduled time.",
-        ],
+        title: "Flight tracking",
+        body: ["Your pickup follows your real landing time once you add a flight number. Non-airport pickups include 15 minutes' free waiting."],
+        faq: "flight-delayed",
       },
       {
-        id: "meet-driver",
-        q: "Where will my driver meet me?",
-        a: [
-          "For airport arrivals, your driver meets you at the terminal's designated meeting point once you've cleared arrivals — the exact spot is confirmed in your booking details. For other pickups, they'll be waiting at the address you provided from the scheduled time.",
-        ],
+        id: "airport-pickup",
+        title: "Airport pickup",
+        body: ["Once you're through arrivals, go to the terminal meeting point named in your booking details. Other pickups start at your address."],
+        faq: "find-driver",
       },
     ],
   },
   {
-    id: "payment",
-    title: "Payment & promotions",
+    id: "paying",
+    title: "Paying",
     items: [
       {
-        id: "payment-methods",
-        q: "What payment methods do you accept?",
-        a: [
-          "Choose either option on the Review step: pay securely by card through Stripe's checkout, or pay your driver in cash at the end of the trip.",
-        ],
+        id: "payment-options",
+        title: "Payment options",
+        body: ["Choose on the Review step: card through Stripe's secure checkout, or cash to your driver."],
+        faq: "payment-methods",
       },
       {
         id: "promo-codes",
-        q: "Do you offer promo codes or discounts?",
-        a: [
+        title: "Do you offer promo codes or discounts?",
+        body: [
           "If you have a promo code, enter it in the trip summary before you pay and it's applied instantly. When a site-wide promotion is running, it's applied automatically and shown as a banner with the discounted price — no code needed.",
         ],
       },
     ],
   },
   {
-    id: "managing",
-    title: "Managing your booking",
+    id: "after-booking",
+    title: "After you book",
     items: [
       {
         id: "track-status",
-        q: "How do I check my booking status?",
-        a: [
+        title: "How do I check my booking status?",
+        body: [
           "Use Track Booking with your reference number, or the direct link in your confirmation email. Status shows as Pending payment, Confirmed, Driver assigned, Completed, or Cancelled.",
         ],
       },
       {
         id: "change-cancel",
-        q: "Can I change or cancel my booking online?",
-        a: [
+        title: "Can I change or cancel my booking online?",
+        body: [
           "Tracking a booking shows its live details, but changes and cancellations are handled by our team rather than self-service on the site — contact us with your reference and we'll take care of it.",
         ],
       },
       {
-        id: "cancellation-fee",
-        q: "Is there a cancellation fee?",
-        a: [
-          "Cancel more than 6 hours before your scheduled pickup and you're refunded in full, minus a 5% payment-gateway processing fee. Cancelling within the final 6 hours, or not showing up, is non-refundable, since a driver has typically already been allocated.",
-          "If we cancel, or the service isn't provided due to our fault, you get a full refund with no processing fee deducted. See our Terms for the full policy.",
-        ],
+        id: "cancel-refunds",
+        title: "Cancellation refunds",
+        body: ["How much comes back depends on how long before pickup you cancel."],
+        faq: "cancellation-policy",
       },
     ],
   },
   {
-    id: "support",
-    title: "Support",
+    id: "get-help",
+    title: "Get help",
     items: [
       {
-        id: "contact-support",
-        q: "How do I contact support?",
-        a: [
-          "WhatsApp, phone, or email — see our Contact page for the details, or use the help button in the bottom corner of any page. Our team is available 24/7 for questions before, during, or after your trip.",
-        ],
+        id: "reach-us",
+        title: "Reach our team",
+        body: ["Tap the help button in the corner of any page, or use the call, WhatsApp and email buttons at the bottom of this page."],
+        faq: "hours",
       },
     ],
   },

@@ -26,6 +26,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         q: "How can I make a booking?",
         a: [
           `You can book in three ways: use our online booking form, message us on WhatsApp at ${WHATSAPP_DISPLAY}, or call ${CALL_DISPLAY}. Enter your pickup and drop-off details and follow the steps provided.`,
+          "Online, you see a fixed price for every vehicle class before choosing one, and no account is needed. Your booking reference is emailed to you as soon as you confirm.",
         ],
       },
       {
@@ -36,7 +37,10 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
       {
         id: "return-journey",
         q: "Can I book a return journey?",
-        a: ["Yes. You can book a one-way or return trip in a single booking, or add the return journey later."],
+        a: [
+          "Yes. You can book a one-way or return trip in a single booking, or add the return journey later.",
+          "Booked together, the return leg is added on the Details step and is often discounted.",
+        ],
       },
       {
         id: "payment-methods",
@@ -60,7 +64,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         id: "flight-delayed",
         q: "Will I be charged extra if my flight is delayed?",
         a: [
-          "No. We track every flight and dispatch your driver based on the actual arrival time, with no extra cost for delays. Changes requested by you at short notice may incur an additional charge. Contact our team to discuss.",
+          "No. We track every flight and dispatch your driver based on the actual arrival time, with no extra cost for delays. Just add your flight number when you book. Changes requested by you at short notice may incur an additional charge. Contact our team to discuss.",
         ],
       },
       {
@@ -93,7 +97,9 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
       {
         id: "vehicle-types",
         q: "What vehicle types do you offer?",
-        a: ["We offer Standard Cars, Business Class, MPV 6-seaters and MPV 8-seaters to suit all group sizes."],
+        a: [
+          "We offer six classes to suit all group sizes: Saloon Car (up to 4 passengers, 2 suitcases), Executive E-Class (up to 3 passengers, 2 suitcases), Estate Car (up to 4 passengers, 3 suitcases), 4 Seater MPV (up to 4 passengers, 4 suitcases), 6 Seater MPV (up to 5 passengers with 5 suitcases, or 6 with hand luggage only) and 8 Seater Minibus (up to 8 passengers, 8 suitcases).",
+        ],
       },
       {
         id: "choose-vehicle",
@@ -162,6 +168,7 @@ export const FAQ_PAGE_CATEGORIES: FaqCategory[] = [
         q: "What is your cancellation policy?",
         a: [
           "If you wish to cancel your booking, you must notify us as soon as possible. Cancellations made more than 6 hours before the scheduled pickup time will be refunded, with only the 5% payment gateway processing fee deducted from the refund amount.",
+          "Cancellations within 6 hours of pickup, and no-shows, are non-refundable, as a driver has usually been allocated by then. If we cancel, or the service isn't provided through our fault, you get a full refund with no fee deducted. Our Terms set out the full policy.",
         ],
       },
       {
