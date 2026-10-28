@@ -24,7 +24,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     heading: "Heathrow Airport (LHR): terminals, taxi transfers and tips",
     where: "West London",
     terminals: "T2, T3, T4, T5",
-    journey: "45 to 75 minutes",
+    journey: "About 50 minutes",
     intro:
       "Heathrow is the UK's busiest airport and the main hub for long-haul flights. It sits on the western edge of London and has four terminals: T2, T3, T4 and T5. Check your booking or airline ticket for your terminal before you travel, because the terminals are some distance apart.",
     goodToKnow: [
@@ -43,7 +43,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     heading: "Gatwick Airport (LGW): terminals, taxi transfers and tips",
     where: "South of London, West Sussex",
     terminals: "North and South",
-    journey: "60 to 90 minutes",
+    journey: "About 1 hour 25 minutes",
     intro:
       "Gatwick is London's second-largest airport and a major base for short-haul and leisure flights. It has a North Terminal and a South Terminal, linked by a short inter-terminal transit.",
     goodToKnow: [
@@ -62,7 +62,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     heading: "Stansted Airport (STN): taxi transfers and tips",
     where: "North-east, Essex",
     terminals: "One terminal",
-    journey: "60 to 90 minutes",
+    journey: "About 1 hour 10 minutes",
     intro:
       "Stansted is a single-terminal airport to the north-east of London, popular with low-cost European routes. Its simple layout makes arrivals and departures quick to navigate.",
     goodToKnow: [
@@ -81,7 +81,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     heading: "Luton Airport (LTN): taxi transfers and tips",
     where: "North-west, Bedfordshire",
     terminals: "One terminal",
-    journey: "60 to 90 minutes",
+    journey: "About 1 hour 10 minutes",
     intro:
       "Luton is a one-terminal airport north-west of London, used by many budget airlines. It is close to the M1 and works well for Bedfordshire, Hertfordshire and north London.",
     goodToKnow: [
@@ -99,7 +99,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     heading: "London City Airport (LCY): taxi transfers and tips",
     where: "East London, Docklands",
     terminals: "One terminal",
-    journey: "25 to 45 minutes",
+    journey: "About 35 minutes",
     intro:
       "London City is the closest airport to the centre, in the Docklands area of east London. It is small, quick to get through, and popular with business travellers heading to Canary Wharf and the City.",
     goodToKnow: [
@@ -117,7 +117,7 @@ export const GUIDE_AIRPORTS: GuideAirport[] = [
     heading: "Southend Airport (SEN): taxi transfers and tips",
     where: "East, Essex coast",
     terminals: "One terminal",
-    journey: "60 to 90 minutes",
+    journey: "About 1 hour 15 minutes",
     intro:
       "Southend is a small, relaxed airport on the Essex coast. It is a convenient alternative if you live in Essex or east London and want to avoid the larger airports.",
     goodToKnow: [
@@ -158,7 +158,7 @@ export const AIRPORT_GUIDE_FAQS: FaqCategory = {
     {
       id: "closest-airport",
       q: "Which London airport is closest to central London?",
-      a: ["London City Airport, in the Docklands, is the closest. It usually takes 25 to 45 minutes by road, depending on traffic."],
+      a: ["London City Airport, in the Docklands, is the closest. It usually takes about 35 minutes by road, depending on traffic."],
     },
     {
       id: "heathrow-terminals",
