@@ -36,7 +36,7 @@ export function SiteFooter() {
           <div className="max-w-lg">
             {/* Same lockup as the site header. */}
             <Link href="/" className="inline-flex items-center gap-2 font-semibold">
-              <Image src="/brand/logo-circle.webp" alt="" width={40} height={40} className="size-10 shrink-0 rounded-full ring-1 ring-white/35 shadow-sm" />
+              <Image src="/brand/logo-circle-white.webp" alt="" width={40} height={40} className="size-10 shrink-0 rounded-full ring-1 ring-white/35 shadow-sm" />
               <span className="text-lg tracking-tight">ONE Airport Taxi</span>
             </Link>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
