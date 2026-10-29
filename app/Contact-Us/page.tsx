@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Contact Us",
   description:
     "Get in touch with ONE Airport Taxi by WhatsApp, phone, or email for bookings, changes, and support.",
-  alternates: { canonical: "/contact" },
+  alternates: { canonical: "/Contact-Us" },
 }
 
 type ContactMethod = {

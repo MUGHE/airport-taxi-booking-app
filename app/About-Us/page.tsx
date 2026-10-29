@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "About Us",
   description:
     "ONE Airport Taxi provides fixed-price, professionally driven airport transfers across London — with flight tracking and 24/7 support on every trip.",
-  alternates: { canonical: "/about" },
+  alternates: { canonical: "/About-Us" },
 }
 
 const STATS = [
@@ -110,7 +110,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-3xl px-4 pb-10 text-center">
           <p className="text-sm leading-relaxed text-muted-foreground">
             Have questions before you book? Our team is glad to help —{" "}
-            <Link href="/contact" className="font-medium text-primary hover:underline">
+            <Link href="/Contact-Us" className="font-medium text-primary hover:underline">
               get in touch
             </Link>
             , or read our{" "}
