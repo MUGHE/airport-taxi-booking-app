@@ -16,7 +16,7 @@ const HELPFUL_LINKS = [
   { href: "/book", label: "Book an airport transfer", icon: CarFront },
   { href: "/track", label: "Track an existing booking", icon: Search },
   { href: "/faqs", label: "Read our FAQs", icon: LifeBuoy },
-  { href: "/contact-us", label: "Contact our team", icon: Headset },
+  { href: "/Contact-Us", label: "Contact our team", icon: Headset },
 ]
 
 // Rendering this file for an unmatched route (or a `notFound()` call) makes Next.js

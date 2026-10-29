@@ -62,7 +62,7 @@ export default function TermsPage() {
                   ))}
                   {section.id === "contact" && (
                     <p>
-                      <Link href="/contact-us" className="font-medium text-primary hover:underline">
+                      <Link href="/Contact-Us" className="font-medium text-primary hover:underline">
                         View our contact details →
                       </Link>
                     </p>

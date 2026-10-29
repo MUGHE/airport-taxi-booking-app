@@ -24,10 +24,9 @@ const nextConfig = {
     return [
       // The Help Centre was replaced by the FAQs page.
       { source: '/help', destination: '/faqs', permanent: true },
-      // The contact page moved to /contact-us.
-      { source: '/contact', destination: '/contact-us', permanent: true },
-      // The about page moved to /about-us.
-      { source: '/about', destination: '/about-us', permanent: true },
+      // The contact and about pages moved to /Contact-Us and /About-Us.
+      { source: '/contact', destination: '/Contact-Us', permanent: true },
+      { source: '/about', destination: '/About-Us', permanent: true },
       ...LEGACY_AIRPORT_REDIRECTS.map(([source, destination]) => ({
         source: `/airport-transfers/${source}`,
         destination: `/airport-transfers/${destination}`,

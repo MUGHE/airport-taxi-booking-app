@@ -17,7 +17,7 @@ test.describe("Published Airport Page fallbacks", () => {
   test("keeps useful page content and a contact route when the quote service is unavailable", async ({ page }) => {
     await page.goto("/airport-transfers/heathrow-airport-taxi")
     await expect(page.getByRole("link", { name: /Get a fixed price to Heathrow/i })).toHaveAttribute("href", /\/book\?/)
-    await expect(page.getByRole("link", { name: /Contact us/i })).toHaveAttribute("href", "/contact-us")
+    await expect(page.getByRole("link", { name: /Contact us/i })).toHaveAttribute("href", "/Contact-Us")
   })
 
   test("shows a branded image placeholder with the original alternative text", async ({ page }) => {

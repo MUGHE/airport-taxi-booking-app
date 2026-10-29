@@ -644,7 +644,7 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
                 <span className="airport-final-icon"><PlaneLanding aria-hidden="true" /></span>
                 <h3>Your {page.shortName} fixed price is 30 seconds away.</h3>
                 <p>Enter your route, see your fare, book in a few taps.</p>
-                <Button size="lg" variant="secondary" nativeButton={false} render={<Link href={page.bookingAvailable === false ? "/contact-us" : page.bookingLinks.toAirport} />}>{page.bookingAvailable === false ? "Contact our team" : "Get My Fixed Price"}<ArrowRight className="size-4" /></Button>
+                <Button size="lg" variant="secondary" nativeButton={false} render={<Link href={page.bookingAvailable === false ? "/Contact-Us" : page.bookingLinks.toAirport} />}>{page.bookingAvailable === false ? "Contact our team" : "Get My Fixed Price"}<ArrowRight className="size-4" /></Button>
                 {page.bookingAvailable !== false && <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="airport-final-secondary">Prefer to talk? WhatsApp us <ArrowRight aria-hidden="true" /></a>}
               </div>
             </div>
