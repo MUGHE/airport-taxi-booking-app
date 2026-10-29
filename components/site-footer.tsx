@@ -88,7 +88,7 @@ export function SiteFooter() {
             { href: "/track", label: "Track Booking" },
           ]} />
           <FooterCol title="Company" links={[
-            { href: "/about", label: "About Us" },
+            { href: "/about-us", label: "About Us" },
             { href: "/contact-us", label: "Contact" },
             { href: "/faqs", label: "FAQs" },
             { href: "/blog", label: "Blog" },

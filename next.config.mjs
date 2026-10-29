@@ -26,6 +26,8 @@ const nextConfig = {
       { source: '/help', destination: '/faqs', permanent: true },
       // The contact page moved to /contact-us.
       { source: '/contact', destination: '/contact-us', permanent: true },
+      // The about page moved to /about-us.
+      { source: '/about', destination: '/about-us', permanent: true },
       ...LEGACY_AIRPORT_REDIRECTS.map(([source, destination]) => ({
         source: `/airport-transfers/${source}`,
         destination: `/airport-transfers/${destination}`,
