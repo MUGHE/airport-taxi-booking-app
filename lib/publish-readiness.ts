@@ -46,7 +46,7 @@ export type ExistingQualityPage = {
 }
 
 const REQUIRED_SECTIONS = ["introduction", "benefits", "fleet_pricing", "airport_guide", "map"] as const
-const SAFE_INTERNAL_PATHS = new Set(["/", "/book", "/airport-transfers", "/airport-guide", "/contact", "/faqs", "/help", "/about", "/privacy", "/terms"])
+const SAFE_INTERNAL_PATHS = new Set(["/", "/book", "/airport-transfers", "/airport-guide", "/contact-us", "/faqs", "/help", "/about", "/privacy", "/terms"])
 
 function hasText(value: string | undefined): boolean { return Boolean(value?.trim()) }
 function hasContent(section: { body: { text: string }[]; fields: Record<string, string> }): boolean {

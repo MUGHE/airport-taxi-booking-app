@@ -89,7 +89,7 @@ export function SiteFooter() {
           ]} />
           <FooterCol title="Company" links={[
             { href: "/about", label: "About Us" },
-            { href: "/contact", label: "Contact" },
+            { href: "/contact-us", label: "Contact" },
             { href: "/faqs", label: "FAQs" },
             { href: "/blog", label: "Blog" },
           ]} />

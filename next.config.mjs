@@ -24,6 +24,8 @@ const nextConfig = {
     return [
       // The Help Centre was replaced by the FAQs page.
       { source: '/help', destination: '/faqs', permanent: true },
+      // The contact page moved to /contact-us.
+      { source: '/contact', destination: '/contact-us', permanent: true },
       ...LEGACY_AIRPORT_REDIRECTS.map(([source, destination]) => ({
         source: `/airport-transfers/${source}`,
         destination: `/airport-transfers/${destination}`,
