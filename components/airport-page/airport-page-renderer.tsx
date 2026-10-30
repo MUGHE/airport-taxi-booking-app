@@ -31,8 +31,8 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
-import { HeathrowAirportRoutesSection, HeathrowCitiesSection, HeathrowGuideSection, HeathrowPortsSection, HeathrowPricing, HeathrowTerminalTransfersSection, HeathrowTravellersSection } from "@/components/airport-page/heathrow-sections"
-import { HEATHROW_VEHICLE_TEXT } from "@/lib/heathrow-page"
+import { BriefPricingPanel, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
+import { BRIEF_COPY } from "@/components/airport-page/airport-briefs"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
 import { CALL_NUMBER, WHATSAPP_LINK } from "@/lib/contact"
@@ -169,7 +169,7 @@ const trustItems = [
 
 type InfoCard = { icon: typeof Banknote; title: string; items: string[] }
 
-type AirportCopy = {
+export type AirportCopy = {
   heroHeading?: string
   heroSubhead?: string
   /** Adds "get a quote or call us" under the hero intro. */
@@ -197,95 +197,26 @@ type AirportCopy = {
   /** Replaces the CMS introduction heading, copy and button. */
   intro?: { heading: string; paragraphs: React.ReactNode[]; cta: string; points?: { title: string; text: string }[] }
   /** Replaces the fleet heading and copy; `descriptions` is keyed by vehicle id. */
-  fleet?: { heading: string; paragraphs: React.ReactNode[]; closing: string; descriptions: Record<string, string>; pricing?: React.ComponentType<{ page: AirportPagePresentation }> }
+  fleet?: { heading: string; paragraphs: React.ReactNode[]; closing: string; descriptions: Record<string, string>; pricing?: BriefPricing }
   /** Replaces the pickup guide copy beside the terminal map. */
   pickup?: { heading: string; lead: string[]; stepsHeading: string; steps: { title: string; text: string }[]; dropHeading: string; dropText: string }
   /** Replaces the final call to action copy. */
   final?: { heading: string; paragraphs: React.ReactNode[]; tagline: string }
   comfortOrder?: number
+  /** Replace only the heading and subhead of the default comfort cards. */
+  comfortHeading?: string
+  comfortSubhead?: string
+  /** A line under the "Why book with us" cards. */
+  benefitsClosing?: string
   /** Airport-only sections placed into the page's reading order. */
   extraSections?: { key: string; order: number; Component: React.ComponentType<{ page: AirportPagePresentation }> }[]
   /** CMS sections this airport's own sections replace. */
   hiddenSections?: AirportPageContentSection["type"][]
 }
 
-const linkClass = "font-semibold text-primary underline decoration-primary/30 underline-offset-4"
-
+// Airports rewritten from a client content brief (Heathrow, Southend) live in airport-briefs.tsx.
 const AIRPORT_COPY: Record<string, AirportCopy> = {
-  // From the client's Heathrow content brief; routes, terminals and ports live in lib/heathrow-page.ts.
-  Heathrow: {
-    heroHeading: "Heathrow Airport Taxi – Reliable Transfers to and from LHR",
-    heroSubhead: "Book a taxi to Heathrow Airport or arrange a comfortable transfer from Heathrow into London or other UK destinations. One Airport Taxi lets you pre-book your airport transfer, with fares fixed before you travel. Our professional, licensed drivers offer a choice of saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re travelling alone, with family, or in a group, you can choose the vehicle that fits your passengers and luggage. This way, you get to Heathrow with no surprises.",
-    heroCallLine: true,
-    heroCallText: "Get your free instant Heathrow taxi quote online and have the journey planned before you set off, or call our team on",
-    intro: {
-      heading: "Heathrow Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
-      paragraphs: [
-        <>Arranging a reliable Heathrow taxi shouldn’t be complicated. With One Airport Taxi, you can plan your trip, enter your pickup and drop-off details, and see your fare before you commit. So whether you need a <Link className={linkClass} href="#heathrow-destinations">taxi to Heathrow from London</Link>, a private transfer from Slough or <Link className={linkClass} href="/destinations/reading-taxi">Reading</Link>, or a pickup from the airport to your home, hotel or office, every journey is pre-booked and built around your plans.</>,
-        <>We cover all four operational passenger terminals: <Link className={linkClass} href="#heathrow-terminals">Terminal 2, 3, 4 and 5</Link>. Choose your <Link className={linkClass} href="#vehicles">vehicle</Link>, add your flight details, and set up your pickup in advance. The price you’re quoted is the price you pay. This means you can budget for your journey with no meter running and no unexpected costs at the end. Whether it’s a single airport run, a family holiday, or a long-distance transfer, booking with us is simple.</>,
-      ],
-      cta: "Get Your Heathrow Taxi Quote",
-      // Short restatements of the two paragraphs above, shown as checkmarks.
-      points: [
-        { title: "Fare first", text: "See your price before you commit." },
-        { title: "All four terminals", text: "Terminal 2, 3, 4 and 5." },
-        { title: "No meter running", text: "The price you’re quoted is the price you pay." },
-      ],
-    },
-    benefitsHeading: "Why Choose One Airport Taxi for Heathrow Airport Transfers?",
-    benefitsSubhead: "The right airport taxi service makes a difference to the whole journey, not just the drive. We focus on clear pricing, planned pickups, comfortable cars and support that actually answers.",
-    fleet: {
-      heading: "Heathrow Airport Taxi Fleet and Pricing",
-      paragraphs: [
-        "Choosing the right vehicle matters when you’re booking a taxi to Heathrow or arranging a transfer from it. Think about both seats and suitcase space before you choose.",
-        "We run a range of vehicles, from everyday airport runs to executive travel and group transport.",
-      ],
-      closing: "Pick your vehicle based on how many people and how much luggage you have. Make sure to check the capacity details before you confirm your booking.",
-      descriptions: HEATHROW_VEHICLE_TEXT,
-      pricing: HeathrowPricing,
-    },
-    pickup: {
-      heading: "Taxi from Heathrow Airport – Meet Your Driver and Travel with Confidence",
-      lead: [
-        "Landed at Heathrow after a long flight? Pre-booking your taxi takes the stress out of whatever comes next.",
-        "We provide pickups from Terminals 2, 3, 4 and 5. Give us your flight number, arrival date and destination when you book, and we’ll plan the journey around your flight.",
-      ],
-      stepsHeading: "How Your Heathrow Airport Pickup Works",
-      steps: [
-        { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." },
-        { title: "Follow the arrival signs.", text: "Once you’ve landed, follow signs for passport control and baggage reclaim. Your booking confirmation has your specific driver meeting instructions." },
-        { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." },
-        { title: "Head to your destination.", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
-      ],
-      dropHeading: "Heathrow Airport Drop-Off Service",
-      dropText: "Travelling into Heathrow from London or elsewhere in the UK? Your driver takes you to the correct terminal drop-off area. Just make sure you’ve given the right terminal, and leave room in your timing for traffic, check-in and security.",
-    },
-    comfort: {
-      ...defaultComfort("Heathrow"),
-      heading: "Comfortable Heathrow Airport Transfers with Thoughtful Extras",
-      subhead: "The journey should be comfortable from the moment you’re picked up to the moment you’re dropped off. A few extras help.",
-    },
-    comfortOrder: 75,
-    final: {
-      heading: "Book Your Heathrow Airport Taxi with One Airport Taxi",
-      paragraphs: [
-        "Whether it’s a taxi to Heathrow, a pickup from Heathrow into London, or a long-distance transfer, we’ll help you plan it.",
-        <>Choose your vehicle, enter your travel details, and see your fare before you confirm. With pre-booked transfers, licensed drivers, flight monitoring, and <Link className="font-semibold text-white underline underline-offset-4" href="/Contact-Us">24/7 support</Link>, we make sure your Heathrow journey is taken care of so you can focus on your trip.</>,
-      ],
-      tagline: "Your journey starts with a clear price.",
-    },
-    finalChip: "All terminals",
-    extraSections: [
-      { key: "heathrow-guide", order: 42, Component: HeathrowGuideSection },
-      { key: "heathrow-terminal-transfers", order: 44, Component: HeathrowTerminalTransfersSection },
-      { key: "heathrow-travellers", order: 62, Component: HeathrowTravellersSection },
-      { key: "heathrow-cities", order: 64, Component: HeathrowCitiesSection },
-      { key: "heathrow-airports", order: 66, Component: HeathrowAirportRoutesSection },
-      { key: "heathrow-ports", order: 68, Component: HeathrowPortsSection },
-    ],
-    // The city, airport and port sections above cover the CMS routes and cruise sections.
-    hiddenSections: ["ferry_cruise", "related_destinations"],
-  },
+  ...BRIEF_COPY,
   // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
   "London City": {
     heroSubhead: "Fixed-price transfers from London City to Canary Wharf, the City and beyond. Your driver tracks your flight and is ready when you walk out.",
@@ -462,7 +393,7 @@ function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation;
           {orderedVehicles.map((vehicle, index) => <VehicleCard key={vehicle.id} vehicle={vehicle} index={index} href={page.bookingLinks.toAirport} bestFor={copy.bestFor?.[vehicle.id]} description={copy.fleet?.descriptions[vehicle.id]} />)}
         </div>
         {copy.fleet && <p className="airport-vehicles-heading-copy mt-8">{copy.fleet.closing}</p>}
-        {copy.fleet?.pricing && <copy.fleet.pricing page={page} />}
+        {copy.fleet?.pricing && <BriefPricingPanel page={page} pricing={copy.fleet.pricing} />}
       </div>
     </section>
   )
@@ -483,7 +414,9 @@ function defaultComfort(placeName: string): NonNullable<AirportCopy["comfort"]> 
 }
 
 function ComfortSection({ page }: { page: AirportPagePresentation }) {
-  return <ComfortCards comfort={airportCopy(page).comfort ?? defaultComfort(page.shortName)} />
+  const copy = airportCopy(page)
+  const comfort = copy.comfort ?? defaultComfort(page.shortName)
+  return <ComfortCards comfort={{ ...comfort, heading: copy.comfortHeading ?? comfort.heading, subhead: copy.comfortSubhead ?? comfort.subhead }} />
 }
 
 /** The "Why book with us" section for a destination (place) page. */
@@ -601,7 +534,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   }
 
   if (section.type === "benefits") {
-    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={whyBookCards(page)} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
+    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={whyBookCards(page)} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div>{airportCopy(page).benefitsClosing && <p className="airport-benefits-closing">{airportCopy(page).benefitsClosing}</p>}</div></section>
   }
 
   if (section.type === "fleet_pricing") {
