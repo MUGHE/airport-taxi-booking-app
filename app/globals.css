@@ -1285,6 +1285,17 @@ footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weig
 
 html:has(.faq-page) { scroll-behavior: smooth; }
 
+/* An introduction with a long heading and two paragraphs: smaller heading, wider copy, and the photo stretched to the copy's height. */
+.airport-introduction-long .airport-introduction-copy h2 { max-width: 22ch; font-size: clamp(1.9rem, 3.2vw, 2.75rem); }
+.airport-intro-points { display: grid; gap: .6rem; margin-top: 1.5rem; }
+.airport-intro-points li { display: flex; gap: .65rem; align-items: flex-start; padding: .8rem 1rem; border: 1px solid #e1e8ef; border-radius: var(--airport-radius-md); background: #fff; color: #4b5d70; font-size: .9rem; line-height: 1.5; }
+.airport-intro-points svg { flex: none; width: 1.25rem; height: 1.25rem; margin-top: .05rem; padding: .2rem; border-radius: 999px; background: var(--airport-blue); color: #fff; stroke-width: 3; }
+.airport-intro-points strong { margin-right: .35rem; color: var(--airport-ink); }
+@media (min-width: 900px) {
+  .airport-introduction-long .airport-introduction-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: stretch; }
+  .airport-introduction-long .airport-introduction-media { min-height: 100%; }
+}
+
 /* Airport-page cards with booking buttons (Heathrow terminals, towns, airports and ports). */
 .airport-travel-info-intro > h2 + p, .airport-travel-info-intro > p + p { margin-top: 1rem; color: #617285; line-height: 1.7; }
 .airport-card-group-title { margin-top: 2.5rem; color: var(--airport-ink); font-size: 1.15rem; font-weight: 700; }
