@@ -1285,7 +1285,7 @@ footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weig
 
 html:has(.faq-page) { scroll-behavior: smooth; }
 
-/* Airport-page cards with booking buttons: Heathrow terminals, towns, airports and ports. */
+/* Airport-page cards with booking buttons (Heathrow terminals, towns, airports and ports). */
 .airport-travel-info-intro > h2 + p, .airport-travel-info-intro > p + p { margin-top: 1rem; color: #617285; line-height: 1.7; }
 .airport-card-group-title { margin-top: 2.5rem; color: var(--airport-ink); font-size: 1.15rem; font-weight: 700; }
 .airport-card-grid { display: grid; gap: 1rem; margin-top: 1.25rem; }
@@ -1298,8 +1298,6 @@ html:has(.faq-page) { scroll-behavior: smooth; }
 .airport-info-card-badge { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border-radius: 999px; background: var(--airport-blue); color: #fff; font-size: .85rem; font-weight: 800; }
 .airport-info-card-icon { display: grid; flex: none; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 999px; background: #eaf3fc; color: var(--airport-blue); }
 .airport-info-card-icon svg { width: 1.2rem; height: 1.2rem; }
-.airport-info-card-wide { flex-direction: row; gap: 1rem; margin-top: 1rem; }
-.airport-info-card-wide > div { display: grid; gap: .6rem; }
 .airport-card-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; padding-top: .35rem; }
 .airport-card-link { display: inline-flex; gap: .35rem; align-items: center; color: var(--airport-blue); font-size: .82rem; font-weight: 700; }
 .airport-card-link svg { width: .9rem; transition: transform .2s ease; }
@@ -1309,6 +1307,7 @@ html:has(.faq-page) { scroll-behavior: smooth; }
 .airport-city-card h4 { display: flex; gap: .5rem; align-items: center; }
 .airport-city-card h4 svg { flex: none; width: 1.1rem; color: var(--airport-blue); }
 .airport-city-card-more { border-style: dashed; background: var(--airport-sky); }
+.airport-info-card-highlight { border-color: #b9d6f0; background: var(--airport-sky); }
 .airport-note { display: flex; gap: .75rem; align-items: flex-start; margin-top: 2rem; padding: 1.1rem 1.25rem; border: 1px solid #f1d38c; border-radius: var(--airport-radius-md); background: #fff8e8; color: #4b3d14; font-size: .92rem; line-height: 1.6; }
 .airport-note svg { flex: none; width: 1.2rem; margin-top: .15rem; color: #b07d10; }
 .airport-pricing-panel { display: grid; gap: 1.25rem; align-items: center; margin-top: 2.5rem; padding: clamp(1.5rem, 4vw, 2.25rem); border: 1px solid rgba(255,255,255,.14); border-radius: var(--airport-radius-xl); background: rgba(255,255,255,.05); }

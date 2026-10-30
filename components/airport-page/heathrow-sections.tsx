@@ -36,7 +36,7 @@ function CardButtons({ primary, secondary }: { primary: { href: string; label: s
 }
 
 /** "Heathrow Airport Information and Travel Guide": the four terminals as cards, then how to get there. */
-export function HeathrowGuideSection() {
+export function HeathrowGuideSection({ page }: { page: AirportPagePresentation }) {
   return (
     <section id="heathrow-terminals" className="airport-travel-info" data-preview-section="travel_information">
       <div className="airport-container">
@@ -56,15 +56,25 @@ export function HeathrowGuideSection() {
           ))}
         </div>
 
-        <article className="airport-info-card airport-info-card-wide">
-          <span className="airport-info-card-icon"><TrainFront aria-hidden="true" /></span>
-          <div>
-            <h4>Getting to Heathrow Airport</h4>
-            <p>By road, Heathrow is reached via the M4 and M25. You can also use the Heathrow Express, the Elizabeth line or the Piccadilly line.</p>
-            <p>Public transport is a good option for light travellers. But when you have several suitcases, children, business equipment, or a group, a private taxi is much more convenient.</p>
+        <h3 className="airport-card-group-title">Getting to Heathrow Airport</h3>
+        <div className="airport-card-grid airport-card-grid-3">
+          <article className="airport-info-card">
+            <span className="airport-info-card-icon"><Car aria-hidden="true" /></span>
+            <h4>By road</h4>
+            <p>By road, Heathrow is reached via the M4 and M25. When you have several suitcases, children, business equipment, or a group, a private taxi is much more convenient.</p>
+          </article>
+          <article className="airport-info-card">
+            <span className="airport-info-card-icon"><TrainFront aria-hidden="true" /></span>
+            <h4>By rail and Underground</h4>
+            <p>You can also use the Heathrow Express, the Elizabeth line or the Piccadilly line. Public transport is a good option for light travellers.</p>
+          </article>
+          <article className="airport-info-card airport-info-card-highlight">
+            <span className="airport-info-card-icon"><MapPin aria-hidden="true" /></span>
+            <h4>Door-to-door by taxi</h4>
             <p>With One Airport Taxi, your journey is door-to-door. We take you from your home, hotel, or office straight to your terminal.</p>
-          </div>
-        </article>
+            <CardButtons primary={{ href: page.bookingLinks.toAirport, label: "Get my fixed price" }} />
+          </article>
+        </div>
       </div>
     </section>
   )
