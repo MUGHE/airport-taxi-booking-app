@@ -7,6 +7,7 @@ import { PublicPageServiceError } from "@/components/airport-page/public-page-se
 import { getGoogleRating } from "@/lib/google-rating"
 import { getStopPricing } from "@/lib/actions"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
+import { HEATHROW_SEO, HEATHROW_SLUG } from "@/lib/heathrow-page"
 
 // Cached and rebuilt in the background at most every 5 minutes; publishing in the CMS refreshes it straight away.
 export const revalidate = 300
@@ -49,10 +50,22 @@ const nonPublicMetadata: Metadata = {
   alternates: { canonical: null },
 }
 
+// Heathrow's title and description come from its content brief and replace the CMS ones. The title is
+// used as written, without the brand suffix the layout would add.
+function heathrowMetadata(seo: AirportPageSeo): Metadata {
+  const metadata = pageMetadata({ ...seo, description: HEATHROW_SEO.description })
+  return {
+    ...metadata,
+    title: { absolute: HEATHROW_SEO.title },
+    openGraph: { ...metadata.openGraph, title: HEATHROW_SEO.title },
+    twitter: { ...metadata.twitter, title: HEATHROW_SEO.title },
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const publishedRead = await readPublicAirportPage(slug)
-  if (publishedRead.status === "published" || publishedRead.status === "fallback") return pageMetadata(publishedRead.page.metadata)
+  if (publishedRead.status === "published" || publishedRead.status === "fallback") return slug === HEATHROW_SLUG ? heathrowMetadata(publishedRead.page.metadata) : pageMetadata(publishedRead.page.metadata)
 
   return nonPublicMetadata
 }
@@ -63,7 +76,7 @@ export default async function AirportPage({ params }: { params: Promise<{ slug: 
   if (redirectSlug === "airport-transfers") permanentRedirect("/airport-transfers")
   if (redirectSlug) permanentRedirect(`/airport-transfers/${redirectSlug}`)
   const [publishedRead, googleRating, stopPricing] = await Promise.all([readPublicAirportPage(slug), getGoogleRating(), getStopPricing()])
-  if (publishedRead.status === "published" || publishedRead.status === "fallback") return <><AirportPageStructuredData seo={publishedRead.page.metadata} /><AirportPageRenderer page={publishedRead.page.presentation} canonicalPath={publishedRead.page.metadata.canonical} googleRating={googleRating} stopPricing={stopPricing} /></>
+  if (publishedRead.status === "published" || publishedRead.status === "fallback") return <><AirportPageStructuredData seo={slug === HEATHROW_SLUG ? { ...publishedRead.page.metadata, description: HEATHROW_SEO.description } : publishedRead.page.metadata} /><AirportPageRenderer page={publishedRead.page.presentation} canonicalPath={publishedRead.page.metadata.canonical} googleRating={googleRating} stopPricing={stopPricing} /></>
 
   if (publishedRead.status === "unavailable") return <PublicPageServiceError retryHref={`/airport-transfers/${slug}`} />
 

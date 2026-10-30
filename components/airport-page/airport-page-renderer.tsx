@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   Banknote,
   BatteryCharging,
-  Car,
   Check,
   DoorOpen,
   GlassWater,
@@ -19,7 +18,6 @@ import {
   Ship,
   SlidersHorizontal,
   Star,
-  TrainFront,
   UsersRound,
 } from "lucide-react"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
@@ -33,6 +31,8 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
+import { HeathrowAirportRoutesSection, HeathrowCitiesSection, HeathrowGuideSection, HeathrowPortsSection, HeathrowPricing, HeathrowTerminalTransfersSection, HeathrowTravellersSection } from "@/components/airport-page/heathrow-sections"
+import { HEATHROW_VEHICLE_TEXT } from "@/lib/heathrow-page"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
 import { CALL_NUMBER, WHATSAPP_LINK } from "@/lib/contact"
@@ -192,33 +192,93 @@ type AirportCopy = {
   travelInfo?: { heading: string; lead: string; cards: InfoCard[]; closing: string }
   /** Overrides the default driver vetting section shown after the pickup guide. */
   drivers?: { heading: string; paragraphs: string[]; checks: string[] }
+  /** Replaces the "Get a free instant quote" line under the hero intro (the phone number follows it). */
+  heroCallText?: string
+  /** Replaces the CMS introduction heading, copy and button. */
+  intro?: { heading: string; paragraphs: React.ReactNode[]; cta: string }
+  /** Replaces the fleet heading and copy; `descriptions` is keyed by vehicle id. */
+  fleet?: { heading: string; paragraphs: React.ReactNode[]; closing: string; descriptions: Record<string, string>; pricing?: React.ComponentType<{ page: AirportPagePresentation }> }
+  /** Replaces the pickup guide copy beside the terminal map. */
+  pickup?: { heading: string; lead: string[]; stepsHeading: string; steps: { title: string; text: string }[]; dropHeading: string; dropText: string }
+  /** Replaces the final call to action copy. */
+  final?: { heading: string; paragraphs: React.ReactNode[]; tagline: string }
+  comfortOrder?: number
+  /** Airport-only sections placed into the page's reading order. */
+  extraSections?: { key: string; order: number; Component: React.ComponentType<{ page: AirportPagePresentation }> }[]
+  /** CMS sections this airport's own sections replace. */
+  hiddenSections?: AirportPageContentSection["type"][]
 }
 
+const linkClass = "font-semibold text-primary underline decoration-primary/30 underline-offset-4"
+
 const AIRPORT_COPY: Record<string, AirportCopy> = {
+  // From the client's Heathrow content brief; routes, terminals and ports live in lib/heathrow-page.ts.
   Heathrow: {
-    heroHeading: "Reliable Heathrow Transfers - to and from Airport",
-    heroSubhead: "Book a reliable taxi to Heathrow Airport with One Airport Taxi and travel at a fixed price agreed in advance. Whether you need a Heathrow airport taxi to Terminal 2, 3, 4 or 5, or a taxi from Heathrow to London and beyond, we track your flight, meet you on arrival and include up to 60 minutes of complimentary waiting time. Choose from saloon cars, executive cars, MPVs and 8-seater minibuses, with no hidden fees.",
+    heroHeading: "Heathrow Airport Taxi – Reliable Transfers to and from LHR",
+    heroSubhead: "Book a taxi to Heathrow Airport or arrange a comfortable transfer from Heathrow into London or other UK destinations. One Airport Taxi lets you pre-book your airport transfer, with fares fixed before you travel. Our professional, licensed drivers offer a choice of saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re travelling alone, with family, or in a group, you can choose the vehicle that fits your passengers and luggage. This way, you get to Heathrow with no surprises.",
     heroCallLine: true,
-    travelInfo: {
-      heading: "Heathrow Airport Taxis and Transfers",
-      lead: "Located in West London, Heathrow is the UK’s busiest airport and one of the busiest in the world, serving over 80 million passengers a year across four terminals. Book online for a reliable ride, Meet and Greet service, and free waiting time for flight delays.",
-      cards: [
-        { icon: TrainFront, title: "Key Travel Info", items: [
-          "Airports nearby: London City Airport (22 miles) and Gatwick Airport (40 miles).",
-          "Rail links: Heathrow Express (15 mins to Paddington), Elizabeth line (45 mins to Central London), and the Piccadilly line serve all terminals.",
-          "Road access: M25 (Junctions 14 & 15) for routes across the UK, M4 for direct city access, and A4 Bath Road for the northern terminals.",
-          "Drop-off charges included: Heathrow charges £7 per drop-off at the terminal forecourts (10-minute max stay). When you book with us, the drop-off charge is already included in your fixed fare — no surprise fees at the airport.",
-        ] },
-        { icon: Car, title: "Driving Times to Major Cities", items: [
-          "Oxford: 1 hour 10 minutes – 1 hour 40 minutes (51 miles)",
-          "Cambridge: 1 hour 25 minutes – 2 hours 20 minutes (70 miles)",
-          "Brighton: 1 hour 10 minutes – 1 hour 40 minutes (64 miles)",
-          "Southampton: 1 hour 10 minutes – 1 hour 50 minutes (64 miles)",
-          "Bristol: 1 hour 40 minutes – 2 hours 20 minutes (105 miles)",
-        ] },
+    heroCallText: "Get your free instant Heathrow taxi quote online and have the journey planned before you set off, or call our team on",
+    intro: {
+      heading: "Heathrow Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        <>Arranging a reliable Heathrow taxi shouldn’t be complicated. With One Airport Taxi, you can plan your trip, enter your pickup and drop-off details, and see your fare before you commit. So whether you need a <Link className={linkClass} href="#heathrow-destinations">taxi to Heathrow from London</Link>, a private transfer from Slough or <Link className={linkClass} href="/destinations/reading-taxi">Reading</Link>, or a pickup from the airport to your home, hotel or office, every journey is pre-booked and built around your plans.</>,
+        <>We cover all four operational passenger terminals: <Link className={linkClass} href="#heathrow-terminals">Terminal 2, 3, 4 and 5</Link>. Choose your <Link className={linkClass} href="#vehicles">vehicle</Link>, add your flight details, and set up your pickup in advance. The price you’re quoted is the price you pay. This means you can budget for your journey with no meter running and no unexpected costs at the end. Whether it’s a single airport run, a family holiday, or a long-distance transfer, booking with us is simple.</>,
       ],
-      closing: "From early morning departures at Terminal 5 to late-night long-haul arrivals, book your Heathrow Airport taxi in advance for a fixed fare and a driver ready and waiting — no matter what time you fly.",
+      cta: "Get Your Heathrow Taxi Quote",
     },
+    benefitsHeading: "Why Choose One Airport Taxi for Heathrow Airport Transfers?",
+    benefitsSubhead: "The right airport taxi service makes a difference to the whole journey, not just the drive. We focus on clear pricing, planned pickups, comfortable cars and support that actually answers.",
+    fleet: {
+      heading: "Heathrow Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle matters when you’re booking a taxi to Heathrow or arranging a transfer from it. Think about both seats and suitcase space before you choose.",
+        "We run a range of vehicles, from everyday airport runs to executive travel and group transport.",
+      ],
+      closing: "Pick your vehicle based on how many people and how much luggage you have. Make sure to check the capacity details before you confirm your booking.",
+      descriptions: HEATHROW_VEHICLE_TEXT,
+      pricing: HeathrowPricing,
+    },
+    pickup: {
+      heading: "Taxi from Heathrow Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at Heathrow after a long flight? Pre-booking your taxi takes the stress out of whatever comes next.",
+        "We provide pickups from Terminals 2, 3, 4 and 5. Give us your flight number, arrival date and destination when you book, and we’ll plan the journey around your flight.",
+      ],
+      stepsHeading: "How Your Heathrow Airport Pickup Works",
+      steps: [
+        { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." },
+        { title: "Follow the arrival signs.", text: "Once you’ve landed, follow signs for passport control and baggage reclaim. Your booking confirmation has your specific driver meeting instructions." },
+        { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." },
+        { title: "Head to your destination.", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
+      ],
+      dropHeading: "Heathrow Airport Drop-Off Service",
+      dropText: "Travelling into Heathrow from London or elsewhere in the UK? Your driver takes you to the correct terminal drop-off area. Just make sure you’ve given the right terminal, and leave room in your timing for traffic, check-in and security.",
+    },
+    comfort: {
+      ...defaultComfort("Heathrow"),
+      heading: "Comfortable Heathrow Airport Transfers with Thoughtful Extras",
+      subhead: "The journey should be comfortable from the moment you’re picked up to the moment you’re dropped off. A few extras help.",
+    },
+    comfortOrder: 75,
+    final: {
+      heading: "Book Your Heathrow Airport Taxi with One Airport Taxi",
+      paragraphs: [
+        "Whether it’s a taxi to Heathrow, a pickup from Heathrow into London, or a long-distance transfer, we’ll help you plan it.",
+        <>Choose your vehicle, enter your travel details, and see your fare before you confirm. With pre-booked transfers, licensed drivers, flight monitoring, and <Link className="font-semibold text-white underline underline-offset-4" href="/Contact-Us">24/7 support</Link>, we make sure your Heathrow journey is taken care of so you can focus on your trip.</>,
+      ],
+      tagline: "Your journey starts with a clear price.",
+    },
+    finalChip: "All terminals",
+    extraSections: [
+      { key: "heathrow-guide", order: 42, Component: HeathrowGuideSection },
+      { key: "heathrow-terminal-transfers", order: 44, Component: HeathrowTerminalTransfersSection },
+      { key: "heathrow-travellers", order: 62, Component: HeathrowTravellersSection },
+      { key: "heathrow-cities", order: 64, Component: HeathrowCitiesSection },
+      { key: "heathrow-airports", order: 66, Component: HeathrowAirportRoutesSection },
+      { key: "heathrow-ports", order: 68, Component: HeathrowPortsSection },
+    ],
+    // The city, airport and port sections above cover the CMS routes and cruise sections.
+    hiddenSections: ["ferry_cruise", "related_destinations"],
   },
   // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
   "London City": {
@@ -279,7 +339,7 @@ function AirportHeroCopy({ page, canonicalPath, googleRating }: { page: AirportP
         <h1>{airportCopy(page).heroHeading ?? <>{page.shortName} Airport Taxi &amp; Transfers</>}</h1>
       </div>
       <p className="airport-hero-intro">{airportCopy(page).heroSubhead ?? <>Fixed-price transfers to and from {page.terminals.length > 1 ? `every ${page.shortName} terminal` : `${page.shortName} Airport`}. We track your flight and confirm your fare before you pay.</>}</p>
-      {airportCopy(page).heroCallLine && <p className="airport-hero-call">Get a free instant {page.shortName} taxi quote today, or call our team on <a href={`tel:${CALL_NUMBER}`}>{CALL_NUMBER}</a> to book.</p>}
+      {airportCopy(page).heroCallLine && <p className="airport-hero-call">{airportCopy(page).heroCallText ?? `Get a free instant ${page.shortName} taxi quote today, or call our team on`} <a href={`tel:${CALL_NUMBER}`}>{CALL_NUMBER}</a>{airportCopy(page).heroCallText ? "." : " to book."}</p>}
       <div className="airport-hero-proof">
         <p className="airport-quote-notes">
           {(airportCopy(page).heroNotes ?? ["No account needed", "No surge pricing", "Free flight tracking"]).map((note) => <span key={note}>{note}</span>)}
@@ -381,20 +441,22 @@ function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation;
         <div className="airport-vehicles-heading">
           <div>
             <p className="airport-eyebrow airport-eyebrow-light">Our fleet</p>
-            <h2 className="text-balance">{headingFor(fleetSection?.title, `The right car for your ${page.shortName} trip`)}</h2>
+            <h2 className="text-balance">{copy.fleet?.heading ?? headingFor(fleetSection?.title, `The right car for your ${page.shortName} trip`)}</h2>
           </div>
         </div>
         <div className="airport-vehicles-intro">
           <div className="airport-vehicles-intro-copy">
-          <p className="airport-vehicles-heading-copy">{airportCopy(page).vehiclesSubhead ?? "Compare seats and luggage space, then pick the car that fits your group."}</p>
-          {fleetSection && fleetHasBody && <div className="mt-4"><LeadAndMore blocks={fleetSection.body} document={fleetSection.bodyDocument} moreLabel={`More about ${page.shortName} fares and vehicles`} /></div>}
+          {copy.fleet ? copy.fleet.paragraphs.map((paragraph, index) => <p key={index} className={`airport-vehicles-heading-copy ${index > 0 ? "mt-3" : ""}`}>{paragraph}</p>) : <p className="airport-vehicles-heading-copy">{copy.vehiclesSubhead ?? "Compare seats and luggage space, then pick the car that fits your group."}</p>}
+          {!copy.fleet && fleetSection && fleetHasBody && <div className="mt-4"><LeadAndMore blocks={fleetSection.body} document={fleetSection.bodyDocument} moreLabel={`More about ${page.shortName} fares and vehicles`} /></div>}
           </div>
           <p className="airport-vehicles-count">{page.vehicles.length} vehicles</p>
         </div>
 
         <div className="landing-fleet-grid">
-          {orderedVehicles.map((vehicle, index) => <VehicleCard key={vehicle.id} vehicle={vehicle} index={index} href={page.bookingLinks.toAirport} bestFor={copy.bestFor?.[vehicle.id]} />)}
+          {orderedVehicles.map((vehicle, index) => <VehicleCard key={vehicle.id} vehicle={vehicle} index={index} href={page.bookingLinks.toAirport} bestFor={copy.bestFor?.[vehicle.id]} description={copy.fleet?.descriptions[vehicle.id]} />)}
         </div>
+        {copy.fleet && <p className="airport-vehicles-heading-copy mt-8">{copy.fleet.closing}</p>}
+        {copy.fleet?.pricing && <copy.fleet.pricing page={page} />}
       </div>
     </section>
   )
@@ -529,7 +591,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   const reversed = index % 2 === 1
   if (section.type === "introduction") {
     // The CMS hero text is appended here unless the hero already shows this airport's own copy (no repeats).
-    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">{page.shortName} transfers at a glance</p><h2>{headingFor(section.title, `${page.shortName} Airport transfers, priced before you book`)}</h2><div className="mt-5"><LeadAndMore blocks={section.body} document={section.bodyDocument} moreLabel={`More about ${page.shortName} transfers`} extra={airportCopy(page).heroSubhead ? undefined : page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.length > 0 ? <div className="space-y-4 text-muted-foreground">{page.intro.map((paragraph) => <p key={paragraph} className="leading-7">{paragraph}</p>)}</div> : undefined} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Get My Fixed Price <ArrowRight className="size-4" /></Button></div>{section.image ? <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" />{terminalsSummary(page) ? <span>Meet &amp; greet at {terminalsSummary(page)}<br /><small>Add it when you book</small></span> : <span>Door-to-door service<br /><small>Planned around your flight</small></span>}</div></div> : <div className="airport-introduction-media"><Image src="/hero-airport-transfer.webp" alt="A driver beside an executive car outside an airport terminal" fill sizes="(min-width: 900px) 50vw, 100vw" className="object-cover" /></div>}</div></section>
+    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">{page.shortName} transfers at a glance</p><h2>{airportCopy(page).intro?.heading ?? headingFor(section.title, `${page.shortName} Airport transfers, priced before you book`)}</h2><div className="mt-5">{airportCopy(page).intro ? <div className="space-y-4 text-left text-muted-foreground">{airportCopy(page).intro!.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="leading-7">{paragraph}</p>)}</div> : <LeadAndMore blocks={section.body} document={section.bodyDocument} moreLabel={`More about ${page.shortName} transfers`} extra={airportCopy(page).heroSubhead ? undefined : page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.length > 0 ? <div className="space-y-4 text-muted-foreground">{page.intro.map((paragraph) => <p key={paragraph} className="leading-7">{paragraph}</p>)}</div> : undefined} />}</div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>{airportCopy(page).intro?.cta ?? "Get My Fixed Price"} <ArrowRight className="size-4" /></Button></div>{section.image ? <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" />{terminalsSummary(page) ? <span>Meet &amp; greet at {terminalsSummary(page)}<br /><small>Add it when you book</small></span> : <span>Door-to-door service<br /><small>Planned around your flight</small></span>}</div></div> : <div className="airport-introduction-media"><Image src="/hero-airport-transfer.webp" alt="A driver beside an executive car outside an airport terminal" fill sizes="(min-width: 900px) 50vw, 100vw" className="object-cover" /></div>}</div></section>
   }
 
   if (section.type === "benefits") {
@@ -543,6 +605,32 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   // Facility cards (food, hotels, Wi-Fi) don't help someone booking a transfer; the pickup guide in
   // the map section answers "where do I meet my driver?" instead.
   if (section.type === "airport_guide") return null
+
+  const pickup = airportCopy(page).pickup
+  if (section.type === "map" && pickup) {
+    return (
+      <section className={`airport-map-chapter ${reversed ? "airport-map-reversed" : ""}`} data-preview-section="map">
+        <div className="airport-container airport-map-grid">
+          <div>
+            <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
+            <h2>{pickup.heading}</h2>
+            {pickup.lead.map((paragraph) => <p key={paragraph} className="airport-map-lead">{paragraph}</p>)}
+            <h3 className="airport-pickup-title">{pickup.stepsHeading}</h3>
+            <ol className="airport-pickup-steps">
+              {pickup.steps.map((step, stepIndex) => <li key={step.title}><span>{stepIndex + 1}</span><p><strong>{step.title}</strong> {step.text}</p></li>)}
+            </ol>
+            <h3 className="airport-pickup-title">{pickup.dropHeading}</h3>
+            <p className="airport-pickup-depart">{pickup.dropText}</p>
+            <div className="airport-card-actions mt-6">
+              <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Book a {page.shortName} pickup <ArrowRight className="size-4" /></Button>
+              <Button variant="secondary" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Book a drop-off</Button>
+            </div>
+          </div>
+          {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
+        </div>
+      </section>
+    )
+  }
 
   if (section.type === "map") {
     return (
@@ -591,17 +679,20 @@ const DRIVERS_ORDER = 55
 const DEFAULT_ORDER = 60
 
 export function AirportPageRenderer({ page, canonicalPath, showFooter = true, googleRating, stopPricing }: { page: AirportPagePresentation; canonicalPath?: string; showFooter?: boolean; googleRating?: GoogleRating | null; stopPricing?: StopPricing }) {
-  const visibleSections = page.sections.filter((section) => section.visible)
+  const copy = airportCopy(page)
+  const hidden = new Set(copy.hiddenSections ?? [])
+  const visibleSections = page.sections.filter((section) => section.visible && !hidden.has(section.type))
   const configuredSectionTypes = new Set(page.sections.map((section) => section.type))
   const rank = (section: AirportPageContentSection) => SECTION_ORDER[section.type] ?? DEFAULT_ORDER
   const orderedSections = visibleSections.map((section, position) => ({ section, position })).sort((a, b) => rank(a.section) - rank(b.section) || a.position - b.position).map(({ section }) => section)
 
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
-  blocks.push([COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
+  for (const { key, order, Component } of copy.extraSections ?? []) blocks.push([order, <Component key={key} page={page} />])
+  blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
   blocks.push([TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
   blocks.push([DRIVERS_ORDER, <DriversSection key="drivers" page={page} />])
   blocks.push([VEHICLES_ORDER, <VehicleSection key="vehicles" page={page} fleetSection={visibleSections.find((section) => section.type === "fleet_pricing")} />])
-  if (!configuredSectionTypes.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
+  if (!configuredSectionTypes.has("related_destinations") && !hidden.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
   if (!configuredSectionTypes.has("reviews")) blocks.push([SECTION_ORDER.reviews!, <ReviewSection key="reviews" page={page} />])
   if (!configuredSectionTypes.has("faq")) blocks.push([SECTION_ORDER.faq!, <FaqSection key="faq" page={page} />])
   blocks.sort((a, b) => a[0] - b[0])
@@ -632,8 +723,8 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
             <div className="airport-final-cta">
               <div className="airport-final-copy">
                 <p className="airport-eyebrow airport-eyebrow-light">{page.shortName} airport transfers</p>
-                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : headingFor(page.finalCta.heading, airportCopy(page).finalHeading ?? (page.terminals.length > 1 ? `Landing at ${page.shortName}? Your driver's ready.` : `Flying into ${page.shortName}? Your driver's ready.`))}</h2>
-                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : finalCtaHasBody ? <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div> : <p>{page.terminals.length > 1 ? "Know who's meeting you, at which terminal and exactly what you'll pay, before you fly." : "Know where your driver will be and exactly what you'll pay, before you even pack. We track your flight and adjust your pickup if you land early or late."}</p>}
+                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : copy.final?.heading ?? headingFor(page.finalCta.heading, copy.finalHeading ?? (page.terminals.length > 1 ? `Landing at ${page.shortName}? Your driver's ready.` : `Flying into ${page.shortName}? Your driver's ready.`))}</h2>
+                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : copy.final ? <div className="space-y-4">{copy.final.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}<p><strong>{copy.final.tagline}</strong></p></div> : finalCtaHasBody ? <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div> : <p>{page.terminals.length > 1 ? "Know who's meeting you, at which terminal and exactly what you'll pay, before you fly." : "Know where your driver will be and exactly what you'll pay, before you even pack. We track your flight and adjust your pickup if you land early or late."}</p>}
                 <div className="airport-final-points">
                   <span><Check aria-hidden="true" /> Fixed fare</span>
                   <span><Check aria-hidden="true" /> Flight tracked</span>
