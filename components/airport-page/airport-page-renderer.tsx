@@ -616,23 +616,33 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   if (section.type === "map" && pickup) {
     return (
       <section className={`airport-map-chapter ${reversed ? "airport-map-reversed" : ""}`} data-preview-section="map">
-        <div className="airport-container airport-map-grid">
-          <div>
-            <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
-            <h2>{pickup.heading}</h2>
-            {pickup.lead.map((paragraph) => <p key={paragraph} className="airport-map-lead">{paragraph}</p>)}
-            <h3 className="airport-pickup-title">{pickup.stepsHeading}</h3>
-            <ol className="airport-pickup-steps">
-              {pickup.steps.map((step, stepIndex) => <li key={step.title}><span>{stepIndex + 1}</span><p><strong>{step.title}</strong> {step.text}</p></li>)}
-            </ol>
-            <h3 className="airport-pickup-title">{pickup.dropHeading}</h3>
-            <p className="airport-pickup-depart">{pickup.dropText}</p>
-            <div className="airport-card-actions mt-6">
-              <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Book a {page.shortName} pickup <ArrowRight className="size-4" /></Button>
-              <Button variant="secondary" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Book a drop-off</Button>
+        <div className="airport-container">
+          <div className="airport-pickup-head">
+            <div>
+              <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
+              <h2>{pickup.heading}</h2>
+            </div>
+            <div>{pickup.lead.map((paragraph) => <p key={paragraph} className="airport-map-lead">{paragraph}</p>)}</div>
+          </div>
+          <div className="airport-pickup-layout">
+            <div>
+              <h3 className="airport-pickup-title">{pickup.stepsHeading}</h3>
+              <ol className="airport-pickup-cards">
+                {pickup.steps.map((step, stepIndex) => <li key={step.title}><span>{String(stepIndex + 1).padStart(2, "0")}</span><h4>{step.title.replace(/\.$/, "")}</h4><p>{step.text}</p></li>)}
+              </ol>
+            </div>
+            <div className="airport-pickup-side">
+              {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
+              <div className="airport-dropoff-card">
+                <h3><PlaneTakeoff aria-hidden="true" />{pickup.dropHeading}</h3>
+                <p>{pickup.dropText}</p>
+                <div className="airport-card-actions">
+                  <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Book a {page.shortName} pickup <ArrowRight className="size-4" /></Button>
+                  <Button variant="secondary" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Book a drop-off</Button>
+                </div>
+              </div>
             </div>
           </div>
-          {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
         </div>
       </section>
     )

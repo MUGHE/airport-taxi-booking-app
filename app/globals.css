@@ -1296,6 +1296,34 @@ html:has(.faq-page) { scroll-behavior: smooth; }
   .airport-introduction-long .airport-introduction-media { min-height: 100%; }
 }
 
+/* Pickup guide with its own copy: heading and intro across the top, step cards beside the map and drop-off card. */
+.airport-pickup-head { display: grid; gap: 1.25rem; }
+.airport-pickup-head h2 { max-width: 24ch; margin-top: .65rem; font-size: clamp(1.9rem, 3.2vw, 2.75rem); }
+.airport-pickup-head .airport-map-lead:first-child { margin-top: 0; }
+.airport-pickup-layout { display: grid; gap: 2rem; margin-top: 2.5rem; }
+.airport-pickup-layout .airport-pickup-title { margin-top: 0; }
+.airport-pickup-cards { display: grid; gap: 1rem; margin-top: 1rem; }
+.airport-pickup-cards li { padding: 1.25rem; border: 1px solid rgba(255,255,255,.12); border-radius: var(--airport-radius-lg); background: rgba(255,255,255,.05); }
+.airport-pickup-cards span { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: 999px; background: var(--airport-blue); color: #fff; font-size: .85rem; font-weight: 800; }
+.airport-pickup-cards h4 { margin-top: .9rem; color: #fff; font-size: 1.05rem; font-weight: 700; }
+.airport-pickup-cards p { margin-top: .4rem; color: rgba(255,255,255,.72); font-size: .9rem; line-height: 1.6; }
+.airport-pickup-side { display: grid; gap: 1rem; align-content: start; }
+/* Same card as .airport-map-grid > div.airport-map-card, which only matches inside the default map layout. */
+.airport-pickup-side > .airport-map-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,.2); border-radius: var(--airport-radius-xl); background: #fff; color: var(--airport-ink); box-shadow: 0 30px 65px rgba(0,0,0,.3); }
+.airport-pickup-side > .airport-map-card .text-muted-foreground { color: #617285; }
+.airport-dropoff-card { display: grid; gap: .75rem; padding: 1.4rem; border: 1px solid rgba(127,195,255,.3); border-radius: var(--airport-radius-lg); background: rgba(7,95,189,.18); }
+.airport-dropoff-card h3 { display: flex; gap: .6rem; align-items: center; color: #fff; font-size: 1.1rem; font-weight: 700; }
+.airport-dropoff-card h3 svg { width: 1.2rem; color: #8bc7ff; }
+.airport-dropoff-card p { color: rgba(255,255,255,.75); font-size: .92rem; line-height: 1.6; }
+@media (min-width: 640px) {
+  .airport-pickup-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+  .airport-pickup-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 3rem; }
+  .airport-pickup-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 2.5rem; }
+  .airport-pickup-side { padding-top: 1.85rem; }
+}
+
 /* Airport-page cards with booking buttons (Heathrow terminals, towns, airports and ports). */
 .airport-travel-info-intro > h2 + p, .airport-travel-info-intro > p + p { margin-top: 1rem; color: #617285; line-height: 1.7; }
 .airport-card-group-title { margin-top: 2.5rem; color: var(--airport-ink); font-size: 1.15rem; font-weight: 700; }
