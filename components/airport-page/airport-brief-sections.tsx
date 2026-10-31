@@ -36,12 +36,12 @@ export type BriefCard = {
 }
 
 export type AirportBrief = {
-  guide: { heading: string; paragraphs: React.ReactNode[]; groups: { title: string; columns: 3 | 4; cards: BriefCard[] }[] }
+  guide: { heading: string; paragraphs: React.ReactNode[]; groups: { title: string; columns: 2 | 3 | 4; cards: BriefCard[] }[] }
   departures: { eyebrow: string; heading: string; paragraphs: React.ReactNode[]; cards: BriefCard[] }
   travellers: { heading: string; lead: string; cards: BriefCard[] }
-  cities: { heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; closing: string; cta: string }
+  cities?: { heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; closing: string; cta: string }
   airports: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; closing?: string }
-  ports: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; note: string }
+  ports?: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; note: string }
 }
 
 export type BriefPricing = { heading: string; paragraphs: string[]; cta: string }
@@ -79,7 +79,7 @@ function Buttons({ buttons }: { buttons: { href: string; label: string }[] }) {
   )
 }
 
-function CardGrid({ page, cards, columns, className = "airport-link-card" }: { page: AirportPagePresentation; cards: BriefCard[]; columns: 3 | 4; className?: string }) {
+function CardGrid({ page, cards, columns, className = "airport-link-card" }: { page: AirportPagePresentation; cards: BriefCard[]; columns: 2 | 3 | 4; className?: string }) {
   return (
     <div className={`airport-card-grid airport-card-grid-${columns}`}>
       {cards.map(({ icon: Icon, badge, title, text, actions, link, highlight }) => (
@@ -135,6 +135,7 @@ export function BriefTravellersSection({ page, brief }: { page: AirportPagePrese
 }
 
 export function BriefCitiesSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+  if (!brief.cities) return null
   const { heading, paragraphs, listHeading, places, closing, cta } = brief.cities
   return (
     <section id={BRIEF_DESTINATIONS_ID} className="airport-comfort" data-preview-section="city_routes">
@@ -197,6 +198,7 @@ export function BriefAirportsSection({ page, brief }: { page: AirportPagePresent
 }
 
 export function BriefPortsSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+  if (!brief.ports) return null
   const { heading, paragraphs, titleFrom, places, note } = brief.ports
   return (
     <section className="airport-comfort" data-preview-section="ferry_cruise">
@@ -211,7 +213,7 @@ export function BriefPortsSection({ page, brief }: { page: AirportPagePresentati
 
 /** The section list for an airport's AIRPORT_COPY entry, in reading order around the CMS sections. */
 export function briefSections(key: string, brief: AirportBrief) {
-  const bind = (Section: typeof BriefGuideSection) => function BriefSection({ page }: { page: AirportPagePresentation }) { return <Section page={page} brief={brief} /> }
+  const bind = (Section: (props: { page: AirportPagePresentation; brief: AirportBrief }) => React.ReactNode) => function BriefSection({ page }: { page: AirportPagePresentation }) { return <Section page={page} brief={brief} /> }
   return [
     { key: `${key}-guide`, order: 42, Component: bind(BriefGuideSection) },
     { key: `${key}-departures`, order: 44, Component: bind(BriefDeparturesSection) },

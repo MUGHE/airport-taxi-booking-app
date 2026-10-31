@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Baby, Banknote, Briefcase, Car, CircleParking, Clock, Headphones, MapPin, PlaneTakeoff, Route, ShieldCheck, TrainFront, UsersRound } from "lucide-react"
+import { Baby, Banknote, Briefcase, Car, CircleParking, Clock, Headphones, Luggage, MapPin, PlaneTakeoff, Route, ShieldCheck, TrainFront, UsersRound } from "lucide-react"
 import { BRIEF_DESTINATIONS_ID, BRIEF_GUIDE_ID, briefSections, type AirportBrief, type BriefPlace } from "@/components/airport-page/airport-brief-sections"
 import type { AirportCopy } from "@/components/airport-page/airport-page-renderer"
 
@@ -221,6 +221,66 @@ const SOUTHEND_BRIEF: AirportBrief = {
   },
 }
 
+const GATWICK_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Gatwick Airport Information and Travel Guide",
+    paragraphs: [
+      "London Gatwick Airport (LGW) sits near Crawley in West Sussex, around 30 miles south of Central London. It’s the UK’s second-busiest airport and a major base for easyJet, British Airways and a long list of long-haul carriers.",
+      "Gatwick has two terminals, North and South, connected by a free 24-hour shuttle. Which one you need depends entirely on your airline — check before you book, because turning up at the wrong one costs you 20 minutes and a lot of dragging.",
+      <>Check your flight details before travelling and allow a proper buffer, particularly in summer. Comparing airports? See our <Link className={linkClass} href="/airport-guide">London airport guide</Link>.</>,
+    ],
+    groups: [
+      { title: "Gatwick Airport Terminals", columns: 2, cards: [
+        { badge: "N", title: "North Terminal", text: "North Terminal handles a mix of short-haul and long-haul services. Check your airline and flight information before travelling to ensure you arrive at the correct terminal." },
+        { badge: "S", title: "South Terminal", text: "South Terminal sits directly above the railway station and handles a large share of the airport’s traffic. Confirm your terminal with your airline before arranging your taxi." },
+      ] },
+      { title: "Gatwick Airport Drop-Off Charges and Parking", columns: 3, cards: [
+        { icon: Banknote, title: "Terminal drop-off charge", text: "Gatwick now charges £10 for 10 minutes in its terminal drop-off zones — the most expensive among London airports — and the fee applies to both the North and South terminals. Blue badge holders are exempt." },
+        { icon: CircleParking, title: "The free alternative", text: "There’s a free alternative in the long-stay car parks, which offer free parking for up to two hours with a shuttle bus to the terminal." },
+        { icon: Car, title: "Included in your fare", text: "With a pre-booked Gatwick Airport taxi, the drop-off charge is included in your fare — one price, no separate payment, no camera-enforced penalty landing on your doormat. Check current rates before you travel, as charges change.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+      { title: "Getting to Gatwick Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, Gatwick is reached via the M23 (junction 9), with the A23 and M25 connecting from the wider network." },
+        { icon: TrainFront, title: "By rail", text: "The Gatwick Express runs from London Victoria in around 30 minutes, with Thameslink and Southern services also calling at Gatwick Airport station, directly beneath South Terminal. Public transport is good here." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A private airport transfer still makes sense with heavy luggage, children, a group, an early flight or a destination well away from a station. With One Airport Taxi, the journey runs door-to-door — from your home, hotel or office straight to the terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Both terminals",
+    heading: "Taxi to Gatwick Airport – North and South Terminal Departures",
+    paragraphs: ["Need a taxi to Gatwick Airport? We run pre-booked transfers to both terminals from London, the South East and across the UK. When booking, select North or South Terminal and add your flight details. It helps us plan the journey and drop you at the right door."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Taxi to Gatwick North Terminal", text: "Arrange a pre-booked taxi to North Terminal for short-haul and long-haul departures. Your driver takes you to the designated terminal drop-off area.", actions: [{ kind: "to", label: "To North Terminal", terminal: "North Terminal" }, { kind: "from", label: "From North Terminal", terminal: "North Terminal" }] },
+      { icon: PlaneTakeoff, title: "Taxi to Gatwick South Terminal", text: "Book a South Terminal taxi from your home, hotel or office. Confirm your airline and terminal before travelling.", actions: [{ kind: "to", label: "To South Terminal", terminal: "South Terminal" }, { kind: "from", label: "From South Terminal", terminal: "South Terminal" }] },
+      { icon: Banknote, title: "Gatwick Airport Departures Drop-Off", text: "Your driver takes you to the terminal drop-off zone, with the airport charge included in your fare. From there, it’s a short walk to check in.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "Gatwick’s first departures leave well before the Gatwick Express starts. Pre-booked taxis are the practical answer — your driver is outside at the agreed time, whatever the hour.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+    ],
+  },
+  travellers: {
+    heading: "Gatwick Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Different passengers have different airport transportation requirements. We offer vehicle options and pre-booked journeys for a range of travel needs.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Choose a vehicle with suitable capacity. You can request a child seat when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "Arrange a professional Gatwick Airport taxi for business meetings, corporate travel and airport connections. Executive vehicles are available for a more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Travelling with friends, colleagues or an extended family? Our MPVs and 8-seater minibuses provide options for larger groups. Check luggage capacity before confirming.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Luggage, title: "Cruise and Long-Haul Transfers", text: "Gatwick handles a lot of cruise and long-haul traffic, which usually means serious luggage. Book an estate, MPV or minibus if you’re travelling with more than one case each.", link: { href: "#vehicles", label: "See estates and MPVs" } },
+    ],
+  },
+  airports: {
+    heading: "Gatwick to Other London Airports: Private Airport Transfers",
+    paragraphs: ["Connecting flights often leave little time to spare. By booking a private transfer in advance, you can travel straight between airports without having to carry your bags through London by train."],
+    titleFrom: "Gatwick",
+    places: [
+      { ...AIRPORTS.heathrow, text: "Looking for a taxi from Gatwick to Heathrow? Book a direct private airport transfer with a vehicle that fits your group and luggage. Be sure to allow enough time for the M25 journey." },
+      { ...AIRPORTS.luton, text: "Traveling from Gatwick to Luton? Book your airport transfer in advance, see your fare before you confirm, and enjoy a comfortable trip on the M25." },
+      { ...AIRPORTS.stansted, text: "Book a reliable private transfer from Gatwick to Stansted with professional drivers, comfortable vehicles, and a confirmed fare before you travel." },
+      { ...AIRPORTS.londonCity, text: "Book your Gatwick to London City Airport transfer in advance and travel comfortably in a vehicle that fits your group and luggage. You’ll know your fare before you confirm your booking." },
+      { ...AIRPORTS.southend, text: "Need to get from Gatwick to Southend Airport? Book your private airport transfer in advance, with a vehicle that fits your luggage and a confirmed fare before you travel." },
+    ],
+  },
+}
+
 const PICKUP_STEP_ONE = { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." }
 const MEET_DRIVER_STEP = { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." }
 
@@ -294,6 +354,108 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     extraSections: briefSections("heathrow", HEATHROW_BRIEF),
     // The city, airport and port sections cover the CMS routes and cruise sections.
     hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+
+  Gatwick: {
+    heroHeading: "Gatwick Airport Taxi – Reliable Transfers to and from LGW",
+    heroSubhead: "Book a Gatwick Airport taxi and get a fixed fare confirmed before you travel. One Airport Taxi runs pre-booked Gatwick Airport transfers from London, Surrey, Sussex, and towns across the UK, with professional, licensed drivers and a choice of saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re travelling alone, with family or as a group, choose the vehicle that suits your passengers and luggage — then leave the driving to us.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant Gatwick Airport taxi quote online and plan your journey before you travel, or call our team on",
+    intro: {
+      heading: "Gatwick Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Arranging a reliable taxi to Gatwick Airport should be straightforward. With One Airport Taxi, you plan, enter your pickup and drop-off details, and receive your fare before confirming your booking.",
+        "Whether you need a taxi to Gatwick Airport from London, a private transfer from Crawley or Brighton, or a taxi from Gatwick Airport to your home, hotel or business address, we provide pre-booked journeys designed around your travel plans.",
+        <>Gatwick has two terminals — <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>North and South</Link> — linked by a free automated shuttle, so choosing the right terminal matters. Please tell us which one when you book, add your flight number, and we’ll plan the pickup around your arrival.</>,
+        <>Your quoted fare is confirmed before you travel so that you can plan your costs without unexpected changes. From a single airport run to a <Link className={linkClass} href="#vehicles">family holiday</Link> or a <Link className={linkClass} href="/destinations">long-distance transfer</Link>, booking your Gatwick journey is simple.</>,
+      ],
+      cta: "Get Your Gatwick Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "Receive your fare before confirming." },
+        { title: "Two terminals", text: "North and South, linked by a free shuttle." },
+        { title: "No unexpected changes", text: "Your quoted fare is confirmed before you travel." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Gatwick Airport Transfers?",
+    benefitsSubhead: "Choosing the right airport taxi service makes a difference to your entire journey. We focus on clear pricing, planned pickups, comfortable vehicles, and helpful support.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "Know your journey cost before confirming your Gatwick Airport taxi booking. Our fixed-fare approach means no meter-based pricing and no unexpected fare changes. Check the fare details and included charges before booking." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We monitor your flight information to help coordinate your pickup. If your arrival time changes, our team uses the updated details to plan your collection." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Travel with professional, licensed drivers who understand punctuality, safe driving, and good customer service. Our drivers aim to make every airport journey comfortable and straightforward." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when booking, and your driver can meet you inside the arrivals area at the agreed meeting point, subject to the service selected and your booking details." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flight schedules don’t fit standard working hours. Our support team is available around the clock for booking enquiries and journey questions." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Choose from saloon cars, executive vehicles, estate cars, MPVs, and 8-seater minibuses, based on passenger and luggage needs. Gatwick carries a lot of long-haul and cruise traffic, so luggage tends to be heavy — check boot space." },
+    ],
+    fleet: {
+      heading: "Gatwick Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle matters when booking a taxi to Gatwick Airport or arranging a transfer from it. Consider passenger capacity and luggage space before selecting your car.",
+        "We offer a range of vehicles, from everyday airport transfers to executive journeys and group transportation.",
+      ],
+      closing: "Choose your vehicle based on your passenger count and luggage needs. Check the details before confirming.",
+      descriptions: {
+        standard: "A practical choice for individuals, couples and small groups with standard luggage. Suitable for everyday airport journeys.",
+        executive: "A suitable option for business travellers and passengers who prefer a premium experience. Ideal for corporate airport transfers.",
+        estate: "An estate provides additional luggage space compared with a standard saloon — useful for several suitcases.",
+        mpv_4seater: "A spacious option for families and small groups needing extra passenger and luggage capacity.",
+        mpv: "Suitable for larger families and small groups, with additional passenger capacity. Luggage allowance depends on the number of people travelling.",
+        minibus_8seater: "A convenient option for larger groups, group holidays and business transportation. Up to eight passengers with suitable luggage capacity.",
+      },
+      pricing: {
+        heading: "Fixed Gatwick Airport Taxi Prices",
+        paragraphs: [
+          "Your Gatwick taxi quote is provided before you confirm your journey. Enter your pickup location, destination, travel date, and passenger requirements to check your available fare.",
+          "Our pricing is designed to make airport taxi costs easier to understand, helping you compare vehicles and plan your trip.",
+        ],
+        cta: "Compare Gatwick Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Gatwick Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Arriving at Gatwick after a long flight? Pre-booking your Gatwick Airport taxi makes the next part of your journey easier.",
+        "We provide airport pickups from both North and South terminals. Give us your flight number, arrival date and destination when you book.",
+      ],
+      stepsHeading: "How Your Gatwick Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "After landing, follow signs for passport control and baggage reclaim. Check your booking confirmation for your specific driver meeting instructions." },
+        { title: "Meet your driver.", text: "If you’ve selected Meet and Greet, your driver will meet you at the agreed-upon arrival meeting point. Otherwise, follow the pickup instructions supplied with your booking." },
+        { title: "Head to your destination.", text: "Once you’ve met your driver, continue to your home, hotel, business address or another UK destination." },
+      ],
+      dropHeading: "Gatwick Airport Drop-Off Service",
+      dropText: "Travelling into Gatwick from London or elsewhere? Your driver takes you to the correct terminal drop-off area and covers the airport charge. Make sure you’ve provided the correct terminal and flight details, and allow time for traffic on the M23 and security checks.",
+    },
+    travelInfo: {
+      heading: "Gatwick Airport Taxis and Transfers",
+      lead: [
+        "London Gatwick Airport is in West Sussex, about 30 miles south of Central London. It’s one of the UK’s busiest airports, with flights to many destinations. If you need to get to the airport for an early flight or need a taxi after you land, One Airport Taxi offers reliable pre-booked transfers with professional drivers, comfortable cars, and clear prices.",
+        "You can book your Gatwick Airport taxi online and get Meet and Greet service, flight monitoring, and up to 60 minutes of free waiting time for pickups. When you pre-book with One Airport Taxi, the drop-off charge is already included in your fare, so you won’t have to pay extra at the airport.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Location: London Gatwick Airport is near Crawley in West Sussex, about 30 miles south of Central London by road, depending on where you are going.",
+          "Nearby London Airports: Heathrow is about 40 to 45 miles away by road. London City Airport is around 45 to 50 miles away. Luton is about 70 to 75 miles away, and Stansted is around 70 to 80 miles away. The exact distance depends on your route and terminal.",
+          "Nearest Rail Link: Gatwick Airport railway station is right across from the South Terminal, making it easy to reach from the terminal building. The Gatwick Express takes you to London Victoria in about 30 minutes, and other trains connect to London and the South East.",
+          "Road Access: You can reach the airport via the M23 at Junction 9, with links to the M25, A23, and other main roads. These routes connect you to London, Brighton, Crawley, and other places in the South East.",
+          "Drop-Off Charge: Gatwick charges £10 for 10 minutes in its designated drop-off zones. This charge increased from £7 on 6 January 2026. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare, so you won’t have to pay anything extra at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities from Gatwick Airport", items: [
+          "London (Central): Approximately 1 hour 15 minutes–2 hours (30 miles).",
+          "Brighton: Approximately 35–50 minutes (29 miles).",
+          "Chichester: Approximately 1 hour–1 hour 25 minutes (45 miles).",
+          "Portsmouth: Approximately 1 hour 15 minutes–1 hour 45 minutes (60 miles).",
+          "Oxford: Approximately 1 hour 30 minutes–2 hours 10 minutes (80 miles).",
+          "Distances are approximate and measured by road to central destinations. Actual journey times may vary based on your specific destination, traffic, roadworks, and chosen route.",
+        ] },
+      ],
+      closing: "Whether you are traveling from the South Terminal or heading to Brighton via the A23, your Gatwick Airport fare is fixed at the time of booking. There are no surcharges or metered rates.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("gatwick", GATWICK_BRIEF),
+    // The airport cards cover the CMS routes (Heathrow, Luton, Stansted); the CMS cruise section stays, as this brief has no ports.
+    hiddenSections: ["related_destinations"],
   },
 
   Southend: {

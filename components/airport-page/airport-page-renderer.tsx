@@ -189,7 +189,8 @@ export type AirportCopy = {
   /** Overrides the default on-board comfort cards shown after "Why book with us". */
   comfort?: { heading: string; subhead: string; cards: { icon: typeof Banknote; title: string; text: string }[] }
   /** Local travel facts as cards, shown before the pickup guide. */
-  travelInfo?: { heading: string; lead: string; cards: InfoCard[]; closing: string }
+  travelInfo?: { heading: string; lead: string | string[]; cards: InfoCard[]; closing: string }
+  travelInfoOrder?: number
   /** Overrides the default driver vetting section shown after the pickup guide. */
   drivers?: { heading: string; paragraphs: string[]; checks: string[] }
   /** Replaces the "Get a free instant quote" line under the hero intro (the phone number follows it). */
@@ -214,7 +215,7 @@ export type AirportCopy = {
   hiddenSections?: AirportPageContentSection["type"][]
 }
 
-// Airports rewritten from a client content brief (Heathrow, Southend) live in airport-briefs.tsx.
+// Airports rewritten from a client content brief (Heathrow, Gatwick, Southend) live in airport-briefs.tsx.
 const AIRPORT_COPY: Record<string, AirportCopy> = {
   ...BRIEF_COPY,
   // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
@@ -462,7 +463,7 @@ function TravelInfoSection({ page }: { page: AirportPagePresentation }) {
   return (
     <section className="airport-travel-info" data-preview-section="travel_information">
       <div className="airport-container">
-        <div className="airport-travel-info-intro"><p className="airport-eyebrow">Plan your journey</p><h2>{info.heading}</h2><p>{info.lead}</p></div>
+        <div className="airport-travel-info-intro"><p className="airport-eyebrow">Plan your journey</p><h2>{info.heading}</h2>{[info.lead].flat().map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
         <div className="airport-travel-info-grid">
           {info.cards.map(({ icon: Icon, title, items }) => (
             <article key={title} className="airport-travel-info-card">
@@ -638,7 +639,7 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
   for (const { key, order, Component } of copy.extraSections ?? []) blocks.push([order, <Component key={key} page={page} />])
   blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
-  blocks.push([TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
+  blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
   blocks.push([DRIVERS_ORDER, <DriversSection key="drivers" page={page} />])
   blocks.push([VEHICLES_ORDER, <VehicleSection key="vehicles" page={page} fleetSection={visibleSections.find((section) => section.type === "fleet_pricing")} />])
   if (!configuredSectionTypes.has("related_destinations") && !hidden.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
