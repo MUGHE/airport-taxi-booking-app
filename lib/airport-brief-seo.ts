@@ -13,6 +13,10 @@ export const AIRPORT_BRIEF_SEO: Record<string, { title: string; description: str
     title: "Stansted Airport Taxi | Fixed Price Transfers to & from STN",
     description: "Book a Stansted Airport taxi with fixed fares confirmed before you travel. Licensed drivers, flight tracking, meet-and-greet, and 8-seater minibuses. Instant quote.",
   },
+  "luton-airport-taxi": {
+    title: "Luton Airport Taxi | Fixed Price Transfers to & from LTN",
+    description: "Book your Luton Airport taxi with a fixed fare confirmed before you travel. Our licensed drivers offer flight tracking, meet-and-greet service, and 8-seater minibuses. Get an instant quote.",
+  },
   "southend-airport-taxi": {
     title: "Southend Airport Taxi | Fixed Price Transfers to & from SEN",
     description: "Book a Southend Airport taxi with fixed fares confirmed before you travel. Licensed drivers, flight tracking, meet-and-greet, and 8-seater minibuses. Get an instant quote.",

@@ -340,6 +340,65 @@ const STANSTED_BRIEF: AirportBrief = {
   },
 }
 
+const LUTON_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Luton Airport Information and Travel Guide",
+    paragraphs: [
+      "London Luton Airport (LTN) sits in Bedfordshire, around 35 miles north of Central London. It’s one of the UK’s busiest airports for short-haul and package-holiday traffic, with a single main passenger terminal and a steady flow of early-morning departures.",
+      "The airport serves a wide range of European and domestic routes across several airlines. Check your airline and flight details before travelling.",
+      <>Give yourself plenty of time for check-in and security, especially during summer and busy weekends. Luton can get crowded. Comparing airports? See our <Link className={linkClass} href="/airport-guide">London airport guide</Link>.</>,
+    ],
+    groups: [
+      { title: "Luton Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "One main passenger terminal", text: "Luton has one main passenger terminal. Departures, arrivals, shops, and food are all in the same building, and the drop-off area is a short walk from the entrance." },
+        { icon: Clock, title: "Before you travel", text: "Confirm your flight time and terminal with your airline before you arrange your taxi, and leave enough time to reach the airport and clear security." },
+      ] },
+      { title: "Luton Airport Drop-Off Charges and Parking", columns: 3, cards: [
+        { icon: Banknote, title: "Dedicated drop-off zone", text: "Luton charges a fee for its dedicated drop-off zone, with higher rates if you stay longer than the included minutes." },
+        { icon: CircleParking, title: "Official car parks", text: "There are also several official car parks, from short-stay to long-stay, with shuttle buses to the terminal." },
+        { icon: Car, title: "Included in your fare", text: "This is where a pre-booked taxi from Luton Airport is worth it. You pay a single fixed fare; the airport charge is included, and there’s no need to worry about parking or catching a shuttle bus.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+      { title: "Getting to Luton Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, Luton is reached via the M1 (Junction 10), with the A1081 and A505 providing local connections." },
+        { icon: TrainFront, title: "By rail", text: "Thameslink and East Midlands services run to Luton Airport Parkway, with the Luton DART to the terminal — around 35 minutes from St Pancras. Public transport is a good option if you’re traveling light." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A private taxi is especially useful if you have luggage, an early flight before the first train, or a group that would otherwise need more than one car. With One Airport Taxi, your journey is door-to-door, taking you from your home, hotel, or office straight to the terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Luton Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Luton Airport? We run pre-booked transfers to the terminal from London, Bedfordshire, Hertfordshire and across the UK. When booking, add your flight details where asked. It helps us plan the journey and time the drop-off around your check-in."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Luton Airport Departures Drop-Off", text: "Your driver will take you to the terminal drop-off area, and the airport charge is included in your booking. There’s no need for a separate card payment or ticket machine.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "Luton’s first wave of departures means leaving home in the small hours. Pre-booked taxis are the practical answer: your driver is outside at the agreed time, whatever the hour.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "Group and Family Departures", text: "Travelling with the whole family or a group of friends? Book an MPV or 8-seater minibus and keep everyone together, with luggage space to match. Cheaper than two cars and far less faff.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Luton Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Different passengers have different airport transportation requirements. We offer vehicle options and pre-booked journeys for a range of travel needs.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Choose a vehicle with suitable passenger and luggage capacity. You can request a child seat when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "Book a professional Luton taxi for meetings, corporate travel, and airport connections. Executive vehicles are available if you prefer a more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Traveling with friends, colleagues, or extended family? Our MPVs and 8-seater minibuses are great for larger groups. Check the luggage capacity before you confirm your vehicle.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Luton is often the starting point for trips far beyond London. Book a private transfer to destinations across the UK, with your fare confirmed before you travel.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "Luton Airport to Other London Airports – Private Airport Transfers",
+    paragraphs: ["Connecting between airports can be stressful, especially with luggage and a tight schedule. A pre-booked private transfer takes you there directly."],
+    titleFrom: "Luton",
+    places: [
+      { ...AIRPORTS.heathrow, text: "A direct private transfer from Luton to Heathrow, with a vehicle sized to your passengers and luggage. Leave plenty of time for the M1 and M25." },
+      { ...AIRPORTS.gatwick, text: "Travelling between Luton and Gatwick? Book in advance and check your fare before you confirm." },
+      { ...AIRPORTS.stansted, text: "We provide straightforward taxi transfers from Luton to Stansted for your connection or onward journey." },
+      { ...AIRPORTS.londonCity, text: "Pre-book your transfer from Luton to London City Airport, with your fare fixed before you travel." },
+      { ...AIRPORTS.southend, text: "Need a transfer from Luton to Southend Airport? Book your private airport taxi in advance, with a suitable vehicle for your passengers and luggage and a confirmed fare before travel." },
+    ],
+  },
+}
+
 const PICKUP_STEP_ONE = { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." }
 const MEET_DRIVER_STEP = { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." }
 
@@ -616,6 +675,106 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     comfortOrder: 75,
     extraSections: briefSections("stansted", STANSTED_BRIEF),
     // The airport cards cover the CMS routes; the CMS cruise section stays, as this brief has no ports.
+    hiddenSections: ["related_destinations"],
+  },
+
+  Luton: {
+    heroHeading: "Luton Airport Taxi – Reliable Transfers to and from LTN",
+    heroSubhead: "Book your Luton Airport taxi and lock in your fare before you travel. One Airport Taxi offers pre-booked transfers from London, Bedfordshire, Hertfordshire, and towns across the UK. Our professional, licensed drivers operate a range of vehicles, including saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re traveling alone, with family, or in a group, choose the vehicle that best suits your needs and book your journey to Luton with confidence.",
+    heroCallLine: true,
+    heroCallText: "Get a free, instant quote for your Luton Airport taxi online and plan your journey, or call our team on",
+    intro: {
+      heading: "Luton Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Booking a reliable taxi to Luton Airport should be simple. With One Airport Taxi, enter your pickup and drop-off locations to see your fare before you confirm your booking. If you need a taxi to Luton Airport from London, a private transfer from St Albans or Milton Keynes, or a ride from Luton Airport to your home, hotel, or business address, every journey is pre-booked and tailored to your plans.",
+        <>Luton has a <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>single main passenger terminal</Link>, making things straightforward. Add your flight number when you book, and we’ll plan your pickup based on your actual arrival time. Your fare is confirmed before you travel so that you can budget with confidence. There’s no meter running and no surge pricing, even when the roads are busy. Whether it’s a single airport trip, a <Link className={linkClass} href="#vehicles">family holiday</Link>, or a <Link className={linkClass} href="/destinations">long-distance transfer</Link>, booking with us is easy.</>,
+      ],
+      cta: "Get Your Luton Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you confirm." },
+        { title: "One main terminal", text: "Making things straightforward." },
+        { title: "No meter, no surge", text: "Even when the roads are busy." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Luton Airport Transfers?",
+    benefitsSubhead: "Choosing the right airport taxi service can improve your whole journey. We focus on clear pricing, planned pickups, comfortable vehicles, and helpful support.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "See your journey cost before you confirm your Luton Airport taxi booking. Our fixed fares mean no meter-based pricing and no unexpected changes. Check what’s included before you book." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We monitor your flight information to coordinate your pickup. If your arrival time shifts, our team uses the updated information to plan your collection." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Travel with licensed, background-checked drivers who know that punctuality, safe driving, and good customer service are important. Our drivers plan for the M1’s traffic to keep you on schedule." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book and your driver can meet you inside the arrivals area at the agreed meeting point, subject to the service selected and your booking details." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flight schedules don’t always fit standard working hours. Our support team is available 24/7 for booking enquiries and travel questions." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Choose from saloon cars, executive vehicles, estate cars, MPVs, and 8-seater minibuses. Whether you need a business transfer, a family airport taxi, or transport for a larger group, select the vehicle that fits your passengers and luggage." },
+    ],
+    fleet: {
+      heading: "Luton Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "It’s important to choose the right vehicle when booking a taxi to or from Luton Airport. Think about both passenger capacity and luggage space before you select your car.",
+        "We offer a range of vehicles to suit different travel needs, from everyday airport transfers to executive journeys and group transport.",
+      ],
+      closing: "Choose your vehicle based on your passenger count and luggage requirements. Check the vehicle details and available capacity before confirming your booking.",
+      descriptions: {
+        standard: "A practical choice for individuals, couples, and small groups with standard luggage. It’s suitable for everyday airport journeys and comfortable transfers to and from Luton.",
+        executive: "A good option for business travellers and anyone who prefers a more premium travel experience. It’s ideal for corporate airport transfers and professional journeys.",
+        estate: "An estate car offers more luggage space than a standard saloon, making it useful for passengers with several suitcases.",
+        mpv_4seater: "A spacious choice for families and small groups needing extra space for passengers and luggage. It’s a good option for family holidays with extra bags.",
+        mpv: "This option suits larger families and small groups, offering more passenger space. Luggage allowance depends on how many people are traveling.",
+        minibus_8seater: "A convenient option for larger groups, group holidays, and business trips. It can carry up to eight passengers with enough space for luggage.",
+      },
+      pricing: {
+        heading: "Fixed Luton Airport Taxi Prices",
+        paragraphs: [
+          "Your Luton taxi quote is provided before you confirm your journey. Enter your pickup location, destination, travel date, and passenger requirements to check your available fare.",
+          "We make our pricing easy to understand, so you can compare vehicles and plan your trip. Luton is a busy airport for transfers, so booking ahead helps you get the vehicle you want.",
+        ],
+        cta: "Compare Luton Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Luton Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Arriving at Luton after your flight? Pre-booking your Luton Airport taxi makes the rest of your journey easier.",
+        "We provide airport pickups from the terminal. Give us your flight number, arrival date, and destination when you book, and we’ll plan the journey around your flight.",
+      ],
+      stepsHeading: "How Your Luton Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "Once you’ve landed, follow signs for passport control and baggage reclaim. Your booking confirmation has your specific driver meeting instructions." },
+        MEET_DRIVER_STEP,
+        { title: "Head to your destination.", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading. The first 60 minutes of waiting after landing are free, measured from your actual arrival time." },
+      ],
+      dropHeading: "Luton Airport Drop-Off Service",
+      dropText: "Travelling into Luton from London or elsewhere in the UK? Your driver takes you to the terminal drop-off area and covers the airport charge. Please make sure you provide the correct flight details and allow extra time in your schedule for M1 traffic and security queues.",
+    },
+    travelInfo: {
+      heading: "Luton Airport Taxis and Transfers",
+      lead: [
+        "Located in Bedfordshire, approximately 32 miles north of Central London by road, London Luton Airport is one of the UK’s major international airports and an important base for low-cost airlines. Whether you are travelling to the airport for an early flight or need a taxi after landing, One Airport Taxi provides reliable pre-booked airport transfers with professional drivers, comfortable vehicles and clear pricing.",
+        "Book online for a reliable Luton Airport taxi with Meet and Greet service, flight monitoring, and up to 60 minutes of free waiting time for airport pickups.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Location: London Luton Airport is situated in Bedfordshire, approximately 32 miles by road from Central London.",
+          "Nearby London Airports: Heathrow Airport is approximately 37 miles away by road, while Stansted Airport is around 54 miles away. Actual distances depend on the route and airport terminal.",
+          "Nearest Rail Link: Luton Airport Parkway railway station is connected to the terminal by the Luton DART automated people mover. The journey takes less than 4 minutes, providing convenient connections to the wider rail network.",
+          "Road Access: London Luton Airport is easily accessible from the M1 at Junction 10, approximately 2 miles away. The A505 provides access from the east, while the M25 connects with the M1 for journeys across London and other parts of the UK.",
+          "Airport Drop-off Charge: London Luton Airport charges £9 for up to 12 minutes in its Drop-off and Pick-up Zone, followed by £1 per additional minute, with a maximum stay of 30 minutes. Payment must be made online by midnight the following day. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities from Luton Airport", items: [
+          "London (Central): Approximately 45 minutes–1 hour 20 minutes (32 miles).",
+          "Milton Keynes: Approximately 30–45 minutes (25 miles).",
+          "Cambridge: Approximately 45 minutes–1 hour 10 minutes (35 miles).",
+          "Northampton: Approximately 45 minutes–1 hour 10 minutes (40 miles).",
+          "Oxford: Approximately 1 hour 10 minutes–1 hour 40 minutes (50 miles).",
+          "Distances are approximate road distances to central destination areas. Journey times may vary depending on your exact postcode, traffic conditions, route and roadworks.",
+        ] },
+      ],
+      closing: "Whether you are travelling along the M1 for an early departure or returning to Bedfordshire after your trip, One Airport Taxi makes your journey straightforward. Get your fare before booking, choose a vehicle to suit your passengers and luggage, and arrange your transfer in advance. With fixed pricing, professional drivers, and convenient airport pickup, we aim to make every journey to and from Luton Airport comfortable and hassle-free.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("luton", LUTON_BRIEF),
+    // The airport cards cover the CMS routes.
     hiddenSections: ["related_destinations"],
   },
 
