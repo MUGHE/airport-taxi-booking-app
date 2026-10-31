@@ -281,6 +281,65 @@ const GATWICK_BRIEF: AirportBrief = {
   },
 }
 
+const STANSTED_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Stansted Airport Information and Travel Guide",
+    paragraphs: [
+      "London Stansted Airport (STN) is located in Essex, about 40 miles northeast of Central London near Bishop’s Stortford. It’s a major hub for short-haul European flights and one of the UK’s busiest airports for low-cost airlines.",
+      "The airport serves a wide range of European and domestic routes across several airlines. Check your airline and flight details before travelling.",
+      <>Stansted is known for its busy early-morning departures. Be sure to give yourself plenty of time for check-in and security, especially during the summer. Comparing airports? See our <Link className={linkClass} href="/airport-guide">London airport guide</Link>.</>,
+    ],
+    groups: [
+      { title: "Stansted Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "One main passenger terminal", text: "Stansted has one main passenger terminal. Departures, arrivals, shops, and food are all in the same building, and the drop-off area is just a short walk from the entrance." },
+        { icon: Clock, title: "Before you travel", text: "Confirm your flight time and terminal with your airline before arranging your taxi, and leave enough time to reach the airport and clear security." },
+      ] },
+      { title: "Stansted Airport Drop-Off Charges and Parking", columns: 3, cards: [
+        { icon: Banknote, title: "Express drop-off zone", text: "Stansted charges for its express drop-off zone, with a fee covering a short stay and higher rates beyond that." },
+        { icon: CircleParking, title: "Official car parks", text: "There are also several official car parks, from short-stay to long-stay, with shuttle buses to the terminal." },
+        { icon: Car, title: "Included in your fare", text: "This is where booking your Stansted Airport taxi in advance really helps. You get one fixed fare, the airport charge is included, and you don’t have to worry about parking fees or catching a shuttle bus in the early hours.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+      { title: "Getting to Stansted Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, Stansted is reached via the M11 (Junction 8), with the A120 providing local access." },
+        { icon: TrainFront, title: "By rail", text: "The Stansted Express runs to London Liverpool Street in around 47 minutes, and cross-country services connect to Cambridge and the Midlands. Public transport is fine if you’re traveling light." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A private taxi is worth it if you have luggage, an early flight before the first train, or a group that would otherwise need more than one car. With One Airport Taxi, your journey is door-to-door, taking you from your home, hotel, or office straight to the terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Stansted Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Stansted Airport? We run pre-booked transfers to the terminal from London, Essex, Cambridgeshire and across the UK. When booking, add your flight details where asked. It helps us plan the journey and time the drop-off around your check-in."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Stansted Airport Departures Drop-Off", text: "Your driver will take you to the terminal drop-off area, and the airport charge is included in your booking. You won’t need to make a separate payment.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "With Stansted’s early departures, you often have to leave home in the middle of the night. Pre-booking a taxi is a practical solution—your driver will be there at the agreed time, no matter how early, so you don’t have to depend on the first train.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "Group and Family Departures", text: "Traveling with your whole family or a group of friends? Book an MPV or 8-seater minibus to keep everyone together and provide enough space for all your luggage.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Stansted Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Every traveler has different airport transport needs. We provide a variety of vehicles and pre-booked journeys to suit all kinds of trips.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Traveling with children, pushchairs, or lots of luggage? Pick a vehicle with enough space for everyone and everything. You can also request a child seat when you book, if available and suitable.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "Book a professional Stansted taxi for meetings, business trips, or airport connections. Executive vehicles are available if you want a more premium experience.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Traveling with friends, colleagues, or a big family? Our MPVs and 8-seater minibuses are great for larger groups. Be sure to check the luggage space before you confirm your booking.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Stansted is often the starting point for trips far beyond London. Book a private transfer to anywhere in the UK, and know your fare before you travel.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "Stansted Airport to Other London Airports – Private Airport Transfers",
+    paragraphs: ["Changing airports can be stressful, especially when you have luggage or a tight schedule. A pre-booked private transfer takes you straight there."],
+    titleFrom: "Stansted",
+    places: [
+      { ...AIRPORTS.heathrow, text: "Get a direct private transfer from Stansted to Heathrow, with a vehicle that fits your group and luggage. Make sure to allow enough time for the journey on the M11 and M25." },
+      { ...AIRPORTS.gatwick, text: "Traveling between Stansted and Gatwick? Book your airport transfer in advance and confirm your fare before you go." },
+      { ...AIRPORTS.luton, text: "Arrange a straightforward private taxi from Stansted to Luton for your connecting flight or onward journey, with a suitable vehicle for your travel needs." },
+      { ...AIRPORTS.londonCity, text: "Pre-book your transfer from Stansted to London City Airport and get your fare before you confirm your booking." },
+      { ...AIRPORTS.southend, text: "Need to get from Stansted to Southend Airport? Book a private airport transfer in advance for a comfortable ride, plenty of luggage space, and a confirmed fare before you travel." },
+    ],
+  },
+}
+
 const PICKUP_STEP_ONE = { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." }
 const MEET_DRIVER_STEP = { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." }
 
@@ -455,6 +514,108 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     comfortOrder: 75,
     extraSections: briefSections("gatwick", GATWICK_BRIEF),
     // The airport cards cover the CMS routes (Heathrow, Luton, Stansted); the CMS cruise section stays, as this brief has no ports.
+    hiddenSections: ["related_destinations"],
+  },
+
+  Stansted: {
+    heroHeading: "Stansted Airport Taxi – Reliable Transfers to and from STN",
+    heroSubhead: "Book your Stansted Airport taxi and lock in your fare before you travel. One Airport Taxi provides pre-booked transfers to and from Stansted from London, Essex, Cambridgeshire, and other UK towns. Our professional, licensed drivers offer a range of vehicles, including saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re traveling solo, with family, or in a group, pick the vehicle that fits your needs and book your Stansted trip with peace of mind.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant Stansted Airport taxi quote online and plan your journey before you travel, or call our team on",
+    intro: {
+      heading: "Stansted Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Booking a reliable taxi to Stansted Airport should be easy. With One Airport Taxi, just enter your pickup and drop-off locations to see your fare before you confirm your booking.",
+        "Whether you need a taxi to Stansted Airport from London, a private transfer from Harlow or Cambridge, or a taxi from Stansted Airport to your home, hotel or business address, every journey is pre-booked and tailored to your travel plans.",
+        <>Stansted has a <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>single main passenger terminal</Link>, so you don’t have to worry about finding the right one. Add your flight number, and we’ll plan your pickup based on your actual arrival time. This is especially helpful at Stansted, where many flights are early in the morning or late at night.</>,
+        <>Your fare is confirmed before you travel so that you can plan your transport costs without surprises. Whether it’s a single airport trip, a <Link className={linkClass} href="#vehicles">family holiday</Link>, or a <Link className={linkClass} href="/destinations">long-distance transfer</Link>, booking your Stansted journey with us is straightforward.</>,
+      ],
+      cta: "Get Your Stansted Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you confirm." },
+        { title: "One main terminal", text: "No worrying about finding the right one." },
+        { title: "No surprises", text: "Your fare is confirmed before you travel." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Stansted Airport Transfers?",
+    benefitsSubhead: "Picking the right airport taxi service can improve your whole trip. We offer clear pricing, scheduled pickups, comfortable vehicles, and friendly customer support.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "See your journey cost before you confirm your Stansted Airport taxi booking. With our fixed fares, there’s no meter and no surprise charges. Check all fare details and included costs before you book." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We monitor your flight information to coordinate your airport pickup. If your arrival time changes, our team uses the updated information to plan your collection." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Ride with professional, licensed drivers who value punctuality, safe driving, and great customer service. Stansted is just off the M11, and our drivers know the best routes and where traffic can build up." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book to make your arrival smoother. Your driver will meet you in the arrivals area at the agreed spot, based on your chosen service and booking details." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flight schedules often fall outside regular working hours, especially at Stansted. Our support team is available 24/7 to help with bookings and any questions about your journey." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Pick from saloon cars, executive vehicles, estate cars, MPVs, and 8-seater minibuses. Whether you need a business transfer, a family airport taxi, or transport for a larger group, choose the vehicle that fits your passengers and luggage." },
+    ],
+    fleet: {
+      heading: "Stansted Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "It’s important to pick the right vehicle when booking a taxi to or from Stansted Airport. Think about how many people and how much luggage you have before choosing your car.",
+        "We offer a range of vehicles for different travel requirements, from everyday airport transfers to executive journeys and group transportation.",
+      ],
+      closing: "Choose your vehicle based on your passenger count and luggage needs. Check the vehicle details and available capacity before confirming your booking.",
+      descriptions: {
+        standard: "A practical choice for individuals, couples and small groups travelling with standard luggage. Suitable for everyday airport journeys and comfortable transfers to and from Stansted.",
+        executive: "A suitable option for business travellers and passengers who prefer a more premium travel experience. Ideal for corporate airport transfers and professional journeys.",
+        estate: "An estate car gives you more luggage space than a standard saloon, so it’s a good choice if you’re traveling with several suitcases.",
+        mpv_4seater: "A spacious option for families and small groups who need additional passenger and luggage capacity. A useful choice for family holidays with extra bags.",
+        mpv: "Great for bigger families and small groups, with extra room for passengers. The amount of luggage you can bring depends on how many people are traveling.",
+        minibus_8seater: "This is a convenient choice for larger groups, group holidays, and business trips. It seats up to 8 passengers and offers ample luggage space, making it a popular option for Stansted group departures.",
+      },
+      pricing: {
+        heading: "Fixed Stansted Airport Taxi Prices",
+        paragraphs: [
+          "Your Stansted taxi quote is provided before you confirm your journey. Enter your pickup location, destination, travel date, and passenger requirements to check your available fare.",
+          "We make our pricing clear so you can easily compare vehicles and plan your journey. This is especially helpful if you’re deciding between a taxi, the Stansted Express, or airport parking.",
+        ],
+        cta: "Compare Stansted Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Stansted Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Arriving at Stansted after a flight? Pre-booking your Stansted Airport taxi makes the next part of your journey easier.",
+        "We provide airport pickups from the terminal. Give us your flight number, arrival date and destination when you book, and we’ll plan the journey around your flight.",
+      ],
+      stepsHeading: "How Your Stansted Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "Once you’ve landed, follow signs for passport control and baggage reclaim. Your booking confirmation has your specific driver meeting instructions." },
+        MEET_DRIVER_STEP,
+        { title: "Head to your destination.", text: "From there, it’s a direct trip to your home, hotel, office, or anywhere else in the UK you need to go. The first 60 minutes of waiting after you land are free, starting from your actual arrival time." },
+      ],
+      dropHeading: "Stansted Airport Drop-Off Service",
+      dropText: "Travelling into Stansted from London or elsewhere in the UK? Your driver takes you to the terminal drop-off area and covers the airport charge. Just be sure to give us the correct flight details, and allow extra time in your schedule for possible M11 traffic and security lines.",
+    },
+    travelInfo: {
+      heading: "Stansted Airport Taxis and Transfers",
+      lead: [
+        "Located in Essex, approximately 40 miles north-east of Central London, London Stansted Airport is a major international airport and an important hub for low-cost airlines, serving numerous destinations across Europe and beyond. Whether you are travelling to the airport for an early flight or need a taxi after landing, One Airport Taxi provides reliable pre-booked airport transfers with professional drivers, comfortable vehicles and clear pricing.",
+        "Book online for a reliable Stansted Airport taxi with Meet and Greet service, flight monitoring, and up to 60 minutes of free waiting time for airport pickups. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Location: London Stansted Airport is situated in Essex, approximately 40 miles from Central London by road, depending on your destination.",
+          "Nearby London Airports: London City Airport is approximately 34 miles away by road, while Luton Airport is around 54–59 miles away. Heathrow Airport is approximately 60–64 miles away. Distances vary according to the route and terminal.",
+          "Nearest Rail Link: Stansted Airport railway station is located directly beneath the terminal building, just a two-minute walk away. The Stansted Express provides direct services to London Liverpool Street in approximately 48 minutes.",
+          "Road Access: The airport is accessible via the M11 at Junction 8 and the A120. These routes provide connections towards London, Cambridge, Colchester and the A12 for journeys across Essex and other parts of the UK.",
+          "Airport Drop-off Charge: London Stansted Airport charges £10 for up to 15 minutes in the Express Set Down area, increasing to £28 for stays over 15 minutes. The maximum stay is 30 minutes. Payment must be made online by midnight on the day after your visit.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities from Stansted Airport", items: [
+          "London (Central): Approximately 1 hour 10 minutes–1 hour 55 minutes (40–47 miles).",
+          "Cambridge: Approximately 35–50 minutes (30 miles).",
+          "Colchester: Approximately 40–55 minutes (33 miles).",
+          "Ipswich: Approximately 1 hour–1 hour 25 minutes (49–50 miles).",
+          "Norwich: Approximately 1 hour 40 minutes without traffic (84 miles).",
+          "Distances shown are approximate and measured by road to central destinations. Your journey time can change depending on your exact destination, traffic, roadworks, and the route you take.",
+        ] },
+      ],
+      closing: "If you have an early-morning flight or are coming back to Essex after your trip, One Airport Taxi makes booking your Stansted Airport transfer easy. You can see your fare before you book, choose the right vehicle for your group and luggage, and plan your journey. With fixed prices, professional drivers, and simple airport pickup, we want every trip to be comfortable and stress-free.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("stansted", STANSTED_BRIEF),
+    // The airport cards cover the CMS routes; the CMS cruise section stays, as this brief has no ports.
     hiddenSections: ["related_destinations"],
   },
 

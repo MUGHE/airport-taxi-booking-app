@@ -215,7 +215,7 @@ export type AirportCopy = {
   hiddenSections?: AirportPageContentSection["type"][]
 }
 
-// Airports rewritten from a client content brief (Heathrow, Gatwick, Southend) live in airport-briefs.tsx.
+// Airports rewritten from a client content brief (Heathrow, Gatwick, Stansted, Southend) live in airport-briefs.tsx.
 const AIRPORT_COPY: Record<string, AirportCopy> = {
   ...BRIEF_COPY,
   // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.

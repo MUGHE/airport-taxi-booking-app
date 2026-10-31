@@ -9,6 +9,10 @@ export const AIRPORT_BRIEF_SEO: Record<string, { title: string; description: str
     title: "Gatwick Airport Taxi | Fixed-Fare Transfers to and from LGW",
     description: "Book your Gatwick Airport taxi with One Airport Taxi and know your fare in advance. We offer fixed-price transfers to and from Gatwick Airport across the UK.",
   },
+  "stansted-airport-taxi": {
+    title: "Stansted Airport Taxi | Fixed Price Transfers to & from STN",
+    description: "Book a Stansted Airport taxi with fixed fares confirmed before you travel. Licensed drivers, flight tracking, meet-and-greet, and 8-seater minibuses. Instant quote.",
+  },
   "southend-airport-taxi": {
     title: "Southend Airport Taxi | Fixed Price Transfers to & from SEN",
     description: "Book a Southend Airport taxi with fixed fares confirmed before you travel. Licensed drivers, flight tracking, meet-and-greet, and 8-seater minibuses. Get an instant quote.",
