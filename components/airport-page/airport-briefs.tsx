@@ -399,6 +399,63 @@ const LUTON_BRIEF: AirportBrief = {
   },
 }
 
+const LONDON_CITY_BRIEF: AirportBrief = {
+  guide: {
+    heading: "London City Airport Information and Travel Guide",
+    paragraphs: [
+      "London City Airport (LCY) sits in the Royal Docks in East London, about six miles from the City and a short hop from Canary Wharf. It’s the most central airport in London, and the one business travellers tend to prefer — small, quick and built for people who want to be in a meeting an hour after landing.",
+      "The airport operates a single passenger terminal serving short-haul UK and European destinations, as well as a handful of longer routes. Check your airline and flight details before travelling.",
+      <>Because the runway is short, LCY handles smaller aircraft — which also means baggage reclaim is quick. Allow the usual buffer for check-in and security, particularly on Friday afternoons. Comparing airports? See our <Link className={linkClass} href="/airport-guide">London airport guide</Link>.</>,
+    ],
+    groups: [
+      { title: "London City Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "One terminal, one set of doors", text: "One terminal, one set of doors, no wrong-terminal confusion. Departures, arrivals, shops and food are all in the same building, with the DLR station a couple of minutes’ walk away." },
+        { icon: Clock, title: "Before you travel", text: "Confirm your flight time with your airline before you arrange your taxi, and leave enough time to reach the airport and clear security." },
+      ] },
+      { title: "London City Airport Drop-Off Charges", columns: 2, cards: [
+        { icon: Banknote, title: "Forecourt drop-off charge", text: "Worth knowing: LCY introduced a drop-off charge in January 2026, becoming one of the last London airports to do so. Expect a fee for a short stay in the forecourt drop-off zone, with additional charges for each minute beyond the included time." },
+        { icon: Car, title: "Included in your fare", text: "That’s one more reason a pre-booked London City Airport transfer makes sense — one fixed fare, with the airport charge included in the booking rather than a separate payment.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+      { title: "Getting to London City Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, LCY is reached via the A13 and A1020, with the Blackwall Tunnel and A406 nearby." },
+        { icon: TrainFront, title: "By rail", text: "The DLR runs directly to London City Airport station, with journeys from Canary Wharf taking around 15 minutes and from Bank around 25 minutes. Public transport works well for light travel." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A private taxi earns its keep with luggage, early flights, client pickups or when you need to arrive composed rather than windswept. With One Airport Taxi, the journey runs door-to-door — from your home, hotel or office straight to the terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to London City Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to London City Airport? We run pre-booked transfers to the terminal from across London and the UK. When booking, add your flight details where asked. It helps us plan the journey and time the drop-off around your check-in."],
+    cards: [
+      { icon: PlaneTakeoff, title: "London City Airport Departures Drop-Off", text: "Your driver takes you to the terminal drop-off area, with the airport charge included in your booking — no separate payment.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "LCY’s first departures mean leaving home before the Tube is properly awake. Pre-booked taxis are the practical answer: your driver is outside at the agreed time, whatever the hour.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: Briefcase, title: "Business Travel and Corporate Accounts", text: "Regular flyers can book repeat journeys with the same driver preferences and vehicle type. Executive cars, receipts and account billing available — ask when booking.", actions: [{ kind: "to", label: "Book a business transfer" }], link: { href: "/Contact-Us", label: "Ask about corporate travel" } },
+    ],
+  },
+  travellers: {
+    heading: "London City Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Pick a vehicle with the space to match. You can request a child seat when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "This is LCY’s bread and butter. A professional London City Airport taxi for meetings, corporate travel and flight connections, with executive vehicles for anyone who wants a quieter, more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Friends, colleagues or the extended family? Our MPVs and 8-seater minibuses handle larger groups. Check luggage capacity before you confirm your vehicle.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "LCY is a common starting point for journeys well beyond London. Arrange a private transfer to destinations across the UK, with the fare agreed up front.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "London City Airport to Other London Airports – Private Airport Transfers",
+    paragraphs: ["Connecting between airports is rarely fun, especially with luggage and a tight connection. A pre-booked private transfer gets you there directly, without dragging bags across London on the DLR and Tube."],
+    titleFrom: "London City",
+    places: [
+      { ...AIRPORTS.heathrow, text: "A direct private transfer from LCY to Heathrow, with a vehicle sized to your passengers and luggage." },
+      { ...AIRPORTS.gatwick, text: "Travelling between London City and Gatwick? Book ahead and check the fare before you confirm." },
+      { ...AIRPORTS.stansted, text: "A straightforward taxi from London City to Stansted for a connection or onward journey." },
+      { ...AIRPORTS.luton, text: "Pre-book your London City to Luton transfer, with the fare fixed before you travel." },
+    ],
+  },
+}
+
 const PICKUP_STEP_ONE = { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." }
 const MEET_DRIVER_STEP = { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." }
 
@@ -774,6 +831,111 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     travelInfoOrder: 67,
     comfortOrder: 75,
     extraSections: briefSections("luton", LUTON_BRIEF),
+    // The airport cards cover the CMS routes.
+    hiddenSections: ["related_destinations"],
+  },
+
+  // A short-hop, business-heavy airport by Canary Wharf and the City: executive cars come first.
+  "London City": {
+    heroHeading: "London City Airport Taxi – Reliable Transfers to and from LCY",
+    heroSubhead: "Book a London City Airport taxi and get a fixed fare confirmed before you travel. One Airport Taxi runs pre-booked London City Airport transfers from Canary Wharf, the City, Central London, and destinations across the UK, with professional, licensed drivers and a choice of saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether it’s a quick business run to Docklands or a family transfer with luggage, you pick the vehicle that fits — and we handle the rest.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant London City Airport taxi quote online and plan the journey before you travel, or call our team on",
+    heroNotes: ["No account needed", "Invoice on request", "No surge pricing"],
+    intro: {
+      heading: "London City Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Arranging a reliable taxi to London City Airport should be simple, and it is. With One Airport Taxi, you book ahead, enter your pickup and drop-off, and see your fare before you confirm. Whether you need a taxi to London City Airport from the City, a transfer in from Canary Wharf or Stratford, or a cab from the airport to your home, hotel or office, every journey is pre-booked and built around your timetable.",
+        <><Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>LCY is small and fast to get through</Link>, but it’s also the airport where a missed pickup hurts most — the whole point of flying from Docklands is saving time. That’s exactly why a pre-booked car beats hailing one. The price you’re quoted is the price you pay. No meter, no surge, no surprises. From a single business run to a <Link className={linkClass} href="#vehicles">group transfer</Link>, booking your London City journey with us is straightforward.</>,
+      ],
+      cta: "Get Your London City Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you confirm." },
+        { title: "One terminal", text: "Small and fast to get through." },
+        { title: "No meter, no surge", text: "The price you’re quoted is the price you pay." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for London City Airport Transfers?",
+    benefitsSubhead: "The right airport taxi service shapes the whole journey, not just the drive. We focus on clear pricing, planned pickups, comfortable cars, and support that actually answers.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "You’ll know the cost of your London City Airport taxi before you confirm. Fixed fares mean no meter-based pricing and no last-minute changes — check exactly what’s included before you book." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We track your flight. If you land early or late, we use live arrival information to adjust your pickup — which is especially useful at LCY, where short-haul schedules can change." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Our drivers are licensed, background-checked, and know East London properly — from the A13 to the Blackwall Tunnel and the back routes when it’s busy. Punctuality and safe driving come as standard." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book and your driver can meet you inside arrivals at an agreed meeting point. Availability depends on the service you select and your booking details." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flights and business travel don’t keep office hours, so neither do we. Call or WhatsApp any time for booking questions or anything that comes up on the day." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Saloon, executive, estate, MPV or 8-seater minibus — pick based on passenger numbers and luggage. A single exec car for a City meeting, an MPV for a family arrival, a minibus for the team: all covered." },
+    ],
+    vehicleFirst: "executive",
+    bestFor: { executive: "Best for client meetings and business travel" },
+    fleet: {
+      heading: "London City Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle matters when you’re booking a taxi to London City Airport or arranging a transfer out of it. Consider both seats and suitcase space.",
+        "We run a range of vehicles, from everyday airport runs to executive travel and group transport.",
+      ],
+      closing: "Choose your vehicle around your passenger numbers and luggage. Check the capacity details before you confirm.",
+      descriptions: {
+        standard: "The sensible choice for solo travellers, couples and small groups with standard luggage. Comfortable, practical, ideal for a straightforward airport transfer.",
+        executive: "The most popular choice for LCY, frankly. Premium, quiet, and well-suited to corporate transfers, client pickups, and professional journeys.",
+        estate: "An estate gives you noticeably more luggage room than a standard saloon — handy when you’re travelling with several suitcases.",
+        mpv_4seater: "A roomier option for families and small groups who need extra space for people and bags.",
+        mpv: "Suits larger families and small groups, with extra passenger capacity. Luggage allowance depends on how many of you are travelling, so check before booking.",
+        minibus_8seater: "The practical answer for bigger groups, team travel and event transport. Up to eight passengers, with luggage capacity to match.",
+      },
+      pricing: {
+        heading: "Fixed London City Airport Taxi Prices",
+        paragraphs: [
+          "Your quote comes before you confirm. Enter your pickup and destination, travel date, and passenger requirements to see what’s available.",
+          "The pricing is set out clearly so you can compare vehicles and plan. If your plans change — an extra stop, a different pickup — the fare only changes if the journey does.",
+        ],
+        cta: "Compare London City Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from London City Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at London City? Pre-booking your taxi takes the guesswork out of what happens next.",
+        "We provide pickups from the terminal. Give us your flight number, arrival date, and destination when you book, and we’ll plan the collection around your flight.",
+      ],
+      stepsHeading: "How Your London City Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "Once you’ve landed, follow signs for passport control and baggage reclaim. LCY is compact — you’ll be through in minutes. Your booking confirmation has your specific driver meeting instructions." },
+        MEET_DRIVER_STEP,
+        { title: "Head to your destination.", text: "From there it’s a straight run to your office, hotel, home or wherever else in the UK you’re heading. The first 60 minutes of waiting after landing are free, counted from your actual arrival time." },
+      ],
+      dropHeading: "London City Airport Drop-Off Service",
+      dropText: "Travelling into LCY from London or elsewhere in the UK? Your driver takes you to the terminal drop-off area and covers the airport charge. Just make sure you’ve given the correct flight details, and leave time in your schedule for traffic through the Docklands and security queues.",
+    },
+    travelInfo: {
+      heading: "London City Airport Taxis and Transfers",
+      lead: [
+        "Located in the Royal Docks in East London, London City Airport is the closest airport to central London and a convenient choice for business travellers, holidaymakers and international visitors. Whether you need a taxi to the airport or a transfer after landing, One Airport Taxi provides pre-booked airport journeys with professional drivers, comfortable vehicles and clear pricing.",
+        "Book online for a reliable London City Airport taxi, with a Meet and Greet service and up to 60 minutes of free waiting time for airport pickups.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Info", items: [
+          "Nearest London Airports: Heathrow Airport (around 26 miles by road) and Gatwick Airport (around 49 miles by road).",
+          "Nearest rail: London City Airport DLR station (adjacent to terminal), with connections to Bank, Stratford, and across London.",
+          "Road access: A13 for direct city access; A406 North Circular; M25 for routes across the UK.",
+          "Drop-off charge: London City Airport charges £8 for the first 5 minutes in the terminal drop-off zone, followed by £1 per additional minute (up to a maximum stay of 10 minutes). If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fixed fare, so you won’t face any unexpected charges at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities", items: [
+          "London (City Centre): Approximately 20–40 minutes (5–10 miles).",
+          "Oxford: Approximately 1 hour 45 minutes–2 hours 15 minutes (70–80 miles).",
+          "Cambridge: Approximately 1 hour 20 minutes–1 hour 40 minutes (55–65 miles).",
+          "Brighton: Approximately 1 hour 30 minutes–2 hours (60–75 miles).",
+          "Southampton: Approximately 1 hour 45 minutes–2 hours 15 minutes (around 85 miles).",
+          "Distances are approximate road distances to central destinations. Journey times may vary depending on traffic, roadworks and your chosen route.",
+        ] },
+      ],
+      closing: "If you’re going to London City Airport for a flight or heading home after you land, One Airport Taxi gives you upfront pricing with no hidden fees or sudden price increases. You can plan your trip and travel without stress.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    finalHeading: "Landing at London City? Your driver's ready.",
+    finalChip: "Executive cars",
+    extraSections: briefSections("london-city", LONDON_CITY_BRIEF),
     // The airport cards cover the CMS routes.
     hiddenSections: ["related_destinations"],
   },

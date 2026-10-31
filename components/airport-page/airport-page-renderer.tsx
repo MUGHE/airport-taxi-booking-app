@@ -215,31 +215,8 @@ export type AirportCopy = {
   hiddenSections?: AirportPageContentSection["type"][]
 }
 
-// Airports rewritten from a client content brief (Heathrow, Gatwick, Stansted, Luton, Southend) live in airport-briefs.tsx.
-const AIRPORT_COPY: Record<string, AirportCopy> = {
-  ...BRIEF_COPY,
-  // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
-  "London City": {
-    heroSubhead: "Fixed-price transfers from London City to Canary Wharf, the City and beyond. Your driver tracks your flight and is ready when you walk out.",
-    heroNotes: ["No account needed", "Invoice on request", "No surge pricing"],
-    benefitsHeading: "Built for fast, on-time City trips",
-    benefitsSubhead: "From landing to your meeting with no fuss, at a price agreed in advance.",
-    benefitCards: [
-      { icon: Banknote, title: "One fixed fare", text: "Set by your route and locked in when you book. No meter running in City traffic." },
-      { icon: PlaneTakeoff, title: "Ready when you walk out", text: "We track your flight, so your driver is ready as you come through arrivals." },
-      { icon: UsersRound, title: "Executive cars on request", text: "A premium car for client meetings or a smarter arrival." },
-      { icon: Headphones, title: "Invoices for expense claims", text: "Ask and we'll email an invoice for any trip, ready for your expense claim." },
-    ],
-    guideHeading: "Your London City pickup",
-    guideLead: "One compact terminal, so you'll be with your driver within minutes of landing. No terminal to choose when you book.",
-    routesSubhead: "Business districts, Central London and airport connections at fixed prices.",
-    vehiclesSubhead: "Executive cars available for business travel. Compare seats and luggage space, then pick the car that fits.",
-    vehicleFirst: "executive",
-    bestFor: { executive: "Best for client meetings and business travel" },
-    finalHeading: "Landing at London City? Your driver's ready.",
-    finalChip: "Executive cars",
-  },
-}
+// Each airport's own copy lives in airport-briefs.tsx.
+const AIRPORT_COPY: Record<string, AirportCopy> = BRIEF_COPY
 
 function airportCopy(page: AirportPagePresentation): AirportCopy {
   return AIRPORT_COPY[page.shortName] ?? {}
