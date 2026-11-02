@@ -1,5 +1,7 @@
 # airport-taxi-booking-app
 
+
+
 ## Supabase database setup
 
 1. Create a Supabase project, then run **every** SQL file in `supabase/migrations/` in filename order in its SQL Editor. If the project already exists, run every migration added after your last setup—not only the custom-route migration. In particular, the booking add-ons, promo codes, and site promotion features require the `20260828000001`, `20260828000002`, and `20260828000003` migrations. Missing one of these tables makes Supabase return a 404 for that feature.
