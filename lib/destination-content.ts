@@ -208,6 +208,11 @@ export function blocksToTiptapDocument(blocks: RichTextBlock[]): TiptapDocument 
   }
 }
 
+/** Tiptap's attrs have a null prototype, which React can't send to a Server Action: the server gets a reference it can't read, and reading it throws. */
+export function toPlainTiptapDocument(document: unknown): TiptapDocument {
+  return JSON.parse(JSON.stringify(document)) as TiptapDocument
+}
+
 function nodeText(node: TiptapNode): string {
   return node.text ?? (node.content ?? []).map(nodeText).join("")
 }

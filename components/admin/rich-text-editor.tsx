@@ -6,7 +6,7 @@ import StarterKit from "@tiptap/starter-kit"
 import Link from "@tiptap/extension-link"
 import { Bold, Heading3, Link as LinkIcon, List, ListOrdered, Pilcrow, Redo2, Undo2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { blocksToTiptapDocument, isSafeDestinationContentLink, type RichTextBlock, type TiptapDocument } from "@/lib/destination-content"
+import { blocksToTiptapDocument, isSafeDestinationContentLink, toPlainTiptapDocument, type RichTextBlock, type TiptapDocument } from "@/lib/destination-content"
 
 function ToolbarButton({ label, active, disabled, onClick, children }: { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return <Button type="button" variant={active ? "secondary" : "ghost"} size="icon-sm" aria-label={label} aria-pressed={active} disabled={disabled} onClick={onClick}>{children}</Button>
@@ -19,7 +19,7 @@ export function RichTextEditor({ value, onChange }: { value: RichTextBlock[] | T
     content: initialDocument,
     immediatelyRender: false,
     editorProps: { attributes: { class: "min-h-28 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-within:ring-3 focus-within:ring-ring/50" } },
-    onUpdate: ({ editor: currentEditor }) => onChange(currentEditor.getJSON() as TiptapDocument),
+    onUpdate: ({ editor: currentEditor }) => onChange(toPlainTiptapDocument(currentEditor.getJSON())),
   })
 
   useEffect(() => {
