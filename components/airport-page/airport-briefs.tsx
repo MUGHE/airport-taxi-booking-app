@@ -671,6 +671,75 @@ const OXFORD_BRIEF: AirportBrief = {
   },
 }
 
+const FARNBOROUGH_AIRPORT = { name: "Farnborough Airport (FAB)", latitude: 51.2832253, longitude: -0.7772854 }
+
+const FARNBOROUGH_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Farnborough Airport Information and Travel Guide",
+    paragraphs: [
+      "Farnborough Airport is located in Hampshire, around 35 miles south-west of Central London, and is the UK’s primary hub for business and private aviation. Unlike Heathrow, Gatwick or Luton, it doesn’t handle scheduled commercial passenger flights — its traffic is almost entirely private jets, corporate aircraft and charter flights, making it a key arrival and departure point for business travellers, VIPs and private clients.",
+    ],
+    groups: [
+      { title: "Farnborough Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "Built around private aviation", text: "The terminal at Farnborough is built around private aviation, with a more intimate, lower-footfall experience than a commercial airport." },
+        { icon: Clock, title: "Timing depends on your flight", text: "Processing tends to be quicker, but exact timing depends on the operator and flight. Hence, coordinating pickups based on real-time information matters more here than at a scheduled commercial airport." },
+      ] },
+      { title: "Getting to Farnborough Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, Farnborough is reached via the M3 and A331, with good connections to London, Guildford, Reading and the wider Hampshire and Surrey road network." },
+        { icon: TrainFront, title: "Public transport", text: "Given the nature of traffic at Farnborough, public transport is rarely a practical option, making a pre-booked private transfer the standard choice for passengers and crew alike." },
+        { icon: MapPin, title: "Door to door", text: "With One Airport Taxi, your journey runs door to door — from the airport straight to your home, hotel, office or meeting in London or further afield.", actions: [{ kind: "from", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Farnborough Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Farnborough Airport ahead of a private or corporate flight? We run pre-booked transfers to the airport from London and across the South East. When booking, add your flight or departure details where asked so that we can time the drop-off correctly."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Farnborough Airport Departures Drop-Off", text: "Your driver takes you directly to the airport, with time built in for any required security or processing before departure.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early and Late Departures", text: "Private aviation schedules often fall outside normal hours. A pre-booked taxi means your driver is ready at the agreed time, whatever the hour.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "Group and Corporate Departures", text: "Travelling with colleagues or clients to the same flight? Book an MPV or 8-seater minibus and travel together.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Farnborough Airport Taxi Service for Business Travellers, Executives and Groups",
+    lead: "Farnborough’s traffic is almost entirely business and private aviation, so our service here is built around those journeys.",
+    cards: [
+      { icon: Briefcase, title: "Executive and Business Transfers", text: "A professional Farnborough Airport taxi for executives, business travellers and corporate clients, with executive vehicles available throughout.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: PlaneTakeoff, title: "Private Aviation Transfers", text: "Transfers coordinated around private jet arrivals and departures, with flexible timing and a discreet, professional driver.", link: { href: "/Contact-Us", label: "Talk to our team" } },
+      { icon: UsersRound, title: "Group and Corporate Transfers", text: "Teams or groups travelling together can book an MPV or 8-seater minibus, with the whole party moving in one vehicle.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Executive Journeys", text: "Farnborough is a common gateway for executive journeys into Central London and beyond. Arrange a private transfer with your fare agreed before you travel.", link: { href: createRouteBookingLinks(FARNBOROUGH_AIRPORT, { name: LONDON.address, latitude: LONDON.latitude, longitude: LONDON.longitude }).toAirport, label: "Book Farnborough to Central London" } },
+    ],
+  },
+  airports: {
+    heading: "Farnborough Airport to Other Airports – Private Airport Transfers",
+    paragraphs: ["Heathrow, Gatwick and Southampton are the nearest larger airports to Farnborough. Arrange a private transfer with your fare agreed before you travel."],
+    titleFrom: "Farnborough",
+    places: [
+      { ...AIRPORTS.heathrow, text: "Heathrow Airport is approximately 25–30 miles from Farnborough Airport, around 30–45 minutes by road." },
+      { ...AIRPORTS.gatwick, text: "Gatwick Airport is approximately 45–55 miles from Farnborough Airport, around 50–75 minutes by road." },
+      { ...AIRPORTS.southampton, text: "Southampton Airport is approximately 40–45 miles from Farnborough Airport by road." },
+    ],
+  },
+  ports: {
+    heading: "Farnborough Airport to Your Cruise or Ferry Port",
+    paragraphs: [
+      "Farnborough Airport does not have its own ferry or cruise terminals, but many passengers arriving at FAB need onward transport to a UK port. One Airport Taxi offers pre-booked, fixed-price taxi transfers from Farnborough Airport to major ferry and cruise ports across the UK.",
+      "Cruise luggage is often bulkier than standard airport luggage, so choose your vehicle based on the number of suitcases, not just the number of passengers. For example, a family of four travelling with four large suitcases may need a 4-seater MPV rather than a saloon.",
+      "Whether you are travelling to Southampton, Dover, Portsmouth, Harwich or Tilbury, One Airport Taxi can arrange a comfortable, pre-booked transfer. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to accommodate your passengers and luggage.",
+    ],
+    titleFrom: "Farnborough Airport",
+    places: [
+      { ...PORTS.southampton, text: "Southampton is around 46 miles from Farnborough Airport by road, with a journey time of around 1 hour 10 minutes to 1 hour 30 minutes. Southampton has five cruise terminals: Ocean, Mayflower, City, Queen Elizabeth II and Horizon. Confirm your departure terminal on your cruise documents before booking your transfer." },
+      { ...PORTS.dover, text: "Dover is approximately 105–120 miles from Farnborough Airport, with a journey time of around 2–2.5 hours. Ferries to France depart from the Eastern Docks, while cruise ships generally use the Western Docks. Allow extra time for traffic and port check-in." },
+      { ...PORTS.portsmouth, text: "Portsmouth International Port is approximately 45–55 miles from Farnborough Airport, with a journey time of around 1–1 hour 20 minutes. The port operates ferry services to destinations including France, Spain and the Channel Islands, as well as selected cruise departures." },
+      { ...PORTS.harwich, text: "Harwich International Port is around 132 miles from Farnborough Airport by road, with a journey time of around 3–3.5 hours. The port provides international ferry services, including crossings to the Hook of Holland. Plan your transfer carefully to allow enough time for check-in." },
+      { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 75–90 miles from Farnborough Airport, with a journey time of around 1 hour 30 minutes to 2 hours. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Check your cruise documents for the correct terminal and departure time before arranging your journey." },
+    ],
+    note: "Journey times are estimates and can vary depending on traffic, roadworks and your chosen route, so leave enough time before your embarkation or check-in.",
+  },
+}
+
 const PICKUP_STEP_ONE = { title: "Share your flight and arrival details.", text: "Add your flight number and arrival information when you book so we know when to expect you." }
 const MEET_DRIVER_STEP = { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." }
 
@@ -1538,6 +1607,111 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     travelInfoOrder: 67,
     comfortOrder: 75,
     extraSections: briefSections("oxford", OXFORD_BRIEF),
+    hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+
+  Farnborough: {
+    heroHeading: "Farnborough Airport Taxi – Reliable Transfers to and from Farnborough",
+    heroSubhead: "Book a taxi at Farnborough Airport for a smooth, professional transfer to or from the UK’s leading business aviation airport. One Airport Taxi provides pre-booked Farnborough Airport transfers with professional licensed drivers and a choice of executive cars, saloon cars, MPVs and 8-seater minibuses, suited to the discretion and timing that private and business aviation travel demands. Whether you’re met off a private jet, travelling for a corporate meeting, or arranging transport for colleagues or clients, choose a vehicle that matches the journey.",
+    heroCallLine: true,
+    heroCallText: "Get your free, instant Farnborough Airport taxi quote online and arrange your transfer before you travel, or call our team on",
+    heroNotes: ["No account needed", "Invoice on request", "No surge pricing"],
+    intro: {
+      heading: "Farnborough Airport Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        <>Farnborough Airport, formerly TAG Farnborough Airport, is the UK’s principal dedicated business aviation airport, <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>handling private jets and corporate flights</Link> rather than scheduled commercial services. That makes transfers here a little different — timings can be tighter, flexibility matters more, and discretion is often part of the brief.</>,
+        <>With One Airport Taxi, you book ahead, enter your pickup and drop-off details, and see your fare before you confirm. Whether you need a Farnborough Airport taxi for an arriving private jet passenger, a transfer to a London meeting straight off the aircraft, or an <Link className={linkClass} href="#vehicles">executive car</Link> to take you to Farnborough ahead of a departure, every journey is pre-booked and planned around your schedule.</>,
+        "Add your flight details when you book, including private or corporate flight information where applicable, and our team will plan the pickup around your actual arrival time rather than a published timetable.",
+        "The fare you’re quoted is the fare you pay, with the professionalism and punctuality that business and private aviation transfers call for.",
+      ],
+      cta: "Get Your Farnborough Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you confirm." },
+        { title: "Planned around your arrival", text: "Not a published timetable." },
+        { title: "Discreet and punctual", text: "Built for business and private aviation." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Farnborough Airport Transfers?",
+    benefitsSubhead: "Business aviation passengers expect a certain standard, and that shapes how we run this service. We focus on clear pricing, precise timing, professional vehicles and discreet, reliable drivers.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "You’ll know the cost of your Farnborough Airport transfer before you confirm. No meter, no last-minute changes — a fixed price agreed in advance, suited to business accounts and expense reporting." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We track flight information where it’s available, so your pickup can be adjusted if timings shift — important when private aviation schedules can move at short notice." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Our drivers are licensed, professionally presented and experienced with business and executive transfers, understanding the discretion and punctuality that corporate and private clients expect." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book, and your driver can meet you at the agreed-upon point at the airport, depending on the service selected." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Private aviation doesn’t run to a fixed schedule, so neither do we. Our team is available around the clock for bookings and last-minute changes." },
+      { icon: Car, title: "Executive and Group Vehicles", text: "Choose from executive cars for individual business travel, saloon cars for everyday transfers, or MPVs and 8-seater minibuses when a group of colleagues or clients is travelling together." },
+    ],
+    vehicleFirst: "executive",
+    bestFor: { executive: "Best for corporate travel and client pickups" },
+    fleet: {
+      heading: "Farnborough Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle matters for business and private aviation transfers, where the impression a journey makes can matter as much as getting there on time.",
+      ],
+      closing: "Choose your vehicle around the nature of the trip, your passenger numbers and luggage. Check availability before you confirm.",
+      descriptions: {
+        standard: "A comfortable, practical option for individual transfers and standard business journeys to or from Farnborough Airport.",
+        executive: "Our most popular choice for Farnborough transfers — suited to corporate travel, client pickups and journeys where presentation matters.",
+        estate: "Extra luggage space compared with a saloon, useful for business travellers with additional equipment or baggage.",
+        mpv_4seater: "A practical option when a small group of colleagues or family members are travelling together.",
+        mpv: "Suits larger groups travelling to or from the airport together, with capacity depending on luggage.",
+        minibus_8seater: "The right choice for larger corporate groups, event transport or teams travelling together through Farnborough.",
+      },
+      pricing: {
+        heading: "Fixed Farnborough Airport Taxi Prices",
+        paragraphs: [
+          "Your quote comes before you confirm. Enter your pickup and destination, travel date, and passenger requirements to see your available fare for a Farnborough Airport transfer or a longer executive journey to London or beyond.",
+        ],
+        cta: "Compare Farnborough Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Farnborough Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at Farnborough after a private or corporate flight? Pre-booking your taxi means a smooth, well-timed pickup straight off the aircraft.",
+        "Share your flight or arrival details when booking, and we’ll plan your collection around the actual arrival.",
+      ],
+      stepsHeading: "How Your Farnborough Airport Pickup Works",
+      steps: [
+        { title: "Share your flight and arrival details.", text: "Add your flight number or arrival information when you book, so we know when to expect you." },
+        { title: "Our driver tracks your arrival.", text: "Where flight information is available, we monitor it to time your pickup accurately." },
+        { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver will be waiting at the agreed point. Otherwise, follow the pickup instructions in your confirmation." },
+        { title: "Continue to your destination.", text: "From there, it’s a direct run into London, to a meeting, or to your home, hotel or office elsewhere in the UK." },
+      ],
+      dropHeading: "Farnborough Airport Drop-Off Service",
+      dropText: "Travelling to Farnborough before departure? Your driver takes you directly to the airport, allowing time for traffic on the M3 or A331.",
+    },
+    travelInfo: {
+      heading: "Farnborough Airport Taxis and Transfers",
+      lead: [
+        "Located in Farnborough, Hampshire, close to the Surrey border and approximately 35 miles southwest of central London, Farnborough Airport is a leading UK business aviation airport serving private flights, corporate travellers and charter services. Whether you need a taxi to Farnborough Airport or a transfer after landing, One Airport Taxi provides pre-booked airport journeys with professional drivers, comfortable vehicles and transparent pricing.",
+        "Book online for a reliable Farnborough Airport taxi, with a Meet and Greet service and up to 60 minutes of free waiting time for airport pickups.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Nearby airports: Heathrow Airport (approximately 25–30 miles), Gatwick Airport (approximately 45–55 miles) and Southampton Airport (approximately 40–45 miles).",
+          "Nearest railway station: Farnborough Main railway station, around 2 miles from the airport by road, with direct train services to London Waterloo.",
+          "Road access: Convenient access via the M3 at Junctions 4 and 4A, as well as the A31 and A325, connecting the airport with Hampshire, Surrey and London.",
+          "Airport drop-off: Check the airport’s latest drop-off and parking arrangements before travelling. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Towns and Cities", items: [
+          "Farnborough Town Centre: Approximately 5–10 minutes (2–3 miles).",
+          "Aldershot: Approximately 15–20 minutes (5–7 miles).",
+          "Camberley: Approximately 15–25 minutes (around 5.5 miles).",
+          "Guildford: Approximately 25–40 minutes (15–18 miles).",
+          "Reading: Approximately 35–50 minutes (around 20 miles).",
+          "Heathrow Airport: Approximately 30–45 minutes (25–30 miles).",
+          "Central London: Approximately 1–1.5 hours (35–40 miles).",
+          "Gatwick Airport: Approximately 50–75 minutes (45–55 miles).",
+          "Distances are approximate road distances to central destinations. Journey times may vary depending on traffic, roadworks and your chosen route.",
+        ] },
+      ],
+      closing: "Whether you are travelling to Farnborough Airport for a private flight, arranging transport for a corporate trip or heading home after landing, One Airport Taxi offers convenient pre-booked transfers with fares confirmed before travel. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to suit your passengers and luggage. For a comfortable and reliable Farnborough Airport transfer, get your instant taxi quote online and plan your journey with confidence. Important: Farnborough Airport primarily serves private and business aviation rather than regular scheduled commercial passenger flights. Check your flight arrangements directly with your operator before travelling.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    finalChip: "Executive cars",
+    extraSections: briefSections("farnborough", FARNBOROUGH_BRIEF),
     hiddenSections: ["ferry_cruise", "related_destinations"],
   },
 }
