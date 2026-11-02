@@ -61,12 +61,21 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
     setDirty(true)
   }
 
+  /** A rejected call (a dropped connection, a request that's too big) would otherwise crash the whole page. */
+  function requestFailed(error: unknown) {
+    console.error("Blog editor request failed", error)
+    const text = "The server could not finish that. Your changes are still here, so please try again."
+    setStatus({ tone: "error", text })
+    toast.error(text)
+  }
+
   function save(then?: (saved: BlogPost) => void) {
     setStatus(null)
     startTransition(async () => {
-      const result = await saveBlogPostAction({ ...form, id: post?.id, categoryId: form.categoryId || null })
+      const result = await saveBlogPostAction({ ...form, id: post?.id, categoryId: form.categoryId || null }).catch((error: unknown) => { requestFailed(error); return null })
+      if (!result) return
       if (!result.ok) {
-        setErrors(result.fieldErrors ?? {})
+        setErrors(("fieldErrors" in result ? result.fieldErrors : undefined) ?? {})
         setStatus({ tone: "error", text: result.error })
         toast.error(result.error)
         return
@@ -86,7 +95,8 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
 
   function changeStatus(next: "published" | "draft") {
     const run = (saved: BlogPost) => startTransition(async () => {
-      const result = next === "published" ? await publishBlogPostAction(saved.id) : await unpublishBlogPostAction(saved.id)
+      const result = await (next === "published" ? publishBlogPostAction(saved.id) : unpublishBlogPostAction(saved.id)).catch((error: unknown) => { requestFailed(error); return null })
+      if (!result) return
       if (!result.ok) {
         setStatus({ tone: "error", text: result.error })
         return void toast.error(result.error)
@@ -104,7 +114,8 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
   function remove() {
     if (!post || !window.confirm(`Delete “${post.title}”? This can't be undone.`)) return
     startTransition(async () => {
-      const result = await deleteBlogPostAction(post.id)
+      const result = await deleteBlogPostAction(post.id).catch((error: unknown) => { requestFailed(error); return null })
+      if (!result) return
       if (!result.ok) return void toast.error(result.error)
       toast.success("Post deleted.")
       router.push("/admin/blog")
@@ -116,8 +127,9 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
     setUploading(true)
     const data = new FormData()
     data.set("file", file)
-    const result = await uploadBlogImageAction(data)
+    const result = await uploadBlogImageAction(data).catch((error: unknown) => { requestFailed(error); return null })
     setUploading(false)
+    if (!result) return
     if (!result.ok) return void toast.error(result.error)
     update("featuredImageUrl", result.url)
   }
@@ -125,7 +137,8 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
   async function addCategory() {
     const name = window.prompt("New category name")
     if (!name?.trim()) return
-    const result = await createBlogCategoryAction(name)
+    const result = await createBlogCategoryAction(name).catch((error: unknown) => { requestFailed(error); return null })
+    if (!result) return
     if (!result.ok) return void toast.error(result.error)
     setCategories((current) => [...current, result.category].sort((a, b) => a.name.localeCompare(b.name)))
     update("categoryId", result.category.id)

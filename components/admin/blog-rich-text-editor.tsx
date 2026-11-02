@@ -55,7 +55,7 @@ export function BlogRichTextEditor({ value, onChange }: { value: BlogPost["conte
     setUploading(true)
     const form = new FormData()
     form.set("file", file)
-    const result = await uploadBlogImageAction(form)
+    const result = await uploadBlogImageAction(form).catch(() => ({ ok: false as const, error: "The image could not be uploaded. Please try again." }))
     setUploading(false)
     if (!result.ok) return void toast.error(result.error)
     editor.chain().focus().setImage({ src: result.url, alt: alt.trim() }).run()
