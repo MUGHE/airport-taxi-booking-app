@@ -175,7 +175,8 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
             {post?.publishedAt && <p className="text-xs text-muted-foreground">First published {new Date(post.publishedAt).toLocaleString("en-GB")}</p>}
             {status && <p className={status.tone === "error" ? "text-sm font-medium text-destructive" : "text-sm font-medium text-emerald-700"} role="status">{status.text}</p>}
             {dirty && !status && <p className="text-xs text-muted-foreground">You have unsaved changes.</p>}
-            <Button type="submit" variant="outline" className="w-full" disabled={pending}>{pending ? <Loader2 className="size-4 animate-spin" /> : null}Save draft</Button>
+            <p className="text-xs text-muted-foreground">{published ? "This post is live. Saved changes appear on the site straight away." : "Publish puts this post on the site straight away."}</p>
+            <Button type="submit" variant="outline" className="w-full" disabled={pending}>{pending ? <Loader2 className="size-4 animate-spin" /> : null}{published ? "Save changes" : "Save draft"}</Button>
             {published
               ? <Button type="button" variant="secondary" className="w-full" disabled={pending} onClick={() => changeStatus("draft")}>Unpublish</Button>
               : <Button type="button" className="w-full" disabled={pending} onClick={() => changeStatus("published")}>Publish</Button>}

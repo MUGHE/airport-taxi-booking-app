@@ -1,11 +1,12 @@
 import { unstable_cache } from "next/cache"
 import { createClient } from "@supabase/supabase-js"
-import { BLOG_IMAGE_MAX_BYTES, BLOG_IMAGE_TYPES, BLOG_POSTS_PER_PAGE, EMPTY_BLOG_DOCUMENT, sanitizeBlogDocument, slugify, type BlogCategory, type BlogPost, type BlogPostInput, type BlogStatus } from "@/lib/blog-schema"
+import { BLOG_IMAGE_MAX_BYTES, BLOG_IMAGE_TYPES, BLOG_POSTS_PER_PAGE, BLOG_VIDEO_MAX_BYTES, BLOG_VIDEO_TYPES, EMPTY_BLOG_DOCUMENT, sanitizeBlogDocument, slugify, type BlogCategory, type BlogPost, type BlogPostInput, type BlogStatus } from "@/lib/blog-schema"
 
 // Blog storage. Like the rest of the site this talks to Supabase with the service role key,
 // so callers are responsible for authorisation (see lib/blog-actions.ts).
 
 const BUCKET = "blog-images"
+const VIDEO_BUCKET = "blog-videos"
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string }
 
@@ -215,4 +216,20 @@ export async function uploadBlogImage(file: File): Promise<Result<{ url: string 
     return { ok: false, error: "The image could not be uploaded. Please try again." }
   }
   return { ok: true, url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl }
+}
+
+/** Videos are too big for a Server Action, so the browser uploads straight to storage with a one-time signed URL. */
+export async function createBlogVideoUpload(file: { name: string; type: string; size: number }): Promise<Result<{ uploadUrl: string; url: string }>> {
+  const supabase = getSupabase()
+  if (!supabase) return { ok: false, error: NOT_CONNECTED }
+  if (!(BLOG_VIDEO_TYPES as readonly string[]).includes(file.type)) return { ok: false, error: "Upload an MP4 or WebM video." }
+  if (file.size > BLOG_VIDEO_MAX_BYTES) return { ok: false, error: "Videos must be 50 MB or smaller. Use a YouTube link for longer videos." }
+  const base = slugify(file.name.replace(/\.[^.]+$/, "")) || "video"
+  const path = `${new Date().toISOString().slice(0, 7)}/${base}-${crypto.randomUUID().slice(0, 8)}.${file.type.split("/")[1]}`
+  const { data, error } = await supabase.storage.from(VIDEO_BUCKET).createSignedUploadUrl(path)
+  if (error) {
+    console.error("Blog video upload could not start", error.message)
+    return { ok: false, error: "The video could not be uploaded. Please try again." }
+  }
+  return { ok: true, uploadUrl: data.signedUrl, url: supabase.storage.from(VIDEO_BUCKET).getPublicUrl(path).data.publicUrl }
 }

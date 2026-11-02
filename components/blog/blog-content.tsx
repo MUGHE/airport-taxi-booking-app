@@ -1,6 +1,6 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { isSafeBlogImageSrc, isSafeBlogLink, slugify } from "@/lib/blog-schema"
+import { isSafeBlogImageSrc, isSafeBlogLink, parseBlogVideo, slugify } from "@/lib/blog-schema"
 import type { TiptapDocument, TiptapNode } from "@/lib/destination-content"
 
 function text(node: TiptapNode): string {
@@ -33,6 +33,7 @@ function renderBlock(node: TiptapNode, key: number): ReactNode {
     case "heading": {
       // Headings get anchors so articles can link to a section (#where-to-meet-your-driver).
       const id = slugify(text(node)) || undefined
+      if (node.attrs?.level === 4) return <h4 key={key} id={id}>{children}</h4>
       return node.attrs?.level === 3 ? <h3 key={key} id={id}>{children}</h3> : <h2 key={key} id={id}>{children}</h2>
     }
     case "bulletList":
@@ -50,6 +51,18 @@ function renderBlock(node: TiptapNode, key: number): ReactNode {
         // eslint-disable-next-line @next/next/no-img-element -- inline article images come from editors at any size
         ? <img key={key} src={node.attrs.src} alt={typeof node.attrs?.alt === "string" ? node.attrs.alt : ""} loading="lazy" decoding="async" />
         : null
+    case "blogVideo": {
+      const video = parseBlogVideo(node.attrs?.src)
+      if (!video) return null
+      const title = typeof node.attrs?.title === "string" ? node.attrs.title : ""
+      return (
+        <div key={key} className="blog-video">
+          {video.kind === "embed"
+            ? <iframe src={video.url} title={title || "Video"} loading="lazy" allow="fullscreen; picture-in-picture; encrypted-media" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+            : <video src={video.url} title={title || undefined} controls playsInline preload="metadata" />}
+        </div>
+      )
+    }
     default:
       return null
   }

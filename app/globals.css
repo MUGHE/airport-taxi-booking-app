@@ -1165,7 +1165,8 @@
 .blog-prose > * + * { margin-top: 1.15em; }
 .blog-prose h2 { margin-top: 2em; color: #071d33; font-size: 1.65rem; font-weight: 700; line-height: 1.25; letter-spacing: -.025em; scroll-margin-top: 6rem; }
 .blog-prose h3 { margin-top: 1.6em; color: #071d33; font-size: 1.3rem; font-weight: 700; line-height: 1.3; scroll-margin-top: 6rem; }
-.blog-prose h2 + *, .blog-prose h3 + * { margin-top: .6em; }
+.blog-prose h4 { margin-top: 1.4em; color: #071d33; font-size: 1.1rem; font-weight: 700; line-height: 1.35; scroll-margin-top: 6rem; }
+.blog-prose h2 + *, .blog-prose h3 + *, .blog-prose h4 + * { margin-top: .6em; }
 .blog-prose a { color: #075fbd; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(7,95,189,.35); text-underline-offset: 3px; }
 .blog-prose a:hover { text-decoration-color: currentColor; }
 .blog-prose ul { padding-left: 1.4em; list-style: disc; }
@@ -1175,10 +1176,14 @@
 .blog-prose strong { color: #071d33; font-weight: 700; }
 .blog-prose blockquote { padding: .25em 0 .25em 1.1em; border-left: 3px solid #075fbd; color: #3d5266; font-style: italic; }
 .blog-prose img { width: 100%; height: auto; border-radius: .9rem; }
+.blog-prose .blog-video { overflow: hidden; aspect-ratio: 16 / 9; border-radius: .9rem; background: #071d33; }
+.blog-prose .blog-video iframe, .blog-prose .blog-video video { display: block; width: 100%; height: 100%; border: 0; }
 .blog-prose hr { border: 0; border-top: 1px solid #e1e8ef; }
 .blog-prose p, .blog-prose li { text-wrap: pretty; }
 .blog-editor-surface .ProseMirror { min-height: 18rem; outline: none; }
-.blog-editor-surface img.ProseMirror-selectednode { outline: 3px solid #075fbd; }
+.blog-editor-surface img.ProseMirror-selectednode, .blog-editor-surface .blog-video.ProseMirror-selectednode { outline: 3px solid #075fbd; }
+/* In the editor a click selects the video block, so it can be moved or deleted, instead of playing it. */
+.blog-editor-surface .blog-video iframe, .blog-editor-surface .blog-video video { pointer-events: none; }
 
 @media (min-width: 640px) { .blog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .blog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
