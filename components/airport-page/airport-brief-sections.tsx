@@ -128,7 +128,7 @@ export function BriefTravellersSection({ page, brief }: { page: AirportPagePrese
     <section className="airport-benefits" data-preview-section="travellers">
       <div className="airport-container">
         <SectionHeading eyebrow="Who we drive" title={brief.travellers.heading} paragraphs={[brief.travellers.lead]} />
-        <CardGrid page={page} cards={brief.travellers.cards} columns={4} />
+        <CardGrid page={page} cards={brief.travellers.cards} columns={brief.travellers.cards.length === 4 ? 4 : 3} />
       </div>
     </section>
   )

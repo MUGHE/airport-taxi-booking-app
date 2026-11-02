@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Baby, Banknote, Briefcase, Car, CircleParking, Clock, Headphones, Luggage, MapPin, PlaneTakeoff, Route, ShieldCheck, TrainFront, UsersRound } from "lucide-react"
+import { Accessibility, Baby, Banknote, Briefcase, Car, CircleParking, Clock, Headphones, Luggage, MapPin, PlaneTakeoff, Route, ShieldCheck, Ship, TrainFront, UsersRound } from "lucide-react"
 import { BRIEF_DESTINATIONS_ID, BRIEF_GUIDE_ID, briefSections, type AirportBrief, type BriefPlace } from "@/components/airport-page/airport-brief-sections"
 import type { AirportCopy } from "@/components/airport-page/airport-page-renderer"
 
@@ -16,6 +16,7 @@ const AIRPORTS = {
   stansted: { label: "Stansted", name: "Stansted Airport", address: "London Stansted Airport (STN)", latitude: 51.885, longitude: 0.235, href: "/airport-transfers/stansted-airport-taxi", hrefLabel: "Stansted Airport taxi guide" },
   londonCity: { label: "London City", name: "London City Airport", address: "London City Airport (LCY)", latitude: 51.5053, longitude: 0.0553, href: "/airport-transfers/london-city-airport-taxi", hrefLabel: "London City Airport taxi guide" },
   southend: { label: "Southend", name: "Southend Airport", address: "London Southend Airport (SEN)", latitude: 51.5714, longitude: 0.6956, href: "/airport-transfers/southend-airport-taxi", hrefLabel: "Southend Airport taxi guide" },
+  bournemouth: { label: "Bournemouth", name: "Bournemouth Airport", address: "Bournemouth Airport (BOH)", latitude: 50.78, longitude: -1.8425 },
 } satisfies Record<string, BriefPlace>
 
 const PORTS = {
@@ -453,6 +454,74 @@ const LONDON_CITY_BRIEF: AirportBrief = {
       { ...AIRPORTS.stansted, text: "A straightforward taxi from London City to Stansted for a connection or onward journey." },
       { ...AIRPORTS.luton, text: "Pre-book your London City to Luton transfer, with the fare fixed before you travel." },
     ],
+  },
+}
+
+const SOUTHAMPTON_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Southampton Airport Information and Travel Guide",
+    paragraphs: [
+      "Southampton Airport (SOU) is a compact regional airport on the edge of the city, close to Eastleigh and well placed for Winchester, the New Forest and the Hampshire coast. It mainly serves domestic and short-haul European routes, with a small, easy-to-navigate single terminal.",
+      "Because it’s small, check-in and security tend to move quickly, though it’s still worth allowing the usual buffer, particularly at peak holiday times.",
+    ],
+    groups: [
+      { title: "Southampton Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "One terminal", text: "One terminal covers everything — check-in, security, shops and arrivals — so there’s no confusion about where to go. The pickup and drop-off area is a short walk from the terminal entrance." },
+        { icon: Clock, title: "Before you travel", text: "Confirm your flight time with your airline before arranging your taxi, and build in time for the drive and for security." },
+      ] },
+      { title: "Getting to Southampton Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, the airport sits just off the M27 and M3, with good connections to Winchester, Portsmouth and the wider south coast." },
+        { icon: TrainFront, title: "By rail", text: "Southampton Airport Parkway railway station sits directly next to the terminal, with regular services to London Waterloo, Reading and the south coast. Public transport covers the basics well." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A pre-booked airport taxi earns its keep with heavy luggage, an early flight, a cruise connection, or when you’re travelling as a family or group. With One Airport Taxi, your journey runs door-to-door — from your home, hotel or office straight to the terminal, or on to the cruise terminal if that’s your onward connection.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Southampton Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Southampton Airport? We run pre-booked transfers to the terminal from across Hampshire and the wider UK. When booking, add your flight details where asked so that we can time your drop-off around check-in rather than the other way round."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Southampton Airport Departures Drop-Off", text: "Your driver takes you directly to the terminal drop-off area, with enough time built in for check-in and security.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "Short-haul schedules often mean very early starts. A pre-booked airport taxi means your driver is outside at the agreed time, whatever the hour — no need to rely on a taxi rank that may be empty at 4 am.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "Group and Family Departures", text: "Travelling with the whole family, or a group heading off on the same flight? Book an MPV or 8-seater minibus and travel together, with the luggage space to match.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Southampton Airport Taxi Service for Families, Business Travellers, Groups and Cruise Passengers",
+    lead: "Different trips call for different vehicles. We offer options to suit a wide range of journeys to and from Southampton Airport.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Choose a vehicle with the right space. Child seats can be requested when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "A professional Southampton Airport taxi for meetings, corporate travel and flight connections, with executive vehicles available for a more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Travelling with friends, colleagues or the extended family? Our MPVs and 8-seater minibuses handle larger groups comfortably.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Ship, title: "Southampton Cruise Terminal Transfers", text: "Southampton is one of the UK’s busiest cruise ports, and plenty of our bookings connect the airport, the cruise terminals and onward journeys. Book a Southampton cruise terminal taxi alongside your airport transfer and avoid the hassle of taxi ranks on embarkation day.", link: { href: "/destinations/southampton-taxi", label: "Southampton taxi guide" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Southampton Airport is also a practical starting point for longer transfers — Southampton to Heathrow, Southampton to Gatwick or Southampton to Bournemouth Airport, with your fare agreed before you travel.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "Southampton Airport to Other Airports – Private Airport Transfers",
+    paragraphs: ["Southampton Airport is a practical starting point for longer transfers to other airports, with your fare agreed before you travel."],
+    titleFrom: "Southampton",
+    places: [
+      { ...AIRPORTS.heathrow, text: "Heathrow Airport is approximately 65–70 miles from Southampton Airport. A direct private transfer, with your fare agreed before you travel." },
+      { ...AIRPORTS.gatwick, text: "Gatwick Airport is around 88 miles from Southampton Airport by road. A direct private transfer, with your fare agreed before you travel." },
+      { ...AIRPORTS.bournemouth, text: "Bournemouth Airport is around 31 miles from Southampton Airport by road. A direct private transfer, with your fare agreed before you travel." },
+    ],
+  },
+  ports: {
+    heading: "Southampton Airport to Your Cruise or Ferry Port",
+    paragraphs: [
+      "Southampton Airport is conveniently located near several major UK ferry and cruise ports, making it a useful arrival point for passengers continuing their journey by sea. Whether you are flying into Southampton before joining a cruise or catching an international ferry, One Airport Taxi offers pre-booked, fixed-price transfers from Southampton Airport to major UK ports.",
+      "Cruise and ferry journeys often involve larger suitcases and additional luggage, so choose your vehicle based on the total amount of luggage rather than passenger numbers alone. For example, a family of four travelling with four large suitcases may need a 4-seater MPV rather than a standard saloon.",
+    ],
+    titleFrom: "Southampton Airport",
+    places: [
+      { ...PORTS.southampton, label: "Cruise Terminal", text: "Southampton Cruise Port is approximately 5–7 miles from Southampton Airport, with a journey time of around 15–25 minutes by road. The port has five cruise terminals: Ocean, Mayflower, City, Queen Elizabeth II and Horizon. Confirm your departure terminal before booking so your driver can take you to the correct location." },
+      { ...PORTS.dover, text: "Dover is around 150 miles from Southampton Airport by road, with a journey time of around 2 hours 15 minutes to 2 hours 45 minutes. Dover Eastern Docks handles ferry services to France, while cruise ships generally use the Western Docks." },
+      { ...PORTS.portsmouth, text: "Portsmouth International Port is approximately 20–25 miles from Southampton Airport, with a journey time of around 35–50 minutes. The port serves ferry routes to destinations including France, Spain and the Channel Islands." },
+      { ...PORTS.harwich, text: "Harwich International Port is around 170 miles from Southampton Airport by road, with a journey time of around 2 hours 45 minutes to 3 hours 15 minutes. It is an important departure point for ferry services to the Hook of Holland." },
+      { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 115–130 miles from Southampton Airport, with a journey time of around 2 hours to 2 hours 30 minutes. It serves cruise passengers travelling from the London area and other destinations." },
+    ],
+    note: "Journey times are approximate and can vary depending on traffic, roadworks and your chosen route. Allow additional time for port check-in, embarkation and ferry departure.",
   },
 }
 
@@ -1016,6 +1085,108 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     },
     comfortOrder: 75,
     extraSections: briefSections("southend", SOUTHEND_BRIEF),
+    hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+
+  Southampton: {
+    heroHeading: "Southampton Airport Taxi – Reliable Transfers to and from SOU",
+    heroSubhead: "Book a Southampton Airport taxi and know your fare before you even leave the house. One Airport Taxi offers pre-booked Southampton Airport transfers for passengers flying out, landing back in, or simply moving between the airport and the city, with professional, licensed drivers and a choice of saloon cars, executive vehicles, MPVs, 8-seater minibuses, and wheelchair-accessible vehicles. Whether you’re heading off on a short-haul city break or arriving back tired after a long one, pick the vehicle that suits your group and your luggage, and let someone else do the driving.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant Southampton Airport taxi quote online and have the journey sorted before you travel, or call our team on",
+    intro: {
+      heading: "Southampton Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Finding a dependable taxi to Southampton Airport shouldn’t mean waiting on a street corner hoping one turns up. With One Airport Taxi, you book in advance, enter your pickup and drop-off details, and see the price before you confirm.",
+        "So whether you need a taxi to Southampton Airport from the city centre, a transfer in from Winchester or Eastleigh, or a taxi from Southampton Airport to your home, hotel or business address, every journey is pre-booked and built around your actual travel plans — not a queue at a taxi rank.",
+        <>Southampton Airport is one of the UK’s smaller, more manageable regional airports, with <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>a single terminal and a railway station right outside</Link>. That makes pickups and drop-offs straightforward. Add your flight number when you book, and we’ll plan your collection around your real arrival time, not the scheduled one.</>,
+        <>The fare you’re quoted is the fare you pay, whether you’re booking an everyday airport taxi service in Southampton or a longer transfer to Heathrow or Gatwick. No meter, no last-minute mark-up. From a routine airport run to a <Link className={linkClass} href="/destinations/southampton-taxi">cruise terminal connection</Link>, booking with us is simple from the start.</>,
+      ],
+      cta: "Get Your Southampton Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See the price before you confirm." },
+        { title: "One terminal", text: "A railway station right outside." },
+        { title: "No meter, no mark-up", text: "The fare you’re quoted is the fare you pay." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Southampton Airport Transfers?",
+    benefitsSubhead: "A good airport transfer service shapes the whole trip, not just the drive itself. We focus on clear pricing, planned pickups, comfortable cars, and support that’s actually there when you need it.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "You’ll know the cost of your Southampton Airport taxi before you confirm the booking. Our fixed-fare approach means no meter-based pricing and no surprise extras — check exactly what’s included before you book." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We track your flight. If your arrival time shifts, our team adjusts your pickup based on live information, so you’re not left waiting, and your driver isn’t guessing." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Our drivers are licensed, properly checked, and know the routes around Southampton, the cruise terminals, and the wider Hampshire area well. Punctuality and safe driving come as standard." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book and your driver will meet you inside the arrivals area at an agreed point. Availability depends on the service selected and your booking details." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flights and cruise ships don’t run to office hours, so neither do we. Reach a real person any time, day or night." },
+      { icon: Accessibility, title: "Vehicles for Different Travel Needs, Including Wheelchair Access", text: "Saloon, executive, estate, MPV, 8-seater minibus or wheelchair-accessible taxi — choose based on your passengers, luggage, and any accessibility needs. If you need a wheelchair accessible taxi in Southampton, let us know when booking so we can arrange the right vehicle." },
+    ],
+    fleet: {
+      heading: "Southampton Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Picking the right vehicle matters whether you’re booking a taxi to Southampton Airport, a cruise terminal transfer, or a longer run to another UK airport. Think about seats and suitcase space together.",
+        "We run a range of vehicles, from everyday airport taxis to executive travel, group transport and accessible vehicles.",
+        <><strong>Wheelchair Accessible Taxi:</strong> a dedicated wheelchair-accessible taxi is available for passengers who need it. <Link className={linkClass} href="/Contact-Us">Let us know your requirements</Link> when booking so that the right vehicle and equipment can be arranged in advance.</>,
+      ],
+      closing: "Choose your vehicle based on your passenger numbers, luggage, and any accessibility needs. Check availability before you confirm.",
+      descriptions: {
+        standard: "The practical choice for solo travellers, couples and small groups with standard luggage. Comfortable and straightforward for everyday Southampton airport transfers.",
+        executive: "For business travellers and anyone who prefers a more premium ride to or from the airport or cruise terminal.",
+        estate: "Extra boot space compared with a standard saloon — useful if you’re travelling with several suitcases or sports equipment.",
+        mpv_4seater: "More room for families and small groups who need extra space for passengers and luggage, including cruise passengers travelling with larger cases.",
+        mpv: "Suits larger families and small groups. Luggage allowance depends on the number of passengers, so check before booking.",
+        minibus_8seater: "The practical option for bigger groups, cruise send-offs and business transport. Up to eight passengers, with luggage capacity to match.",
+      },
+      pricing: {
+        heading: "Fixed Southampton Airport Taxi Prices",
+        paragraphs: [
+          "Your quote comes before you confirm. Enter your pickup and destination, travel date, and passenger requirements to see your available fare, whether that’s a short airport transfer or a longer run to Heathrow or Bournemouth Airport.",
+          "Our pricing is designed to be easy to compare, so you know what a cheap Southampton airport taxi should actually cost before you book one.",
+        ],
+        cta: "Compare Southampton Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Southampton Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at Southampton after a flight? Pre-booking your taxi from Southampton Airport means one less thing to think about after a tiring journey.",
+        "We provide airport pickups from the terminal. Share your flight number, arrival date, and destination when booking, and we’ll plan your collection around your actual flight.",
+      ],
+      stepsHeading: "How Your Southampton Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "After landing, follow the signs for baggage reclaim and the exit. Your booking confirmation has your specific driver meeting instructions." },
+        MEET_DRIVER_STEP,
+        { title: "Continue to your destination.", text: "From there, it’s a straight run to your home, hotel, office or cruise terminal, or further afield if you’re continuing your journey." },
+      ],
+      dropHeading: "Southampton Airport Drop-Off Service",
+      dropText: "Travelling into Southampton Airport from elsewhere in the UK? Your driver takes you to the terminal drop-off area, with time allowed for traffic and check-in.",
+    },
+    travelInfo: {
+      heading: "Southampton Airport Taxis and Transfers",
+      lead: [
+        "Located in Eastleigh, Hampshire, approximately 4 miles from Southampton city centre, Southampton Airport is a convenient gateway for passengers travelling across Hampshire, Dorset and the South Coast. Whether you need a taxi to Southampton Airport for an upcoming flight or a transfer after landing, One Airport Taxi provides pre-booked airport journeys with professional drivers, comfortable vehicles and transparent pricing.",
+        "Book online for a reliable Southampton Airport taxi with a Meet and Greet service, flight monitoring and up to 60 minutes of free waiting time for airport pickups. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Nearby airports: Bournemouth Airport (around 31 miles), Heathrow Airport (approximately 65–70 miles) and Gatwick Airport (around 88 miles).",
+          "Nearest rail: Southampton Airport Parkway railway station is located directly beside the terminal, providing connections to Southampton, Winchester, London and other destinations.",
+          "Road access: M27 Junction 5 provides access to the airport, with connections to the M3, A27 and A31 for journeys across Hampshire, Dorset and the wider UK.",
+          "Airport drop-off charge: Southampton Airport’s designated drop-off and pick-up area is located in the short-stay car park, approximately a one-minute walk from the terminal. The published charge is £7 for 20 minutes. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities", items: [
+          "Southampton City Centre: Approximately 15–25 minutes (4–5 miles).",
+          "Winchester: Approximately 20–30 minutes (12–14 miles).",
+          "Portsmouth: Approximately 35–50 minutes (20–22 miles).",
+          "Bournemouth: Approximately 40–60 minutes (35–40 miles).",
+          "Salisbury: Approximately 40–55 minutes (25–30 miles).",
+          "London: Approximately 1 hour 30 minutes–2 hours (75–80 miles).",
+          "Distances are approximate road distances to central destinations. Journey times may vary depending on traffic, roadworks, your exact pickup or drop-off location and the route taken.",
+        ] },
+      ],
+      closing: "Whether you’re travelling to Southampton Airport for a flight or heading home after landing, One Airport Taxi makes arranging your airport transfer straightforward. Get your fare before booking, choose a suitable vehicle for your passengers and luggage, and enjoy a comfortable journey with professional drivers and transparent pricing.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("southampton", SOUTHAMPTON_BRIEF),
     hiddenSections: ["ferry_cruise", "related_destinations"],
   },
 }

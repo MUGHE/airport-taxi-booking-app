@@ -25,4 +25,8 @@ export const AIRPORT_BRIEF_SEO: Record<string, { title: string; description: str
     title: "Southend Airport Taxi | Fixed Price Transfers to & from SEN",
     description: "Book a Southend Airport taxi with fixed fares confirmed before you travel. Licensed drivers, flight tracking, meet-and-greet, and 8-seater minibuses. Get an instant quote.",
   },
+  "southampton-airport-taxi": {
+    title: "Southampton Airport Taxi | Fixed Price Transfers to & from SOU",
+    description: "Book a Southampton Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring, meet-and-greet, and wheelchair-accessible vehicles. Instant quote.",
+  },
 }

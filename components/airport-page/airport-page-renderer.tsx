@@ -103,7 +103,7 @@ function headingFor(title: string | undefined, fallback: string) {
 /** "London Luton (LTN)" -> "London Luton Airport (LTN)", from the primary terminal's name. */
 function airportLabel(page: AirportPagePresentation) {
   const name = (page.terminals.find((terminal) => terminal.isPrimary) ?? page.terminals[0])?.name.split(" - ")[0]
-  return name ? name.replace(/\s*\(([A-Z]{3})\)/, " Airport ($1)") : `${page.shortName} Airport`
+  return name ? name.replace(/(?<! Airport)\s*\(([A-Z]{3})\)/, " Airport ($1)") : `${page.shortName} Airport`
 }
 
 function hasContent(section: AirportPageContentSection) {
