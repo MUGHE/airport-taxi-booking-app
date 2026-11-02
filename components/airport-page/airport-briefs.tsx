@@ -20,6 +20,8 @@ const AIRPORTS = {
   bournemouth: { label: "Bournemouth", name: "Bournemouth Airport", address: "Bournemouth Airport (BOH)", latitude: 50.774566, longitude: -1.83211 },
   southampton: { label: "Southampton", name: "Southampton Airport", address: "Southampton Airport (SOU)", latitude: 50.9480307, longitude: -1.3648088 },
   birmingham: { label: "Birmingham", name: "Birmingham Airport", address: "Birmingham Airport (BHX)", latitude: 52.4531, longitude: -1.734 },
+  eastMidlands: { label: "East Midlands", name: "East Midlands Airport", address: "East Midlands Airport (EMA)", latitude: 52.8311, longitude: -1.3281 },
+  manchester: { label: "Manchester", name: "Manchester Airport", address: "Manchester Airport (MAN)", latitude: 53.3588, longitude: -2.2727 },
 } satisfies Record<string, BriefPlace>
 
 const PORTS = {
@@ -737,6 +739,73 @@ const FARNBOROUGH_BRIEF: AirportBrief = {
       { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 75–90 miles from Farnborough Airport, with a journey time of around 1 hour 30 minutes to 2 hours. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Check your cruise documents for the correct terminal and departure time before arranging your journey." },
     ],
     note: "Journey times are estimates and can vary depending on traffic, roadworks and your chosen route, so leave enough time before your embarkation or check-in.",
+  },
+}
+
+const BIRMINGHAM_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Birmingham Airport Information and Travel Guide",
+    paragraphs: [
+      "Birmingham Airport (BHX) is the Midlands’ main international airport, located near Solihull and the NEC, about 8 miles east of Birmingham city centre. It operates a single, modern terminal serving domestic, European and long-haul routes, making it one of the busiest airports outside London.",
+    ],
+    groups: [
+      { title: "Birmingham Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "One terminal", text: "With one terminal covering check-in, security, shops and arrivals, there’s no risk of heading to the wrong place. The pickup and drop-off area sits close to the terminal entrance." },
+        { icon: Clock, title: "Before you travel", text: "Confirm your flight time with your airline before arranging your taxi, and allow enough time to reach the airport and clear security, especially during NEC event periods when traffic can build up quickly." },
+      ] },
+      { title: "Getting to Birmingham Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, the airport is reached via the M42 and A45, with good connections to the M6, M5 and wider motorway network." },
+        { icon: TrainFront, title: "By rail", text: "Birmingham International railway station sits next to the terminal, with regular services to Birmingham New Street and across the Midlands. Public transport works well for light travellers." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A private taxi earns its keep when you’re carrying several suitcases, travelling with children, heading to or from an NEC event, or moving as a group. With One Airport Taxi, your journey runs door-to-door — from your home, hotel or office straight to your terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Birmingham Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Birmingham Airport? One Airport Taxi provides pre-booked transfers to the terminal from across the Midlands and the wider UK. When making your booking, provide your flight details where requested. This helps us plan your journey and arrange the appropriate drop-off."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Birmingham Airport Departures Drop-Off", text: "Your driver takes you to the terminal drop-off area, allowing time for check-in and security.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "Long-haul and charter departures from Birmingham often mean early starts or late finishes. A pre-booked taxi means your driver is outside at the agreed time, whatever the hour.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "NEC, Group and Family Departures", text: "Travelling to a flight after an NEC event, or heading off as a family or group? Book an MPV or 8-seater minibus and travel together, with luggage space to match.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Birmingham Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Different passengers have different airport transportation requirements. One Airport Taxi offers a range of vehicle options and pre-booked journeys for a variety of travel needs.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Choose a vehicle with suitable passenger and luggage capacity. You can request a child seat when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "Arrange a professional Birmingham Airport taxi for business meetings, corporate travel, NEC events and airport connections. Executive vehicles are available for passengers who prefer a more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Travelling with friends, colleagues or an extended family? Our MPVs and 8-seater minibuses provide options for larger groups. Check luggage capacity before confirming your vehicle.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Birmingham is a common starting point for journeys beyond the Midlands. You can arrange a private transfer to destinations across the UK, with your fare confirmed before travel.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "Birmingham Airport to Other Airports – Private Airport Transfers",
+    paragraphs: ["East Midlands, Manchester and Luton are among the nearby airports you can reach by private transfer, with your fare confirmed before travel."],
+    titleFrom: "Birmingham",
+    places: [
+      { ...AIRPORTS.eastMidlands, text: "East Midlands Airport is around 37 miles from Birmingham Airport by road." },
+      { ...AIRPORTS.manchester, text: "Manchester Airport is approximately 85–95 miles from Birmingham Airport by road." },
+      { ...AIRPORTS.luton, text: "London Luton Airport is around 82 miles from Birmingham Airport by road." },
+    ],
+  },
+  ports: {
+    heading: "Birmingham Airport to Your Cruise or Ferry Port",
+    paragraphs: [
+      "Birmingham Airport does not have its own ferry or cruise terminals, but many passengers fly into BHX before continuing their journey to a UK port. One Airport Taxi offers pre-booked, fixed-price taxi transfers from Birmingham Airport to major ferry and cruise ports across the UK.",
+      "Cruise luggage is often bulkier than standard airport luggage, so choose your vehicle based on the number of suitcases, not just the number of passengers. For example, a family of four travelling with four large suitcases may need a 4-seater MPV rather than a saloon.",
+      "Whether you are travelling to Southampton, Dover, Portsmouth, Harwich or Tilbury, One Airport Taxi can arrange a comfortable, pre-booked transfer. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to accommodate your passengers and luggage.",
+    ],
+    titleFrom: "Birmingham Airport",
+    places: [
+      { ...PORTS.southampton, text: "Southampton is approximately 130–135 miles from Birmingham Airport, with a journey time of around 2 hours 15 minutes to 2 hours 45 minutes by road. Southampton has five cruise terminals: Ocean, Mayflower, City, Queen Elizabeth II and Horizon. Confirm your departure terminal on your cruise documents before booking your transfer." },
+      { ...PORTS.dover, text: "Dover is around 202 miles from Birmingham Airport by road, with a journey time of around 3–3.5 hours. Ferries to France depart from the Eastern Docks, while cruise ships generally use the Western Docks. Allow extra time for motorway traffic and port check-in." },
+      { ...PORTS.portsmouth, text: "Portsmouth International Port is approximately 140–150 miles from Birmingham Airport, with a journey time of around 2 hours 30 minutes to 3 hours. The port operates ferry services to destinations including France, Spain and the Channel Islands, as well as selected cruise departures." },
+      { ...PORTS.harwich, text: "Harwich International Port is around 171 miles from Birmingham Airport by road, with a journey time of around 3–3.5 hours. The port provides international ferry services, including crossings to the Hook of Holland. Allow additional time for traffic and ferry check-in." },
+      { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 130–135 miles from Birmingham Airport, with a journey time of around 2 hours 15 minutes to 2 hours 45 minutes. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Confirm your cruise terminal and departure time before arranging your transfer." },
+    ],
+    note: "All distances and journey times are approximate road estimates. Traffic, roadworks and the exact port entrance can affect your journey, so allow sufficient time for check-in and boarding.",
   },
 }
 
@@ -1712,6 +1781,108 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     comfortOrder: 75,
     finalChip: "Executive cars",
     extraSections: briefSections("farnborough", FARNBOROUGH_BRIEF),
+    hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+
+  Birmingham: {
+    heroHeading: "Birmingham Airport Taxi – Reliable Transfers to and from BHX",
+    heroSubhead: "Book a Birmingham Airport taxi and get a fixed fare confirmed before you travel. One Airport Taxi operates pre-booked Birmingham Airport transfers across the Midlands and the wider UK, with professional, licensed drivers and a choice of saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re travelling alone, with family or as part of a group, choose the vehicle that fits your passengers and luggage, and have your Birmingham journey sorted with confidence.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant Birmingham Airport taxi quote online and plan your journey before you travel, or call our team on",
+    intro: {
+      heading: "Birmingham Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Arranging a reliable taxi from Birmingham Airport should be straightforward. With One Airport Taxi, you can plan your journey, enter your pickup and drop-off details, and receive your fare before confirming your booking.",
+        "Whether you need a taxi from the city centre to Birmingham Airport, a private transfer from Solihull or Coventry, or a taxi from Birmingham Airport to your home, hotel or business address, we provide pre-booked journeys tailored to your travel plans.",
+        <>Birmingham Airport operates from <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>a single, well-organised terminal</Link>, which keeps pickups and drop-offs simple. Provide your flight number when you book, and we’ll track it and adjust your pickup if your flight runs early or late.</>,
+        <>Your quoted fare is confirmed before you travel, helping you plan your transport costs without unexpected pricing changes. From individual airport journeys to family holidays and business transfers, <Link className={linkClass} href="#vehicles">our fleet</Link> makes booking your Birmingham journey simple.</>,
+      ],
+      cta: "Get Your Birmingham Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "Receive your fare before confirming your booking." },
+        { title: "One terminal", text: "Pickups and drop-offs stay simple." },
+        { title: "Flight tracked", text: "We adjust your pickup if your flight runs early or late." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Birmingham Airport Transfers?",
+    benefitsSubhead: "Choosing the right airport taxi service can make a difference to your entire journey. We focus on clear pricing, planned pickups, comfortable vehicles, and helpful customer support.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "Know your journey cost before confirming your Birmingham Airport taxi booking. Our fixed-fare approach helps you plan your travel budget without meter-based pricing or unexpected fare changes." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We monitor your flight information to help coordinate your airport pickup. If your arrival time changes, our team uses the updated information to plan your collection." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Travel with professional, licensed drivers who understand the importance of punctuality, safe driving, and good customer service across Birmingham and the wider Midlands road network." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Make your arrival easier by adding a Meet and Greet service when booking. Your driver can meet you in the airport arrivals area at an agreed-upon meeting point, depending on the service selected." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flight schedules don’t always fit standard working hours. Our support team is available around the clock to help with booking enquiries and journey-related questions." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater minibuses. Whether you need a business transfer, a family airport taxi or transport for a larger group, select a vehicle based on your passengers and luggage." },
+    ],
+    fleet: {
+      heading: "Birmingham Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle is important when booking a taxi to Birmingham Airport or arranging a transfer from Birmingham. Consider both passenger capacity and luggage space before selecting your car.",
+      ],
+      closing: "Choose your vehicle based on your passenger count and luggage requirements. Check the vehicle details and available capacity before confirming your booking.",
+      descriptions: {
+        standard: "A practical choice for individuals, couples and small groups travelling with standard luggage. Suitable for everyday airport journeys and comfortable transfers to and from Birmingham Airport.",
+        executive: "A suitable option for business travellers and passengers who prefer a more premium travel experience. Ideal for corporate airport transfers and professional journeys into Birmingham city centre or the NEC.",
+        estate: "An estate vehicle offers more luggage space than a standard saloon, making it useful for passengers travelling with several suitcases.",
+        mpv_4seater: "A spacious option for families and small groups who need additional passenger and luggage capacity.",
+        mpv: "Suitable for larger families and small groups. This vehicle offers additional passenger capacity, with luggage allowance depending on the number of people travelling.",
+        minibus_8seater: "A convenient option for larger groups, group holidays and business transportation. An 8-seater minibus can accommodate up to 8 passengers and has sufficient luggage capacity.",
+      },
+      pricing: {
+        heading: "Fixed Birmingham Airport Taxi Prices",
+        paragraphs: [
+          "Your Birmingham taxi quote is provided before you confirm your journey. Enter your pickup location, destination, travel date and passenger requirements to check your available fare.",
+          "Our pricing information is designed to make airport taxi costs easier to understand, helping you compare suitable vehicles and plan your journey.",
+        ],
+        cta: "Compare Birmingham Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Birmingham Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Arriving at Birmingham Airport after a long flight? Pre-booking your taxi can make the next part of your journey easier.",
+        "One Airport Taxi provides airport pickups from the terminal. When booking, provide your flight number, arrival date, and destination so your journey can be planned around your flight.",
+      ],
+      stepsHeading: "How Your Birmingham Airport Pickup Works",
+      steps: [
+        { title: "Complete your flight and arrival details.", text: "Provide your flight number and arrival information when making your booking. This helps us identify your expected arrival time." },
+        { title: "Follow the airport arrival signs.", text: "After landing, follow the signs for passport control and baggage collection. Check your booking confirmation for your specific driver meeting instructions." },
+        { title: "Meet your driver.", text: "If you have selected Meet and Greet, your driver will meet you at the agreed arrivals meeting point. Otherwise, follow the pickup instructions supplied with your booking." },
+        { title: "Continue to your destination.", text: "Once you have met your driver, you can continue to your home, hotel, business address or another destination in the UK." },
+      ],
+      dropHeading: "Birmingham Airport Drop-Off Service",
+      dropText: "If you are travelling to Birmingham Airport from elsewhere in the UK, your driver will take you to the terminal drop-off area. Make sure you provide the correct flight details and allow enough time for traffic, check-in and airport security.",
+    },
+    travelInfo: {
+      heading: "Birmingham Airport Taxis and Transfers",
+      lead: [
+        "Located in Solihull, approximately 8 miles southeast of Birmingham city centre, Birmingham Airport is one of the UK’s busiest international airports and an important gateway to the West Midlands. Whether you need a taxi to Birmingham Airport for an upcoming flight or a transfer after landing, One Airport Taxi provides pre-booked airport journeys with professional drivers, comfortable vehicles and transparent pricing.",
+        "Book online for a reliable Birmingham Airport taxi, with a Meet and Greet service and up to 60 minutes of free waiting time for airport pickups.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Nearby airports: East Midlands Airport (around 37 miles), Manchester Airport (approximately 85–95 miles) and London Luton Airport (around 82 miles).",
+          "Nearest railway station: Birmingham International Station, directly connected to the airport terminal by the free Air-Rail Link, which takes approximately 1.5 minutes.",
+          "Road access: Convenient access via the M42 at Junction 6 and the A45, connecting the airport with Birmingham, Coventry, Solihull and other major destinations.",
+          "Airport drop-off: Birmingham Airport offers a free drop-off car park for stays of up to 10 minutes, around a 5–10-minute walk from the terminal. Premium Set Down, located directly outside the terminal, costs £8 for the first 15 minutes. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities", items: [
+          "Birmingham City Centre: Approximately 20–35 minutes (8–10 miles).",
+          "Coventry: Approximately 20–30 minutes (11–13 miles).",
+          "Wolverhampton: Approximately 35–50 minutes (25–30 miles).",
+          "Leicester: Approximately 40–60 minutes (35–40 miles).",
+          "Worcester: Approximately 40–55 minutes (35–40 miles).",
+          "Nottingham: Approximately 55–75 minutes (around 48 miles).",
+          "Oxford: Approximately 1 hour 15 minutes–1 hour 40 minutes (65–75 miles).",
+          "London: Approximately 2–2.5 hours (110–120 miles).",
+          "Distances are approximate road distances to central destinations. Journey times may vary depending on traffic, roadworks and your chosen route.",
+        ] },
+      ],
+      closing: "Whether you are travelling to Birmingham Airport for a holiday, business trip or international flight, or heading home after landing, One Airport Taxi offers convenient pre-booked transfers with fares confirmed before travel. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to suit your passengers and luggage.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("birmingham", BIRMINGHAM_BRIEF),
     hiddenSections: ["ferry_cruise", "related_destinations"],
   },
 }

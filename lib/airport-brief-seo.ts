@@ -41,4 +41,8 @@ export const AIRPORT_BRIEF_SEO: Record<string, { title: string; description: str
     title: "Farnborough Airport Taxi | Fixed Price Private Transfers",
     description: "Book a Farnborough Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring and executive vehicles for private and business aviation transfers.",
   },
+  "birmingham-airport-taxi": {
+    title: "Birmingham Airport Taxi | Fixed Price Transfers to & from BHX",
+    description: "Book a Birmingham Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring, meet-and-greet, and 8-seater minibuses. Instant quote.",
+  },
 }
