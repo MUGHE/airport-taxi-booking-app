@@ -33,4 +33,8 @@ export const AIRPORT_BRIEF_SEO: Record<string, { title: string; description: str
     title: "Bournemouth Airport Taxi | Fixed Price Transfers to & from BOH",
     description: "Book a Bournemouth Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring, meet-and-greet, and 8-seater minibuses. Instant quote.",
   },
+  "oxford-airport-taxi": {
+    title: "Oxford Airport Taxi | Fixed Price Transfers to & from OXF",
+    description: "Book an Oxford Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring, meet-and-greet, plus Oxford-to-Heathrow and London airport transfers.",
+  },
 }

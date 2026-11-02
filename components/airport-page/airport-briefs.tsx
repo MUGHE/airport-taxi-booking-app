@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Accessibility, Baby, Banknote, Briefcase, Car, CircleParking, Clock, Headphones, Luggage, MapPin, PlaneTakeoff, Route, ShieldCheck, Ship, TrainFront, UsersRound } from "lucide-react"
 import { BRIEF_DESTINATIONS_ID, BRIEF_GUIDE_ID, briefSections, type AirportBrief, type BriefPlace } from "@/components/airport-page/airport-brief-sections"
 import type { AirportCopy } from "@/components/airport-page/airport-page-renderer"
+import { createRouteBookingLinks } from "@/lib/airport-page-data"
 
 // Airport pages rewritten from the client's content briefs, keyed by the airport's short name.
 // The CMS still supplies terminals, vehicles, images, reviews and FAQs; these supply the wording.
@@ -18,6 +19,7 @@ const AIRPORTS = {
   southend: { label: "Southend", name: "Southend Airport", address: "London Southend Airport (SEN)", latitude: 51.5714, longitude: 0.6956, href: "/airport-transfers/southend-airport-taxi", hrefLabel: "Southend Airport taxi guide" },
   bournemouth: { label: "Bournemouth", name: "Bournemouth Airport", address: "Bournemouth Airport (BOH)", latitude: 50.774566, longitude: -1.83211 },
   southampton: { label: "Southampton", name: "Southampton Airport", address: "Southampton Airport (SOU)", latitude: 50.9480307, longitude: -1.3648088 },
+  birmingham: { label: "Birmingham", name: "Birmingham Airport", address: "Birmingham Airport (BHX)", latitude: 52.4531, longitude: -1.734 },
 } satisfies Record<string, BriefPlace>
 
 const PORTS = {
@@ -592,6 +594,80 @@ const BOURNEMOUTH_BRIEF: AirportBrief = {
       { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is around 140 miles from Bournemouth Airport by road, with a journey time of around 3–3.5 hours. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Check your cruise documents for the correct terminal and departure time before arranging your journey." },
     ],
     note: "Journey times are estimates and can vary depending on traffic, roadworks and your chosen route, so allow extra time before your embarkation or check-in.",
+  },
+}
+
+const OXFORD_CITY = town("Oxford", "Oxford city centre, Oxford", 51.752, -1.2577)
+
+/** Most Oxford journeys start in the city, not at Oxford Airport. */
+function fromOxford(place: BriefPlace) {
+  return createRouteBookingLinks({ name: OXFORD_CITY.address, latitude: OXFORD_CITY.latitude, longitude: OXFORD_CITY.longitude }, { name: place.address, latitude: place.latitude, longitude: place.longitude }).toAirport
+}
+
+const OXFORD_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Oxford Airport Information and Travel Guide",
+    paragraphs: [
+      "Oxford (London) Airport, also known as Oxford Airport or Kidlington Airport, is a small general aviation airport north of Oxford, mainly used for private aviation, flight training and charter flights rather than scheduled commercial routes. For that reason, most of the airport-related searches from Oxford are actually about getting to and from the UK’s major airports — Heathrow, Gatwick, Luton, Stansted and Birmingham — and that’s where One Airport Taxi focuses its Oxford service.",
+    ],
+    groups: [
+      { title: "Getting Between Oxford and the Airports", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "Getting from Oxford to Heathrow Airport", text: "Heathrow is around 50 miles from Oxford via the M40 and M25, typically taking 1 hour to 1 hour 30 minutes by road depending on traffic. Alternatives include the Oxford Bus Company’s Airline coach service or the train, with at least one change, but both run to fixed timetables. A pre-booked taxi from Oxford to Heathrow (or Heathrow to Oxford) runs door to door on your schedule, with your fare fixed regardless of which Heathrow terminal you need — including Heathrow Terminal 5.", link: { href: fromOxford(AIRPORTS.heathrow), label: "Book Oxford to Heathrow" } },
+        { icon: Route, title: "Getting from Oxford to Luton, Gatwick, Stansted and Birmingham Airports", text: "Oxford also connects well by road to Luton Airport, Gatwick Airport, Stansted Airport and Birmingham Airport. If you’re flying from one of these airports instead of Heathrow, a pre-booked Oxford airport taxi lets you travel directly with your luggage, without waiting for a coach or changing trains." },
+        { icon: Car, title: "Getting to Oxford Airport and Around Oxford", text: "By road, Oxford is served by the A34, A40 and M40, with the city centre a short drive from the airport itself. Public transport within Oxford is comprehensive, but for an early flight, a late arrival, or travelling with a family or group, a private taxi remains the simplest option.", link: { href: "/destinations/oxford-taxi", label: "Oxford taxi guide" } },
+        { icon: MapPin, title: "Door to door", text: "With One Airport Taxi, your journey runs door to door — from your home, college or office in Oxford straight to your airport terminal, wherever in the UK that may be.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Oxford Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi from Oxford to one of the UK’s major airports, or to Oxford (Kidlington) Airport itself? We run pre-booked transfers across Oxfordshire and beyond. When booking, add your flight details where asked — this helps us plan your journey and time your drop-off around check-in."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Oxford to Heathrow Taxi", text: "Our most requested Oxford airport route. Book an Oxford-to-Heathrow taxi to any terminal, including Terminals 4 and 5, with your fare confirmed before travel.", link: { href: fromOxford(AIRPORTS.heathrow), label: "Book Oxford to Heathrow" } },
+      { icon: Route, title: "Oxford to Luton, Gatwick and Stansted Taxi", text: "Flying from a different London airport? We also cover Oxford to Luton Airport, Oxford to Gatwick Airport and Oxford to Stansted Airport transfers, priced and booked the same straightforward way.", link: { href: fromOxford(AIRPORTS.luton), label: "Book Oxford to Luton" } },
+      { icon: Car, title: "Oxford to Birmingham Airport Taxi", text: "Heading north instead? Book a taxi from Oxford to Birmingham Airport with the same fixed-fare approach.", link: { href: fromOxford(AIRPORTS.birmingham), label: "Book Oxford to Birmingham" } },
+    ],
+  },
+  travellers: {
+    heading: "Oxford Airport Taxi Service for Families, Business Travellers, Students and Groups",
+    lead: "Different trips call for different vehicles. We offer options to suit a wide range of journeys between Oxford and the UK’s major airports.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases on a Heathrow or Gatwick run from Oxford? Choose a vehicle with the right space. Child seats can be requested when booking, subject to availability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business and University Airport Transfers", text: "A professional transfer for business travellers, academics and visiting students connecting Oxford with Heathrow, Luton or Birmingham Airport, with executive vehicles available.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Travelling with colleagues, coursemates or the extended family? Our MPVs and 8-seater minibuses handle larger groups comfortably, with luggage space to match.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Oxford is a popular starting point for journeys to every major UK airport. Arrange a private transfer to Heathrow, Gatwick, Luton, Stansted or Birmingham Airport, with your fare agreed before you travel.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "Oxford to the UK’s Major Airports – Private Airport Transfers",
+    paragraphs: ["A pre-booked taxi between Oxford and the airport runs door to door on your schedule, with your fare agreed before you travel."],
+    titleFrom: "Oxford",
+    origin: OXFORD_CITY,
+    places: [
+      { ...AIRPORTS.heathrow, text: "Our most requested Oxford airport route, to any terminal, including Terminals 4 and 5." },
+      { ...AIRPORTS.gatwick, text: "A direct transfer between Oxford and Gatwick, with your fare confirmed before travel." },
+      { ...AIRPORTS.luton, text: "A direct transfer between Oxford and Luton Airport, priced and booked the same straightforward way." },
+      { ...AIRPORTS.stansted, text: "A direct transfer between Oxford and Stansted, in a vehicle sized to your passengers and luggage." },
+      { ...AIRPORTS.birmingham, text: "Heading north instead? A taxi between Oxford and Birmingham Airport with the same fixed-fare approach." },
+    ],
+  },
+  ports: {
+    heading: "Oxford Airport to Your Cruise or Ferry Port",
+    paragraphs: [
+      "Oxford Airport does not have its own ferry or cruise terminals, but passengers travelling through London Oxford Airport may need an onward transfer to a UK cruise or ferry port. One Airport Taxi offers pre-booked, fixed-price taxi transfers from Oxford Airport to major ferry and cruise ports across the UK.",
+      "Cruise luggage is often bulkier than standard travel luggage, so choose your vehicle based on the number of suitcases, not just the number of passengers. For example, a family of four travelling with four large suitcases may need a 4-seater MPV rather than a standard saloon.",
+      "Whether you are travelling to Southampton, Dover, Portsmouth, Harwich or Tilbury, One Airport Taxi can arrange a comfortable, pre-booked transfer. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to accommodate your passengers and luggage.",
+    ],
+    titleFrom: "Oxford Airport",
+    places: [
+      { ...PORTS.southampton, text: "Southampton is approximately 75–85 miles from Oxford Airport, with a journey time of around 1 hour 30 minutes to 2 hours by road. Southampton has five cruise terminals: Ocean, Mayflower, City, Queen Elizabeth II and Horizon. Confirm your departure terminal on your cruise documents before booking your transfer." },
+      { ...PORTS.dover, text: "Dover is approximately 140–155 miles from Oxford Airport, with a journey time of around 2 hours 45 minutes to 3 hours 15 minutes. Ferries to France depart from the Eastern Docks, while cruise ships generally use the Western Docks. Allow additional time for traffic and port check-in." },
+      { ...PORTS.portsmouth, text: "Portsmouth International Port is approximately 90–100 miles from Oxford Airport, with a journey time of around 1 hour 45 minutes to 2 hours 15 minutes. The port operates ferry services to destinations including France, Spain and the Channel Islands, as well as selected cruise departures." },
+      { ...PORTS.harwich, text: "Harwich International Port is around 146 miles from Oxford Airport by road, with a journey time of around 3–3.5 hours. The port provides international ferry services, including crossings to the Hook of Holland. Plan your transfer carefully to allow enough time for check-in." },
+      { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 100–115 miles from Oxford Airport, with a journey time of around 2–2.5 hours. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Check your cruise documents for the correct terminal and departure time before arranging your journey." },
+    ],
+    note: "Journey times are estimates and can vary depending on traffic, roadworks and your chosen route, so allow extra time before your embarkation or check-in time.",
   },
 }
 
@@ -1360,6 +1436,108 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     travelInfoOrder: 67,
     comfortOrder: 75,
     extraSections: briefSections("bournemouth", BOURNEMOUTH_BRIEF),
+    hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+
+  Oxford: {
+    heroHeading: "Oxford Airport Taxi – Reliable Transfers to and from OXF",
+    heroSubhead: "Book an Oxford Airport taxi or arrange a private transfer between Oxford and the UK’s major airports. One Airport Taxi offers pre-booked Oxford airport transfers with professional, licensed drivers and a choice of saloon cars, executive vehicles, MPVs, and 8-seater minibuses. Whether you’re flying from Oxford Airport itself or need a taxi from Oxford to Heathrow, Gatwick, Luton or Birmingham Airport, choose the vehicle that suits your passengers and luggage, and have the fare agreed before you set off.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant Oxford Airport taxi quote online and have the journey planned before you travel, or call our team on",
+    intro: {
+      heading: "Oxford Airport Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Arranging a reliable airport transfer in Oxford shouldn’t mean checking three different bus timetables and still not knowing what you’ll pay. With One Airport Taxi, you book ahead, enter your pickup and drop-off details, and see your fare before you confirm anything.",
+        <>Most Oxford journeys aren’t to <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>Oxford (London) Airport</Link> itself but between Oxford and Heathrow, Gatwick, Luton, Stansted or Birmingham Airport — and that’s exactly where we specialise. Whether you need a taxi from Oxford to Heathrow, from Heathrow to Oxford, or from Oxford to Luton Airport, every journey is pre-booked and planned around your flight, not a fixed bus schedule.</>,
+        "Add your flight number when you book, and we’ll track it, so your pickup time adjusts automatically if your flight runs early or late.",
+        <>The fare you’re quoted is the fare you pay. Compare that to the uncertainty of the Oxford-to-Heathrow bus or coach — no waiting at a stop, and no guessing what a taxi from Oxford to Heathrow will actually cost until you’re already in the cab. See <Link className={linkClass} href="#vehicles">our fleet</Link> and <Link className={linkClass} href="/destinations/oxford-taxi">our Oxford taxi guide</Link>.</>,
+      ],
+      cta: "Get Your Oxford Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you confirm anything." },
+        { title: "Planned around your flight", text: "Not a fixed bus schedule." },
+        { title: "Flight tracked", text: "Your pickup adjusts if your flight runs early or late." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Oxford Airport Transfers?",
+    benefitsSubhead: "A good airport transfer service shapes the whole journey, not just the drive. We focus on clear pricing, planned pickups, comfortable cars, and support that’s actually available when you need it.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "You’ll know the cost of your Oxford airport transfer before you confirm, whether that’s a short hop to Oxford Airport or a longer run to Heathrow Terminal 5 or Luton. No meter, no surprises." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We track your flight. If your arrival or departure time changes, our team adjusts your pickup using the live information." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Our drivers are licensed, properly checked, and know the routes between Oxford and every major London airport well — including the M40, A34 and M25 connections." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book and your driver can meet you inside the arrivals area at an agreed point, subject to the service selected." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flights don’t run to office hours, so neither do we. Reach a real person any time, day or night." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Saloon, executive, estate, MPV or 8-seater minibus — choose based on your passengers and luggage, whether you’re a solo business traveller or a family heading off on holiday." },
+    ],
+    fleet: {
+      heading: "Oxford Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle matters whether you’re booking a short taxi to Oxford Airport or a longer transfer to Heathrow, Gatwick or Luton. Think about both passenger numbers and luggage space.",
+        "We run a range of vehicles, from everyday airport runs to executive travel and group transport.",
+      ],
+      closing: "Choose your vehicle around your passenger numbers and luggage. Check availability before you confirm.",
+      descriptions: {
+        standard: "The sensible choice for solo travellers, couples and small groups with standard luggage. Comfortable and practical for a straightforward transfer.",
+        executive: "For business travellers and anyone who prefers a more premium ride — a popular option for Oxford-to-Heathrow business transfers.",
+        estate: "More boot space than a standard saloon, useful when you’re travelling with several suitcases.",
+        mpv_4seater: "A roomier option for families and small groups who need extra space for people and bags.",
+        mpv: "Suits larger families and small groups, with extra passenger capacity. Luggage allowance depends on the number of travellers.",
+        minibus_8seater: "The practical option for larger groups, group holidays, and business travel. Up to eight passengers, with luggage capacity to match.",
+      },
+      pricing: {
+        heading: "Fixed Oxford Airport Taxi Prices",
+        paragraphs: [
+          "Your quote comes before you confirm. Enter your pickup, destination, travel date, and passenger requirements to see your available fares — whether that’s an Oxford to Heathrow taxi fare, an Oxford to Luton Airport taxi fare, or a transfer to Birmingham Airport.",
+          "Our pricing is laid out clearly, so you can compare the actual cost of a taxi with the time and hassle of the Heathrow-to-Oxford bus or National Express coach.",
+        ],
+        cta: "Compare Oxford Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Heathrow (and Other Airports) to Oxford – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at Heathrow, Gatwick, Luton, Stansted or Birmingham and heading to Oxford? Pre-booking your taxi from the airport to Oxford means one less thing to think about after a long flight.",
+        "Give us your flight number, arrival date and destination when booking, and we’ll plan your collection around your actual flight.",
+      ],
+      stepsHeading: "How Your Airport-to-Oxford Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "After landing, follow the signs for baggage reclaim and the exit. Your booking confirmation has your specific driver meeting instructions." },
+        MEET_DRIVER_STEP,
+        { title: "Continue to Oxford.", text: "From there, it’s a direct run to your home, college, hotel or business address in Oxford or the surrounding area." },
+      ],
+      dropHeading: "Oxford Drop-Off Service",
+      dropText: "Travelling from Oxford to an airport? Your driver takes you directly to the correct terminal, with time built in for traffic on the M40 or M25 and for check-in and security.",
+    },
+    travelInfo: {
+      heading: "Oxford Airport Taxis and Transfers",
+      lead: [
+        "Located in Kidlington, approximately 7 miles north of Oxford city centre, London Oxford Airport is a convenient airport for private aviation, business travellers and passengers using charter flights. Whether you need a taxi to Oxford Airport or a transfer after landing, One Airport Taxi provides pre-booked airport journeys with professional drivers, comfortable vehicles and transparent pricing.",
+        "Book online for a reliable Oxford Airport taxi, with a Meet and Greet service and up to 60 minutes of free waiting time for airport pickups.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Nearby airports: Birmingham Airport (around 62 miles), Heathrow Airport (approximately 50–60 miles) and London Luton Airport (around 69 miles).",
+          "Nearest railway station: Oxford Parkway, around 3.5 miles from the airport, with connections to Oxford and London Marylebone.",
+          "Road access: Convenient access via the A44, A34 and A40, connecting the airport with Oxford, the Cotswolds and surrounding areas.",
+          "Airport drop-off: Check the airport’s latest drop-off arrangements before travelling. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities", items: [
+          "Oxford City Centre: Approximately 20–30 minutes (around 10 miles).",
+          "Bicester: Approximately 20–30 minutes (around 10 miles).",
+          "Witney: Approximately 20–30 minutes (around 10 miles).",
+          "Abingdon: Approximately 25–40 minutes (15–18 miles).",
+          "Banbury: Approximately 30–45 minutes (around 18 miles).",
+          "Birmingham: Approximately 1 hour 15 minutes–1 hour 40 minutes (65–75 miles).",
+          "London: Approximately 1 hour 15 minutes–1 hour 50 minutes (55–65 miles).",
+          "Distances are approximate road distances to central destinations. Journey times may vary depending on traffic, roadworks and your chosen route.",
+        ] },
+      ],
+      closing: "Whether you are travelling to London Oxford Airport for a private flight, arranging transport for a business trip or heading home after landing, One Airport Taxi offers convenient pre-booked transfers with fares confirmed before travel. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to suit your passengers and luggage.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("oxford", OXFORD_BRIEF),
     hiddenSections: ["ferry_cruise", "related_destinations"],
   },
 }

@@ -40,7 +40,8 @@ export type AirportBrief = {
   departures: { eyebrow: string; heading: string; paragraphs: React.ReactNode[]; cards: BriefCard[] }
   travellers: { heading: string; lead: string; cards: BriefCard[] }
   cities?: { heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; closing: string; cta: string }
-  airports: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; closing?: string }
+  /** `origin` starts the booking buttons somewhere other than the airport itself. */
+  airports: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; closing?: string; origin?: BriefPlace }
   ports?: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; note: string }
 }
 
@@ -55,8 +56,8 @@ function primaryTerminal(page: AirportPagePresentation) {
 }
 
 /** `toAirport` is airport -> place, `fromAirport` is place -> airport. */
-function placeLinks(page: AirportPagePresentation, place: BriefPlace) {
-  const airport = primaryTerminal(page)
+function placeLinks(page: AirportPagePresentation, place: BriefPlace, origin?: BriefPlace) {
+  const airport = origin ? { name: origin.address, latitude: origin.latitude, longitude: origin.longitude } : primaryTerminal(page)
   if (!airport) return page.bookingLinks
   return createRouteBookingLinks(airport, { name: place.address, latitude: place.latitude, longitude: place.longitude })
 }
@@ -165,11 +166,11 @@ export function BriefCitiesSection({ page, brief }: { page: AirportPagePresentat
   )
 }
 
-function PlaceCards({ page, places, titleFrom, icon: Icon }: { page: AirportPagePresentation; places: BriefPlace[]; titleFrom: string; icon: LucideIcon }) {
+function PlaceCards({ page, places, titleFrom, icon: Icon, origin }: { page: AirportPagePresentation; places: BriefPlace[]; titleFrom: string; icon: LucideIcon; origin?: BriefPlace }) {
   return (
     <div className={`airport-card-grid ${places.length === 4 ? "airport-card-grid-2" : "airport-card-grid-3"}`}>
       {places.map((place) => {
-        const links = placeLinks(page, place)
+        const links = placeLinks(page, place, origin)
         return (
           <article key={place.label} className="airport-link-card">
             <span className="airport-info-card-icon"><Icon aria-hidden="true" /></span>
@@ -185,12 +186,12 @@ function PlaceCards({ page, places, titleFrom, icon: Icon }: { page: AirportPage
 }
 
 export function BriefAirportsSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
-  const { heading, paragraphs, titleFrom, places, closing } = brief.airports
+  const { heading, paragraphs, titleFrom, places, closing, origin } = brief.airports
   return (
     <section className="airport-benefits" data-preview-section="airport_routes">
       <div className="airport-container">
         <SectionHeading eyebrow="Airport connections" title={heading} paragraphs={paragraphs} />
-        <PlaceCards page={page} places={places} titleFrom={titleFrom} icon={PlaneLanding} />
+        <PlaceCards page={page} places={places} titleFrom={titleFrom} icon={PlaneLanding} origin={origin} />
         {closing && <p className="airport-travel-info-closing">{closing}</p>}
       </div>
     </section>
