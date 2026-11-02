@@ -29,4 +29,8 @@ export const AIRPORT_BRIEF_SEO: Record<string, { title: string; description: str
     title: "Southampton Airport Taxi | Fixed Price Transfers to & from SOU",
     description: "Book a Southampton Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring, meet-and-greet, and wheelchair-accessible vehicles. Instant quote.",
   },
+  "bournemouth-airport-taxi": {
+    title: "Bournemouth Airport Taxi | Fixed Price Transfers to & from BOH",
+    description: "Book a Bournemouth Airport taxi with a fixed fare confirmed before you travel. Licensed drivers, flight monitoring, meet-and-greet, and 8-seater minibuses. Instant quote.",
+  },
 }

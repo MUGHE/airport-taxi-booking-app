@@ -16,7 +16,8 @@ const AIRPORTS = {
   stansted: { label: "Stansted", name: "Stansted Airport", address: "London Stansted Airport (STN)", latitude: 51.885, longitude: 0.235, href: "/airport-transfers/stansted-airport-taxi", hrefLabel: "Stansted Airport taxi guide" },
   londonCity: { label: "London City", name: "London City Airport", address: "London City Airport (LCY)", latitude: 51.5053, longitude: 0.0553, href: "/airport-transfers/london-city-airport-taxi", hrefLabel: "London City Airport taxi guide" },
   southend: { label: "Southend", name: "Southend Airport", address: "London Southend Airport (SEN)", latitude: 51.5714, longitude: 0.6956, href: "/airport-transfers/southend-airport-taxi", hrefLabel: "Southend Airport taxi guide" },
-  bournemouth: { label: "Bournemouth", name: "Bournemouth Airport", address: "Bournemouth Airport (BOH)", latitude: 50.78, longitude: -1.8425 },
+  bournemouth: { label: "Bournemouth", name: "Bournemouth Airport", address: "Bournemouth Airport (BOH)", latitude: 50.774566, longitude: -1.83211 },
+  southampton: { label: "Southampton", name: "Southampton Airport", address: "Southampton Airport (SOU)", latitude: 50.9480307, longitude: -1.3648088 },
 } satisfies Record<string, BriefPlace>
 
 const PORTS = {
@@ -512,6 +513,7 @@ const SOUTHAMPTON_BRIEF: AirportBrief = {
     paragraphs: [
       "Southampton Airport is conveniently located near several major UK ferry and cruise ports, making it a useful arrival point for passengers continuing their journey by sea. Whether you are flying into Southampton before joining a cruise or catching an international ferry, One Airport Taxi offers pre-booked, fixed-price transfers from Southampton Airport to major UK ports.",
       "Cruise and ferry journeys often involve larger suitcases and additional luggage, so choose your vehicle based on the total amount of luggage rather than passenger numbers alone. For example, a family of four travelling with four large suitcases may need a 4-seater MPV rather than a standard saloon.",
+      "Whether you need a taxi to Southampton Cruise Terminal, Dover, Portsmouth, Harwich or Tilbury, One Airport Taxi can arrange a comfortable transfer with clear pricing. Get your instant quote online and choose a vehicle that suits your passengers and luggage.",
     ],
     titleFrom: "Southampton Airport",
     places: [
@@ -522,6 +524,74 @@ const SOUTHAMPTON_BRIEF: AirportBrief = {
       { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 115–130 miles from Southampton Airport, with a journey time of around 2 hours to 2 hours 30 minutes. It serves cruise passengers travelling from the London area and other destinations." },
     ],
     note: "Journey times are approximate and can vary depending on traffic, roadworks and your chosen route. Allow additional time for port check-in, embarkation and ferry departure.",
+  },
+}
+
+const BOURNEMOUTH_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Bournemouth Airport Information and Travel Guide",
+    paragraphs: [
+      "Bournemouth Airport (BOH) sits just north of the town, close to Christchurch and the Dorset coast. It’s a small, manageable airport with a single terminal, handling a mix of leisure, charter and selected scheduled routes.",
+      "Being compact, check-in and security generally move fast, though it’s still worth allowing the usual buffer at peak travel times.",
+    ],
+    groups: [
+      { title: "Bournemouth Airport Terminal", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "One terminal", text: "One terminal covers check-in, security and arrivals, with the drop-off and pickup area close to the terminal entrance." },
+        { icon: Clock, title: "Before you travel", text: "Confirm your flight time with your airline before arranging your taxi, and leave enough time to get there and through security." },
+      ] },
+      { title: "Getting to Bournemouth Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "By road, the airport sits just off the A338, with good links to Bournemouth, Poole, Christchurch and the wider Dorset road network." },
+        { icon: TrainFront, title: "By rail and bus", text: "Rail and bus options exist but are limited compared with those at larger airports, which is one reason a private airport taxi is such a popular choice here." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "With One Airport Taxi, your journey runs door-to-door — from your home, hotel or office straight to the terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Bournemouth Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Bournemouth Airport? We run pre-booked transfers to the terminal from across Dorset and the wider UK. When booking, add your flight details where asked so that we can plan your drop-off around check-in."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Bournemouth Airport Departures Drop-Off", text: "Your driver takes you directly to the terminal drop-off area, allowing time for check-in and security.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "Charter and leisure flights from Bournemouth often depart early or return late. A pre-booked taxi means your driver is outside at the agreed time, whatever the hour.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "Group and Family Departures", text: "Travelling with the whole family or a group? Book an MPV or 8-seater minibus and keep everyone in one vehicle, with luggage space to match.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Bournemouth Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Different trips call for different vehicles. We offer options to suit a wide range of journeys to and from Bournemouth Airport.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Pick a vehicle with the space to match. Child seats can be requested when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "A professional Bournemouth Airport taxi for meetings, corporate travel and flight connections, with executive vehicles for a more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Friends, colleagues or the extended family travelling together? Our MPVs and 8-seater minibuses handle larger groups comfortably.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Bournemouth is also a practical starting point for longer transfers — Bournemouth to Gatwick, Bournemouth to Southampton Airport or Bournemouth to Stansted, with your fare agreed before you travel.", link: { href: "/destinations", label: "See our destinations" } },
+    ],
+  },
+  airports: {
+    heading: "Bournemouth Airport to Other Airports – Private Airport Transfers",
+    paragraphs: ["Bournemouth is a practical starting point for longer transfers to other airports, with your fare agreed before you travel."],
+    titleFrom: "Bournemouth",
+    places: [
+      { ...AIRPORTS.southampton, text: "Southampton Airport is around 30 miles from Bournemouth Airport by road. A direct private transfer, with your fare agreed before you travel." },
+      { ...AIRPORTS.gatwick, text: "A longer transfer from Bournemouth to Gatwick, in a vehicle that suits your passengers and luggage, with your fare agreed before you travel." },
+      { ...AIRPORTS.stansted, text: "A longer transfer from Bournemouth to Stansted, in a vehicle that suits your passengers and luggage, with your fare agreed before you travel." },
+    ],
+  },
+  ports: {
+    heading: "Bournemouth Airport to Your Cruise or Ferry Port",
+    paragraphs: [
+      "Bournemouth Airport does not have ferry or cruise terminals of its own, but many passengers fly into BOH before continuing their journey to a UK port. One Airport Taxi offers pre-booked, fixed-price taxi transfers from Bournemouth Airport to major ferry and cruise ports across the UK.",
+      "Cruise and ferry luggage is often bulkier than standard airport luggage, so choose your vehicle based on the number of suitcases, not just the number of passengers. For example, a family of four travelling with four large suitcases may need a 4-seater MPV rather than a standard saloon.",
+      "Whether you are travelling to Southampton, Dover, Portsmouth, Harwich or Tilbury, One Airport Taxi can arrange a comfortable, pre-booked transfer. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to accommodate your passengers and luggage.",
+    ],
+    titleFrom: "Bournemouth Airport",
+    places: [
+      { ...PORTS.southampton, text: "Southampton is approximately 25–30 miles from Bournemouth Airport, with a journey time of around 35–50 minutes by road. Southampton has five cruise terminals: Ocean, Mayflower, City, Queen Elizabeth II and Horizon. Confirm your departure terminal on your cruise documents before booking your transfer." },
+      { ...PORTS.dover, text: "Dover is approximately 170–180 miles from Bournemouth Airport, with a journey time of around 3–3.5 hours. Ferries to France depart from the Eastern Docks, while cruise ships generally use the Western Docks. Allow additional time for traffic and port check-in." },
+      { ...PORTS.portsmouth, text: "Portsmouth International Port is around 48 miles from Bournemouth Airport by road, with a journey time of around 1–1 hour 20 minutes. The port operates ferry services to destinations including France, Spain and the Channel Islands, as well as selected cruise departures." },
+      { ...PORTS.harwich, text: "Harwich International Port is around 195 miles from Bournemouth Airport by road, with a journey time of around 3.5–4 hours. The port provides international ferry services, including crossings to the Hook of Holland. Plan your transfer carefully to allow enough time for check-in." },
+      { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is around 140 miles from Bournemouth Airport by road, with a journey time of around 3–3.5 hours. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Check your cruise documents for the correct terminal and departure time before arranging your journey." },
+    ],
+    note: "Journey times are estimates and can vary depending on traffic, roadworks and your chosen route, so allow extra time before your embarkation or check-in.",
   },
 }
 
@@ -1187,6 +1257,109 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     travelInfoOrder: 67,
     comfortOrder: 75,
     extraSections: briefSections("southampton", SOUTHAMPTON_BRIEF),
+    hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+
+  Bournemouth: {
+    heroHeading: "Bournemouth Airport Taxi – Reliable Transfers to and from BOH",
+    heroSubhead: "Book a Bournemouth Airport taxi and get a fixed fare agreed in advance. One Airport Taxi operates pre-booked Bournemouth Airport transfers across Dorset and the wider UK, with professional, licensed drivers and a choice of saloon cars, executive vehicles, MPVs, 8-seater minibuses, and wheelchair-accessible vehicles. Whether you’re flying off on holiday from Dorset or landing back after one, choose the vehicle that fits your passengers and luggage, and skip the queue at the taxi rank.",
+    heroCallLine: true,
+    heroCallText: "Get your free instant Bournemouth Airport taxi quote online and have your journey arranged before you travel, or call our team on",
+    intro: {
+      heading: "Bournemouth Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "Booking a reliable taxi to Bournemouth Airport shouldn’t involve guesswork over the price. With One Airport Taxi, you plan, enter your pickup and drop-off details, and see your fare before you confirm.",
+        "So whether you need a taxi to Bournemouth Airport from Poole or Christchurch, a transfer in from further afield in Dorset, or a taxi from Bournemouth Airport to your home, hotel or office, every journey is pre-booked and planned around your schedule.",
+        <>Bournemouth Airport is a small, easy-to-use regional airport with <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>a single terminal</Link>, which keeps pickups and drop-offs simple. Add your flight details when you book, and we’ll time your collection to your actual arrival.</>,
+        <>The fare you’re quoted is the fare you pay — a cheaper and more predictable option than hunting for the cheapest taxi to Bournemouth Airport on the day and hoping for the best. From a routine airport run to a longer transfer to Gatwick or Southampton, booking with <Link className={linkClass} href="#vehicles">our fleet</Link> is straightforward.</>,
+      ],
+      cta: "Get Your Bournemouth Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you confirm." },
+        { title: "One terminal", text: "Pickups and drop-offs stay simple." },
+        { title: "No guesswork", text: "The fare you’re quoted is the fare you pay." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Bournemouth Airport Transfers?",
+    benefitsSubhead: "The right airport transfer service shapes the whole journey, not just the drive. We focus on clear pricing, planned pickups, comfortable vehicles, and support that’s genuinely available when you need it.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "You’ll know the cost of your Bournemouth Airport taxi before you confirm. Our fixed-fare approach means no meter-based pricing and no last-minute changes — check what’s included before you book." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We track your flight. If your arrival time changes, our team adjusts your pickup based on live information, so you’re not left standing outside waiting on a car that hasn’t been told you’ve landed early." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Our drivers are licensed, properly checked, and know Dorset’s roads well, from the airport out to Poole, Christchurch and beyond. Punctuality and safe driving come as standard." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book and your driver can meet you inside the arrivals area at an agreed point, depending on the service selected." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Flights don’t keep office hours, so neither do we. Call or message anytime with booking questions or help on the day." },
+      { icon: Accessibility, title: "Vehicles for Different Travel Needs", text: "Saloon, executive, estate, MPV, 8-seater minibus or a wheelchair-accessible taxi — choose based on your passengers, luggage and any accessibility requirements." },
+    ],
+    fleet: {
+      heading: "Bournemouth Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Choosing the right vehicle matters when booking a taxi to Bournemouth Airport or arranging a transfer from it. Weigh up seats and luggage space together before you choose.",
+        "We run a range of vehicles, from everyday airport runs to executive travel, group transport and accessible vehicles.",
+        <><strong>Wheelchair Accessible Taxi:</strong> a wheelchair-accessible taxi is available for passengers who need one — <Link className={linkClass} href="/Contact-Us">let us know your requirements</Link> when booking so the right vehicle can be arranged in advance.</>,
+      ],
+      closing: "Choose your vehicle around your passenger numbers and luggage. Check availability before you confirm.",
+      descriptions: {
+        standard: "The sensible choice for solo travellers, couples and small groups with standard luggage. Comfortable and practical for a straightforward Bournemouth airport transfer.",
+        executive: "For business travellers and anyone who prefers a more premium journey to or from the airport.",
+        estate: "More boot space than a standard saloon — useful when you’re travelling with several suitcases or bulkier luggage.",
+        mpv_4seater: "A roomier option for families and small groups who need extra space for people and bags.",
+        mpv: "Suits larger families and small groups, with extra passenger capacity. Luggage allowance depends on the number of travellers, so check before booking.",
+        minibus_8seater: "The practical answer for larger groups, group holidays, and business travel. Up to eight passengers, with luggage capacity to match.",
+      },
+      pricing: {
+        heading: "Fixed Bournemouth Airport Taxi Prices",
+        paragraphs: [
+          "Your quote comes before you confirm. Enter your pickup, destination, travel date and passenger requirements to see your available fare — including longer transfers such as Bournemouth to Gatwick or Bournemouth to Southampton Airport.",
+          "Pricing is laid out clearly so you can compare vehicles and avoid overpaying for a last-minute taxi to the airport.",
+        ],
+        cta: "Compare Bournemouth Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Bournemouth Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at Bournemouth after a flight? Pre-booking your taxi takes the uncertainty out of what happens next.",
+        "We provide pickups from the terminal. Share your flight number, arrival date, and destination when booking, and we’ll plan your collection around your flight.",
+      ],
+      stepsHeading: "How Your Bournemouth Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "After landing, follow the signs for baggage reclaim and the exit. Your booking confirmation has your specific driver meeting instructions." },
+        MEET_DRIVER_STEP,
+        { title: "Continue to your destination.", text: "From there, it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
+      ],
+      dropHeading: "Bournemouth Airport Drop-Off Service",
+      dropText: "Travelling into Bournemouth Airport from elsewhere in the UK? Your driver takes you to the terminal drop-off area, with time allowed for traffic and check-in.",
+    },
+    travelInfo: {
+      heading: "Bournemouth Airport Taxis and Transfers",
+      lead: [
+        "Located in Hurn, Dorset, approximately 4 miles northeast of Bournemouth town centre, Bournemouth Airport is a convenient gateway for passengers travelling across Dorset, Hampshire and the South Coast. Whether you need a taxi to Bournemouth Airport for an upcoming flight or a transfer after landing, One Airport Taxi provides pre-booked airport journeys with professional drivers, comfortable vehicles and transparent pricing.",
+        "Book online for a reliable Bournemouth Airport taxi with Meet and Greet service, flight monitoring and up to 60 minutes of free waiting time for airport pickups. If you pre-book a taxi with One Airport Taxi, the drop-off charge is included in your fare so that you won’t incur any extra charges at the airport.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Nearby airports: Southampton Airport (around 30 miles), Bristol Airport (approximately 70–80 miles) and Heathrow Airport (around 90 miles).",
+          "Nearest railway station: Bournemouth railway station, around 5–6 miles from the airport.",
+          "Road access: Convenient access via the B3073, A338 and A31, connecting the airport with Bournemouth, Poole, Christchurch and surrounding areas.",
+          "Airport drop-off: Check the airport’s latest drop-off arrangements before travelling. Your pre-booked One Airport Taxi fare includes the applicable drop-off charge.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Towns and Cities", items: [
+          "Bournemouth Town Centre: 10–20 minutes (around 7 miles).",
+          "Poole: 20–30 minutes (10–12 miles).",
+          "Christchurch: 10–20 minutes (around 4 miles).",
+          "Wimborne: 15–25 minutes (8–10 miles).",
+          "Southampton: 40–60 minutes (around 29 miles).",
+          "Salisbury: 40–55 minutes (25–30 miles).",
+          "London: 2–2.5 hours (approximately 105–115 miles).",
+          "Journey times are estimates and may vary depending on traffic, road conditions and your destination.",
+        ] },
+      ],
+      closing: "With One Airport Taxi, you can arrange a Bournemouth Airport transfer to suit your travel plans. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles for individual travellers, families and larger groups. Your fare is confirmed before travel, helping you plan your journey with confidence.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("bournemouth", BOURNEMOUTH_BRIEF),
     hiddenSections: ["ferry_cruise", "related_destinations"],
   },
 }
