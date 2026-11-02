@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { canAccess } from "@/lib/admin-roles"
-import { blogPostInputSchema, isSafeBlogLink, publishProblems, readingMinutes, sanitizeBlogDocument, slugify } from "@/lib/blog-schema"
+import { blogPostInputSchema, isSafeBlogLink, parseBlogVideo, publishProblems, readingMinutes, sanitizeBlogDocument, slugify } from "@/lib/blog-schema"
 import type { TiptapDocument } from "@/lib/destination-content"
 
 const words = (count: number) => Array.from({ length: count }, (_, index) => `word${index}`).join(" ")
@@ -39,6 +39,32 @@ test("publishing requires an excerpt, real content and alt text for the featured
   expect(publishProblems({ ...ready, excerpt: "" })).toContain("Add an excerpt for the blog listing.")
   expect(publishProblems({ ...ready, content: { type: "doc", content: [paragraph("Too short.")] } })).toContain("Write at least 30 words of content.")
   expect(publishProblems({ ...ready, featuredImageUrl: "https://example.supabase.co/storage/v1/object/public/blog-images/a.jpg", featuredImageAlt: "" })).toContain("Describe the featured image (alt text).")
+})
+
+test("video links become safe player URLs and anything else is refused", () => {
+  const youtube = { kind: "embed", url: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" }
+  expect(parseBlogVideo("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10")).toEqual(youtube)
+  expect(parseBlogVideo("https://youtu.be/dQw4w9WgXcQ?si=abc")).toEqual(youtube)
+  expect(parseBlogVideo("https://www.youtube.com/shorts/dQw4w9WgXcQ")).toEqual(youtube)
+  expect(parseBlogVideo("https://vimeo.com/123456789")).toEqual({ kind: "embed", url: "https://player.vimeo.com/video/123456789" })
+  expect(parseBlogVideo("https://x.supabase.co/storage/v1/object/public/blog-videos/a.mp4")).toEqual({ kind: "file", url: "https://x.supabase.co/storage/v1/object/public/blog-videos/a.mp4" })
+  for (const bad of ["http://youtu.be/dQw4w9WgXcQ", "javascript:alert(1)", "https://evil.example/page", "https://youtube.com/watch?v=%22%3E", "not a url", null]) {
+    expect(parseBlogVideo(bad)).toBeNull()
+  }
+})
+
+test("sanitiser keeps H4 headings and valid videos, and drops unsafe videos", () => {
+  const clean = sanitizeBlogDocument({
+    type: "doc",
+    content: [
+      { type: "heading", attrs: { level: 4 }, content: [{ type: "text", text: "Sub-point" }] },
+      { type: "blogVideo", attrs: { src: "https://youtu.be/dQw4w9WgXcQ", title: "Tour", onload: "x" } },
+      { type: "blogVideo", attrs: { src: "https://evil.example/page", title: "Bad" } },
+    ],
+  })
+  expect(clean.content.map((node) => node.type)).toEqual(["heading", "blogVideo"])
+  expect(clean.content[0].attrs).toEqual({ level: 4 })
+  expect(clean.content[1].attrs).toEqual({ src: "https://youtu.be/dQw4w9WgXcQ", title: "Tour" })
 })
 
 test("sanitiser keeps supported formatting and drops unsafe links, images and unknown nodes", () => {

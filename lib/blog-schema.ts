@@ -30,6 +30,8 @@ export const EMPTY_BLOG_DOCUMENT: TiptapDocument = { type: "doc", content: [] }
 export const BLOG_POSTS_PER_PAGE = 9
 export const BLOG_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 export const BLOG_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const
+export const BLOG_VIDEO_MAX_BYTES = 50 * 1024 * 1024
+export const BLOG_VIDEO_TYPES = ["video/mp4", "video/webm"] as const
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
@@ -56,7 +58,31 @@ export function isSafeBlogImageSrc(value: unknown): value is string {
   return typeof value === "string" && (value.startsWith("https://") || /^\/(?!\/)/.test(value))
 }
 
-const ALLOWED_NODES = new Set(["doc", "paragraph", "heading", "text", "bulletList", "orderedList", "listItem", "image", "hardBreak", "blockquote", "horizontalRule"])
+export type BlogVideoSource = { kind: "embed"; url: string } | { kind: "file"; url: string }
+
+/** YouTube and Vimeo links become player URLs; other HTTPS links must point at an MP4 or WebM file. */
+export function parseBlogVideo(value: unknown): BlogVideoSource | null {
+  if (typeof value !== "string") return null
+  let url: URL
+  try {
+    url = new URL(value.trim())
+  } catch {
+    return null
+  }
+  if (url.protocol !== "https:") return null
+  const host = url.hostname.replace(/^(www|m)\./, "")
+  if (host === "youtu.be" || host === "youtube.com" || host === "youtube-nocookie.com") {
+    const id = host === "youtu.be" ? url.pathname.slice(1) : url.searchParams.get("v") ?? url.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/)?.[1]
+    return id && /^[\w-]{6,20}$/.test(id) ? { kind: "embed", url: `https://www.youtube-nocookie.com/embed/${id}` } : null
+  }
+  if (host === "vimeo.com" || host === "player.vimeo.com") {
+    const id = url.pathname.match(/^\/(?:video\/)?(\d+)/)?.[1]
+    return id ? { kind: "embed", url: `https://player.vimeo.com/video/${id}` } : null
+  }
+  return /\.(mp4|webm)$/i.test(url.pathname) ? { kind: "file", url: url.href } : null
+}
+
+const ALLOWED_NODES = new Set(["doc", "paragraph", "heading", "text", "bulletList", "orderedList", "listItem", "image", "blogVideo", "hardBreak", "blockquote", "horizontalRule"])
 const ALLOWED_MARKS = new Set(["bold", "italic", "link"])
 
 /** Drops anything the public renderer does not support, plus unsafe links and image sources. */
@@ -64,9 +90,11 @@ export function sanitizeBlogDocument(document: unknown): TiptapDocument {
   function clean(node: TiptapNode): TiptapNode | null {
     if (!node || typeof node !== "object" || !ALLOWED_NODES.has(node.type)) return null
     if (node.type === "image" && !isSafeBlogImageSrc(node.attrs?.src)) return null
+    if (node.type === "blogVideo" && !parseBlogVideo(node.attrs?.src)) return null
     const next: TiptapNode = { type: node.type }
     if (node.type === "text") next.text = typeof node.text === "string" ? node.text : ""
-    if (node.type === "heading") next.attrs = { level: node.attrs?.level === 3 ? 3 : 2 }
+    if (node.type === "heading") next.attrs = { level: node.attrs?.level === 3 || node.attrs?.level === 4 ? node.attrs.level : 2 }
+    if (node.type === "blogVideo") next.attrs = { src: node.attrs!.src, title: typeof node.attrs?.title === "string" ? node.attrs.title : "" }
     if (node.type === "orderedList" && typeof node.attrs?.start === "number") next.attrs = { start: node.attrs.start }
     if (node.type === "image") next.attrs = { src: node.attrs!.src, alt: typeof node.attrs?.alt === "string" ? node.attrs.alt : "" }
     if (node.marks) {

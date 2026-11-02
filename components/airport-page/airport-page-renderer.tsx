@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   Banknote,
   BatteryCharging,
-  Car,
   Check,
   DoorOpen,
   GlassWater,
@@ -19,7 +18,6 @@ import {
   Ship,
   SlidersHorizontal,
   Star,
-  TrainFront,
   UsersRound,
 } from "lucide-react"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
@@ -33,6 +31,8 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
+import { BriefPricingPanel, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
+import { BRIEF_COPY } from "@/components/airport-page/airport-briefs"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
 import { CALL_NUMBER, WHATSAPP_LINK } from "@/lib/contact"
@@ -103,7 +103,7 @@ function headingFor(title: string | undefined, fallback: string) {
 /** "London Luton (LTN)" -> "London Luton Airport (LTN)", from the primary terminal's name. */
 function airportLabel(page: AirportPagePresentation) {
   const name = (page.terminals.find((terminal) => terminal.isPrimary) ?? page.terminals[0])?.name.split(" - ")[0]
-  return name ? name.replace(/\s*\(([A-Z]{3})\)/, " Airport ($1)") : `${page.shortName} Airport`
+  return name ? name.replace(/(?<! Airport)\s*\(([A-Z]{3})\)/, " Airport ($1)") : `${page.shortName} Airport`
 }
 
 function hasContent(section: AirportPageContentSection) {
@@ -169,7 +169,7 @@ const trustItems = [
 
 type InfoCard = { icon: typeof Banknote; title: string; items: string[] }
 
-type AirportCopy = {
+export type AirportCopy = {
   heroHeading?: string
   heroSubhead?: string
   /** Adds "get a quote or call us" under the hero intro. */
@@ -189,59 +189,34 @@ type AirportCopy = {
   /** Overrides the default on-board comfort cards shown after "Why book with us". */
   comfort?: { heading: string; subhead: string; cards: { icon: typeof Banknote; title: string; text: string }[] }
   /** Local travel facts as cards, shown before the pickup guide. */
-  travelInfo?: { heading: string; lead: string; cards: InfoCard[]; closing: string }
+  travelInfo?: { heading: string; lead: string | string[]; cards: InfoCard[]; closing: string }
+  travelInfoOrder?: number
   /** Overrides the default driver vetting section shown after the pickup guide. */
   drivers?: { heading: string; paragraphs: string[]; checks: string[] }
+  /** Replaces the "Get a free instant quote" line under the hero intro (the phone number follows it). */
+  heroCallText?: string
+  /** Replaces the CMS introduction heading, copy and button. */
+  intro?: { heading: string; paragraphs: React.ReactNode[]; cta: string; points?: { title: string; text: string }[] }
+  /** Replaces the fleet heading and copy; `descriptions` is keyed by vehicle id. */
+  fleet?: { heading: string; paragraphs: React.ReactNode[]; closing: string; descriptions: Record<string, string>; pricing?: BriefPricing }
+  /** Replaces the pickup guide copy beside the terminal map. */
+  pickup?: { heading: string; lead: string[]; stepsHeading: string; steps: { title: string; text: string }[]; dropHeading: string; dropText: string }
+  /** Replaces the final call to action copy. */
+  final?: { heading: string; paragraphs: React.ReactNode[]; tagline: string }
+  comfortOrder?: number
+  /** Replace only the heading and subhead of the default comfort cards. */
+  comfortHeading?: string
+  comfortSubhead?: string
+  /** A line under the "Why book with us" cards. */
+  benefitsClosing?: string
+  /** Airport-only sections placed into the page's reading order. */
+  extraSections?: { key: string; order: number; Component: React.ComponentType<{ page: AirportPagePresentation }> }[]
+  /** CMS sections this airport's own sections replace. */
+  hiddenSections?: AirportPageContentSection["type"][]
 }
 
-const AIRPORT_COPY: Record<string, AirportCopy> = {
-  Heathrow: {
-    heroHeading: "Reliable Heathrow Transfers - to and from Airport",
-    heroSubhead: "Book a reliable taxi to Heathrow Airport with One Airport Taxi and travel at a fixed price agreed in advance. Whether you need a Heathrow airport taxi to Terminal 2, 3, 4 or 5, or a taxi from Heathrow to London and beyond, we track your flight, meet you on arrival and include up to 60 minutes of complimentary waiting time. Choose from saloon cars, executive cars, MPVs and 8-seater minibuses, with no hidden fees.",
-    heroCallLine: true,
-    travelInfo: {
-      heading: "Heathrow Airport Taxis and Transfers",
-      lead: "Located in West London, Heathrow is the UK’s busiest airport and one of the busiest in the world, serving over 80 million passengers a year across four terminals. Book online for a reliable ride, Meet and Greet service, and free waiting time for flight delays.",
-      cards: [
-        { icon: TrainFront, title: "Key Travel Info", items: [
-          "Airports nearby: London City Airport (22 miles) and Gatwick Airport (40 miles).",
-          "Rail links: Heathrow Express (15 mins to Paddington), Elizabeth line (45 mins to Central London), and the Piccadilly line serve all terminals.",
-          "Road access: M25 (Junctions 14 & 15) for routes across the UK, M4 for direct city access, and A4 Bath Road for the northern terminals.",
-          "Drop-off charges included: Heathrow charges £7 per drop-off at the terminal forecourts (10-minute max stay). When you book with us, the drop-off charge is already included in your fixed fare — no surprise fees at the airport.",
-        ] },
-        { icon: Car, title: "Driving Times to Major Cities", items: [
-          "Oxford: 1 hour 10 minutes – 1 hour 40 minutes (51 miles)",
-          "Cambridge: 1 hour 25 minutes – 2 hours 20 minutes (70 miles)",
-          "Brighton: 1 hour 10 minutes – 1 hour 40 minutes (64 miles)",
-          "Southampton: 1 hour 10 minutes – 1 hour 50 minutes (64 miles)",
-          "Bristol: 1 hour 40 minutes – 2 hours 20 minutes (105 miles)",
-        ] },
-      ],
-      closing: "From early morning departures at Terminal 5 to late-night long-haul arrivals, book your Heathrow Airport taxi in advance for a fixed fare and a driver ready and waiting — no matter what time you fly.",
-    },
-  },
-  // A short-hop, business-heavy airport by Canary Wharf and the City: speed, punctuality, a smart car.
-  "London City": {
-    heroSubhead: "Fixed-price transfers from London City to Canary Wharf, the City and beyond. Your driver tracks your flight and is ready when you walk out.",
-    heroNotes: ["No account needed", "Invoice on request", "No surge pricing"],
-    benefitsHeading: "Built for fast, on-time City trips",
-    benefitsSubhead: "From landing to your meeting with no fuss, at a price agreed in advance.",
-    benefitCards: [
-      { icon: Banknote, title: "One fixed fare", text: "Set by your route and locked in when you book. No meter running in City traffic." },
-      { icon: PlaneTakeoff, title: "Ready when you walk out", text: "We track your flight, so your driver is ready as you come through arrivals." },
-      { icon: UsersRound, title: "Executive cars on request", text: "A premium car for client meetings or a smarter arrival." },
-      { icon: Headphones, title: "Invoices for expense claims", text: "Ask and we'll email an invoice for any trip, ready for your expense claim." },
-    ],
-    guideHeading: "Your London City pickup",
-    guideLead: "One compact terminal, so you'll be with your driver within minutes of landing. No terminal to choose when you book.",
-    routesSubhead: "Business districts, Central London and airport connections at fixed prices.",
-    vehiclesSubhead: "Executive cars available for business travel. Compare seats and luggage space, then pick the car that fits.",
-    vehicleFirst: "executive",
-    bestFor: { executive: "Best for client meetings and business travel" },
-    finalHeading: "Landing at London City? Your driver's ready.",
-    finalChip: "Executive cars",
-  },
-}
+// Each airport's own copy lives in airport-briefs.tsx.
+const AIRPORT_COPY: Record<string, AirportCopy> = BRIEF_COPY
 
 function airportCopy(page: AirportPagePresentation): AirportCopy {
   return AIRPORT_COPY[page.shortName] ?? {}
@@ -279,7 +254,7 @@ function AirportHeroCopy({ page, canonicalPath, googleRating }: { page: AirportP
         <h1>{airportCopy(page).heroHeading ?? <>{page.shortName} Airport Taxi &amp; Transfers</>}</h1>
       </div>
       <p className="airport-hero-intro">{airportCopy(page).heroSubhead ?? <>Fixed-price transfers to and from {page.terminals.length > 1 ? `every ${page.shortName} terminal` : `${page.shortName} Airport`}. We track your flight and confirm your fare before you pay.</>}</p>
-      {airportCopy(page).heroCallLine && <p className="airport-hero-call">Get a free instant {page.shortName} taxi quote today, or call our team on <a href={`tel:${CALL_NUMBER}`}>{CALL_NUMBER}</a> to book.</p>}
+      {airportCopy(page).heroCallLine && <p className="airport-hero-call">{airportCopy(page).heroCallText ?? `Get a free instant ${page.shortName} taxi quote today, or call our team on`} <a href={`tel:${CALL_NUMBER}`}>{CALL_NUMBER}</a>{airportCopy(page).heroCallText ? "." : " to book."}</p>}
       <div className="airport-hero-proof">
         <p className="airport-quote-notes">
           {(airportCopy(page).heroNotes ?? ["No account needed", "No surge pricing", "Free flight tracking"]).map((note) => <span key={note}>{note}</span>)}
@@ -381,20 +356,22 @@ function VehicleSection({ page, fleetSection }: { page: AirportPagePresentation;
         <div className="airport-vehicles-heading">
           <div>
             <p className="airport-eyebrow airport-eyebrow-light">Our fleet</p>
-            <h2 className="text-balance">{headingFor(fleetSection?.title, `The right car for your ${page.shortName} trip`)}</h2>
+            <h2 className="text-balance">{copy.fleet?.heading ?? headingFor(fleetSection?.title, `The right car for your ${page.shortName} trip`)}</h2>
           </div>
         </div>
         <div className="airport-vehicles-intro">
           <div className="airport-vehicles-intro-copy">
-          <p className="airport-vehicles-heading-copy">{airportCopy(page).vehiclesSubhead ?? "Compare seats and luggage space, then pick the car that fits your group."}</p>
-          {fleetSection && fleetHasBody && <div className="mt-4"><LeadAndMore blocks={fleetSection.body} document={fleetSection.bodyDocument} moreLabel={`More about ${page.shortName} fares and vehicles`} /></div>}
+          {copy.fleet ? copy.fleet.paragraphs.map((paragraph, index) => <p key={index} className={`airport-vehicles-heading-copy ${index > 0 ? "mt-3" : ""}`}>{paragraph}</p>) : <p className="airport-vehicles-heading-copy">{copy.vehiclesSubhead ?? "Compare seats and luggage space, then pick the car that fits your group."}</p>}
+          {!copy.fleet && fleetSection && fleetHasBody && <div className="mt-4"><LeadAndMore blocks={fleetSection.body} document={fleetSection.bodyDocument} moreLabel={`More about ${page.shortName} fares and vehicles`} /></div>}
           </div>
           <p className="airport-vehicles-count">{page.vehicles.length} vehicles</p>
         </div>
 
         <div className="landing-fleet-grid">
-          {orderedVehicles.map((vehicle, index) => <VehicleCard key={vehicle.id} vehicle={vehicle} index={index} href={page.bookingLinks.toAirport} bestFor={copy.bestFor?.[vehicle.id]} />)}
+          {orderedVehicles.map((vehicle, index) => <VehicleCard key={vehicle.id} vehicle={vehicle} index={index} href={page.bookingLinks.toAirport} bestFor={copy.bestFor?.[vehicle.id]} description={copy.fleet?.descriptions[vehicle.id]} />)}
         </div>
+        {copy.fleet && <p className="airport-vehicles-heading-copy mt-8">{copy.fleet.closing}</p>}
+        {copy.fleet?.pricing && <BriefPricingPanel page={page} pricing={copy.fleet.pricing} />}
       </div>
     </section>
   )
@@ -415,7 +392,9 @@ function defaultComfort(placeName: string): NonNullable<AirportCopy["comfort"]> 
 }
 
 function ComfortSection({ page }: { page: AirportPagePresentation }) {
-  return <ComfortCards comfort={airportCopy(page).comfort ?? defaultComfort(page.shortName)} />
+  const copy = airportCopy(page)
+  const comfort = copy.comfort ?? defaultComfort(page.shortName)
+  return <ComfortCards comfort={{ ...comfort, heading: copy.comfortHeading ?? comfort.heading, subhead: copy.comfortSubhead ?? comfort.subhead }} />
 }
 
 /** The "Why book with us" section for a destination (place) page. */
@@ -461,7 +440,7 @@ function TravelInfoSection({ page }: { page: AirportPagePresentation }) {
   return (
     <section className="airport-travel-info" data-preview-section="travel_information">
       <div className="airport-container">
-        <div className="airport-travel-info-intro"><p className="airport-eyebrow">Plan your journey</p><h2>{info.heading}</h2><p>{info.lead}</p></div>
+        <div className="airport-travel-info-intro"><p className="airport-eyebrow">Plan your journey</p><h2>{info.heading}</h2>{[info.lead].flat().map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
         <div className="airport-travel-info-grid">
           {info.cards.map(({ icon: Icon, title, items }) => (
             <article key={title} className="airport-travel-info-card">
@@ -529,11 +508,11 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   const reversed = index % 2 === 1
   if (section.type === "introduction") {
     // The CMS hero text is appended here unless the hero already shows this airport's own copy (no repeats).
-    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">{page.shortName} transfers at a glance</p><h2>{headingFor(section.title, `${page.shortName} Airport transfers, priced before you book`)}</h2><div className="mt-5"><LeadAndMore blocks={section.body} document={section.bodyDocument} moreLabel={`More about ${page.shortName} transfers`} extra={airportCopy(page).heroSubhead ? undefined : page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.length > 0 ? <div className="space-y-4 text-muted-foreground">{page.intro.map((paragraph) => <p key={paragraph} className="leading-7">{paragraph}</p>)}</div> : undefined} /></div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Get My Fixed Price <ArrowRight className="size-4" /></Button></div>{section.image ? <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" />{terminalsSummary(page) ? <span>Meet &amp; greet at {terminalsSummary(page)}<br /><small>Add it when you book</small></span> : <span>Door-to-door service<br /><small>Planned around your flight</small></span>}</div></div> : <div className="airport-introduction-media"><Image src="/hero-airport-transfer.webp" alt="A driver beside an executive car outside an airport terminal" fill sizes="(min-width: 900px) 50vw, 100vw" className="object-cover" /></div>}</div></section>
+    return <section className={`airport-introduction ${reversed ? "airport-introduction-reversed" : ""} ${airportCopy(page).intro ? "airport-introduction-long" : ""}`} data-preview-section="introduction"><div className="airport-container airport-introduction-grid"><div className="airport-introduction-copy"><p className="airport-eyebrow">{page.shortName} transfers at a glance</p><h2>{airportCopy(page).intro?.heading ?? headingFor(section.title, `${page.shortName} Airport transfers, priced before you book`)}</h2><div className="mt-5">{airportCopy(page).intro ? <div className="space-y-4 text-left text-muted-foreground">{airportCopy(page).intro!.paragraphs.map((paragraph, paragraphIndex) => <p key={paragraphIndex} className="leading-7">{paragraph}</p>)}{airportCopy(page).intro!.points && <ul className="airport-intro-points">{airportCopy(page).intro!.points!.map(({ title, text }) => <li key={title}><Check aria-hidden="true" /><span><strong>{title}</strong>{text}</span></li>)}</ul>}</div> : <LeadAndMore blocks={section.body} document={section.bodyDocument} moreLabel={`More about ${page.shortName} transfers`} extra={airportCopy(page).heroSubhead ? undefined : page.introDocument ? <TiptapRichText document={page.introDocument} /> : page.intro.length > 0 ? <div className="space-y-4 text-muted-foreground">{page.intro.map((paragraph) => <p key={paragraph} className="leading-7">{paragraph}</p>)}</div> : undefined} />}</div><Button className="mt-7" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>{airportCopy(page).intro?.cta ?? "Get My Fixed Price"} <ArrowRight className="size-4" /></Button></div>{section.image ? <div className="airport-introduction-media"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-floating-note"><ShieldCheck aria-hidden="true" />{terminalsSummary(page) ? <span>Meet &amp; greet at {terminalsSummary(page)}<br /><small>Add it when you book</small></span> : <span>Door-to-door service<br /><small>Planned around your flight</small></span>}</div></div> : <div className="airport-introduction-media"><Image src="/hero-airport-transfer.webp" alt="A driver beside an executive car outside an airport terminal" fill sizes="(min-width: 900px) 50vw, 100vw" className="object-cover" /></div>}</div></section>
   }
 
   if (section.type === "benefits") {
-    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={whyBookCards(page)} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div></div></section>
+    return <section className={`airport-benefits ${reversed ? "airport-benefits-reversed" : ""}`} data-preview-section="benefits"><div className="airport-container"><div className="airport-section-heading"><div><p className="airport-eyebrow">Why book with us</p><h2>{headingFor(section.title, airportCopy(page).benefitsHeading ?? `Why travellers choose us for ${page.shortName}`)}</h2></div><p>{airportCopy(page).benefitsSubhead ?? `Everything that makes a ${page.shortName} pickup easy.`}</p></div><div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={whyBookCards(page)} /></div>{section.image && <div className="airport-benefit-image"><ResilientImage className="size-full object-cover" src={section.image.secureUrl} alt={section.image.altText} /><div className="airport-image-caption"><ShieldCheck aria-hidden="true" /><span>Professional service, every mile</span></div></div>}</div>{airportCopy(page).benefitsClosing && <p className="airport-benefits-closing">{airportCopy(page).benefitsClosing}</p>}</div></section>
   }
 
   if (section.type === "fleet_pricing") {
@@ -543,6 +522,42 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   // Facility cards (food, hotels, Wi-Fi) don't help someone booking a transfer; the pickup guide in
   // the map section answers "where do I meet my driver?" instead.
   if (section.type === "airport_guide") return null
+
+  const pickup = airportCopy(page).pickup
+  if (section.type === "map" && pickup) {
+    return (
+      <section className={`airport-map-chapter ${reversed ? "airport-map-reversed" : ""}`} data-preview-section="map">
+        <div className="airport-container">
+          <div className="airport-pickup-head">
+            <div>
+              <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
+              <h2>{pickup.heading}</h2>
+            </div>
+            <div>{pickup.lead.map((paragraph) => <p key={paragraph} className="airport-map-lead">{paragraph}</p>)}</div>
+          </div>
+          <div className="airport-pickup-layout">
+            <div>
+              <h3 className="airport-pickup-title">{pickup.stepsHeading}</h3>
+              <ol className="airport-pickup-cards">
+                {pickup.steps.map((step, stepIndex) => <li key={step.title}><span>{String(stepIndex + 1).padStart(2, "0")}</span><h4>{step.title.replace(/\.$/, "")}</h4><p>{step.text}</p></li>)}
+              </ol>
+            </div>
+            <div className="airport-pickup-side">
+              {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
+              <div className="airport-dropoff-card">
+                <h3><PlaneTakeoff aria-hidden="true" />{pickup.dropHeading}</h3>
+                <p>{pickup.dropText}</p>
+                <div className="airport-card-actions">
+                  <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Book a {page.shortName} pickup <ArrowRight className="size-4" /></Button>
+                  <Button variant="secondary" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Book a drop-off</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   if (section.type === "map") {
     return (
@@ -591,17 +606,20 @@ const DRIVERS_ORDER = 55
 const DEFAULT_ORDER = 60
 
 export function AirportPageRenderer({ page, canonicalPath, showFooter = true, googleRating, stopPricing }: { page: AirportPagePresentation; canonicalPath?: string; showFooter?: boolean; googleRating?: GoogleRating | null; stopPricing?: StopPricing }) {
-  const visibleSections = page.sections.filter((section) => section.visible)
+  const copy = airportCopy(page)
+  const hidden = new Set(copy.hiddenSections ?? [])
+  const visibleSections = page.sections.filter((section) => section.visible && !hidden.has(section.type))
   const configuredSectionTypes = new Set(page.sections.map((section) => section.type))
   const rank = (section: AirportPageContentSection) => SECTION_ORDER[section.type] ?? DEFAULT_ORDER
   const orderedSections = visibleSections.map((section, position) => ({ section, position })).sort((a, b) => rank(a.section) - rank(b.section) || a.position - b.position).map(({ section }) => section)
 
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
-  blocks.push([COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
-  blocks.push([TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
+  for (const { key, order, Component } of copy.extraSections ?? []) blocks.push([order, <Component key={key} page={page} />])
+  blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
+  blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
   blocks.push([DRIVERS_ORDER, <DriversSection key="drivers" page={page} />])
   blocks.push([VEHICLES_ORDER, <VehicleSection key="vehicles" page={page} fleetSection={visibleSections.find((section) => section.type === "fleet_pricing")} />])
-  if (!configuredSectionTypes.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
+  if (!configuredSectionTypes.has("related_destinations") && !hidden.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
   if (!configuredSectionTypes.has("reviews")) blocks.push([SECTION_ORDER.reviews!, <ReviewSection key="reviews" page={page} />])
   if (!configuredSectionTypes.has("faq")) blocks.push([SECTION_ORDER.faq!, <FaqSection key="faq" page={page} />])
   blocks.sort((a, b) => a[0] - b[0])
@@ -632,8 +650,8 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
             <div className="airport-final-cta">
               <div className="airport-final-copy">
                 <p className="airport-eyebrow airport-eyebrow-light">{page.shortName} airport transfers</p>
-                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : headingFor(page.finalCta.heading, airportCopy(page).finalHeading ?? (page.terminals.length > 1 ? `Landing at ${page.shortName}? Your driver's ready.` : `Flying into ${page.shortName}? Your driver's ready.`))}</h2>
-                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : finalCtaHasBody ? <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div> : <p>{page.terminals.length > 1 ? "Know who's meeting you, at which terminal and exactly what you'll pay, before you fly." : "Know where your driver will be and exactly what you'll pay, before you even pack. We track your flight and adjust your pickup if you land early or late."}</p>}
+                <h2>{page.bookingAvailable === false ? "Need help with your airport transfer?" : copy.final?.heading ?? headingFor(page.finalCta.heading, copy.finalHeading ?? (page.terminals.length > 1 ? `Landing at ${page.shortName}? Your driver's ready.` : `Flying into ${page.shortName}? Your driver's ready.`))}</h2>
+                {page.bookingAvailable === false ? <p>Online booking is temporarily unavailable. Our team can help with your journey.</p> : copy.final ? <div className="space-y-4">{copy.final.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}<p><strong>{copy.final.tagline}</strong></p></div> : finalCtaHasBody ? <div><RichText blocks={page.finalCta.body} document={page.finalCta.bodyDocument} /></div> : <p>{page.terminals.length > 1 ? "Know who's meeting you, at which terminal and exactly what you'll pay, before you fly." : "Know where your driver will be and exactly what you'll pay, before you even pack. We track your flight and adjust your pickup if you land early or late."}</p>}
                 <div className="airport-final-points">
                   <span><Check aria-hidden="true" /> Fixed fare</span>
                   <span><Check aria-hidden="true" /> Flight tracked</span>

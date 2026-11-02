@@ -1165,7 +1165,8 @@
 .blog-prose > * + * { margin-top: 1.15em; }
 .blog-prose h2 { margin-top: 2em; color: #071d33; font-size: 1.65rem; font-weight: 700; line-height: 1.25; letter-spacing: -.025em; scroll-margin-top: 6rem; }
 .blog-prose h3 { margin-top: 1.6em; color: #071d33; font-size: 1.3rem; font-weight: 700; line-height: 1.3; scroll-margin-top: 6rem; }
-.blog-prose h2 + *, .blog-prose h3 + * { margin-top: .6em; }
+.blog-prose h4 { margin-top: 1.4em; color: #071d33; font-size: 1.1rem; font-weight: 700; line-height: 1.35; scroll-margin-top: 6rem; }
+.blog-prose h2 + *, .blog-prose h3 + *, .blog-prose h4 + * { margin-top: .6em; }
 .blog-prose a { color: #075fbd; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(7,95,189,.35); text-underline-offset: 3px; }
 .blog-prose a:hover { text-decoration-color: currentColor; }
 .blog-prose ul { padding-left: 1.4em; list-style: disc; }
@@ -1175,10 +1176,14 @@
 .blog-prose strong { color: #071d33; font-weight: 700; }
 .blog-prose blockquote { padding: .25em 0 .25em 1.1em; border-left: 3px solid #075fbd; color: #3d5266; font-style: italic; }
 .blog-prose img { width: 100%; height: auto; border-radius: .9rem; }
+.blog-prose .blog-video { overflow: hidden; aspect-ratio: 16 / 9; border-radius: .9rem; background: #071d33; }
+.blog-prose .blog-video iframe, .blog-prose .blog-video video { display: block; width: 100%; height: 100%; border: 0; }
 .blog-prose hr { border: 0; border-top: 1px solid #e1e8ef; }
 .blog-prose p, .blog-prose li { text-wrap: pretty; }
 .blog-editor-surface .ProseMirror { min-height: 18rem; outline: none; }
-.blog-editor-surface img.ProseMirror-selectednode { outline: 3px solid #075fbd; }
+.blog-editor-surface img.ProseMirror-selectednode, .blog-editor-surface .blog-video.ProseMirror-selectednode { outline: 3px solid #075fbd; }
+/* In the editor a click selects the video block, so it can be moved or deleted, instead of playing it. */
+.blog-editor-surface .blog-video iframe, .blog-editor-surface .blog-video video { pointer-events: none; }
 
 @media (min-width: 640px) { .blog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1000px) { .blog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -1284,3 +1289,82 @@ footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weig
 @media (min-width: 1024px) { .google-review-grid { columns: 3; } }
 
 html:has(.faq-page) { scroll-behavior: smooth; }
+
+/* An introduction with a long heading and two paragraphs: smaller heading, wider copy, and the photo stretched to the copy's height. */
+.airport-introduction-long .airport-introduction-copy h2 { max-width: 22ch; font-size: clamp(1.9rem, 3.2vw, 2.75rem); }
+.airport-intro-points { display: grid; gap: .6rem; margin-top: 1.5rem; }
+.airport-intro-points li { display: flex; gap: .65rem; align-items: flex-start; padding: .8rem 1rem; border: 1px solid #e1e8ef; border-radius: var(--airport-radius-md); background: #fff; color: #4b5d70; font-size: .9rem; line-height: 1.5; }
+.airport-intro-points svg { flex: none; width: 1.25rem; height: 1.25rem; margin-top: .05rem; padding: .2rem; border-radius: 999px; background: var(--airport-blue); color: #fff; stroke-width: 3; }
+.airport-intro-points strong { margin-right: .35rem; color: var(--airport-ink); }
+@media (min-width: 900px) {
+  .airport-introduction-long .airport-introduction-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: stretch; }
+  .airport-introduction-long .airport-introduction-media { min-height: 100%; }
+}
+
+/* Pickup guide with its own copy: heading and intro across the top, step cards beside the map and drop-off card. */
+.airport-pickup-head { display: grid; gap: 1.25rem; }
+.airport-pickup-head h2 { max-width: 24ch; margin-top: .65rem; font-size: clamp(1.9rem, 3.2vw, 2.75rem); }
+.airport-pickup-head .airport-map-lead:first-child { margin-top: 0; }
+.airport-pickup-layout { display: grid; gap: 2rem; margin-top: 2.5rem; }
+.airport-pickup-layout .airport-pickup-title { margin-top: 0; }
+.airport-pickup-cards { display: grid; gap: 1rem; margin-top: 1rem; }
+.airport-pickup-cards li { padding: 1.25rem; border: 1px solid rgba(255,255,255,.12); border-radius: var(--airport-radius-lg); background: rgba(255,255,255,.05); }
+.airport-pickup-cards span { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: 999px; background: var(--airport-blue); color: #fff; font-size: .85rem; font-weight: 800; }
+.airport-pickup-cards h4 { margin-top: .9rem; color: #fff; font-size: 1.05rem; font-weight: 700; }
+.airport-pickup-cards p { margin-top: .4rem; color: rgba(255,255,255,.72); font-size: .9rem; line-height: 1.6; }
+.airport-pickup-side { display: grid; gap: 1rem; align-content: start; }
+/* Same card as .airport-map-grid > div.airport-map-card, which only matches inside the default map layout. */
+.airport-pickup-side > .airport-map-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,.2); border-radius: var(--airport-radius-xl); background: #fff; color: var(--airport-ink); box-shadow: 0 30px 65px rgba(0,0,0,.3); }
+.airport-pickup-side > .airport-map-card .text-muted-foreground { color: #617285; }
+.airport-dropoff-card { display: grid; gap: .75rem; padding: 1.4rem; border: 1px solid rgba(127,195,255,.3); border-radius: var(--airport-radius-lg); background: rgba(7,95,189,.18); }
+.airport-dropoff-card h3 { display: flex; gap: .6rem; align-items: center; color: #fff; font-size: 1.1rem; font-weight: 700; }
+.airport-dropoff-card h3 svg { width: 1.2rem; color: #8bc7ff; }
+.airport-dropoff-card p { color: rgba(255,255,255,.75); font-size: .92rem; line-height: 1.6; }
+@media (min-width: 640px) {
+  .airport-pickup-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+  .airport-pickup-head { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 3rem; }
+  .airport-pickup-layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 2.5rem; }
+  .airport-pickup-side { padding-top: 1.85rem; }
+}
+
+/* Airport-page cards with booking buttons (Heathrow terminals, towns, airports and ports). */
+.airport-travel-info-intro > h2 + p, .airport-travel-info-intro > p + p { margin-top: 1rem; color: #617285; line-height: 1.7; }
+.airport-card-group-title { margin-top: 2.5rem; color: var(--airport-ink); font-size: 1.15rem; font-weight: 700; }
+.airport-card-grid { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.airport-travel-info-intro + .airport-card-grid { margin-top: 2.5rem; }
+.airport-info-card, .airport-link-card, .airport-city-card { display: flex; flex-direction: column; gap: .75rem; padding: 1.4rem; border: 1px solid #e1e8ef; border-radius: var(--airport-radius-lg); background: #fff; box-shadow: 0 14px 34px rgba(7,29,51,.05); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.airport-link-card:hover, .airport-city-card:hover { transform: translateY(-2px); border-color: #b9d6f0; box-shadow: 0 18px 40px rgba(7,29,51,.09); }
+.airport-info-card h3, .airport-link-card h3, .airport-city-card h4 { color: var(--airport-ink); font-size: 1.05rem; font-weight: 700; line-height: 1.3; }
+.airport-benefits-closing { max-width: 46rem; margin-top: 2rem; color: #4b5d70; line-height: 1.7; }
+.airport-link-card h3 a, .airport-city-card h4 a { color: var(--airport-blue); text-decoration: underline; text-decoration-color: rgba(7,95,189,.3); text-underline-offset: 4px; }
+.airport-info-card p, .airport-link-card p { color: #4b5d70; font-size: .92rem; line-height: 1.6; }
+.airport-info-card-badge { display: grid; width: 2.6rem; height: 2.6rem; place-items: center; border-radius: 999px; background: var(--airport-blue); color: #fff; font-size: .85rem; font-weight: 800; }
+.airport-info-card-icon { display: grid; flex: none; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 999px; background: #eaf3fc; color: var(--airport-blue); }
+.airport-info-card-icon svg { width: 1.2rem; height: 1.2rem; }
+.airport-card-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; padding-top: .35rem; }
+.airport-card-link { display: inline-flex; gap: .35rem; align-items: center; color: var(--airport-blue); font-size: .82rem; font-weight: 700; }
+.airport-card-link svg { width: .9rem; transition: transform .2s ease; }
+.airport-card-link:hover svg { transform: translateX(3px); }
+.airport-link-card > .airport-card-link { margin-top: auto; }
+.airport-link-card > .airport-card-actions + .airport-card-link { margin-top: 0; }
+.airport-city-card h4 { display: flex; gap: .5rem; align-items: center; }
+.airport-city-card h4 svg { flex: none; width: 1.1rem; color: var(--airport-blue); }
+.airport-city-card-more { border-style: dashed; background: var(--airport-sky); }
+.airport-info-card-highlight { border-color: #b9d6f0; background: var(--airport-sky); }
+.airport-note { display: flex; gap: .75rem; align-items: flex-start; margin-top: 2rem; padding: 1.1rem 1.25rem; border: 1px solid #f1d38c; border-radius: var(--airport-radius-md); background: #fff8e8; color: #4b3d14; font-size: .92rem; line-height: 1.6; }
+.airport-note svg { flex: none; width: 1.2rem; margin-top: .15rem; color: #b07d10; }
+.airport-pricing-panel { display: grid; gap: 1.25rem; align-items: center; margin-top: 2.5rem; padding: clamp(1.5rem, 4vw, 2.25rem); border: 1px solid rgba(255,255,255,.14); border-radius: var(--airport-radius-xl); background: rgba(255,255,255,.05); }
+.airport-pricing-panel h3 { color: #fff; font-size: clamp(1.25rem, 2.4vw, 1.6rem); font-weight: 700; }
+.airport-pricing-panel p { margin-top: .5rem; max-width: 40rem; color: rgba(255,255,255,.7); line-height: 1.6; }
+.airport-pricing-panel .airport-info-card-icon { background: rgba(127,195,255,.15); color: #8bc7ff; }
+.landing-vehicle-description { margin-top: .4rem; color: #4b5d70; font-size: .8rem; line-height: 1.55; }
+@media (min-width: 640px) {
+  .airport-card-grid-2, .airport-card-grid-3, .airport-card-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .airport-pricing-panel { grid-template-columns: auto minmax(0, 1fr) auto; }
+}
+@media (min-width: 1000px) {
+  .airport-card-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .airport-card-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

@@ -6,4 +6,9 @@ export const AIRPORT_IMAGES: Record<string, string> = {
   "luton-airport-taxi": "/airport-transfers/luton.webp",
   "london-city-airport-taxi": "/airport-transfers/london-city.webp",
   "southend-airport-taxi": "/airport-transfers/southend.webp",
+  "southampton-airport-taxi": "/airport-transfers/hero.webp",
+  "bournemouth-airport-taxi": "/airport-transfers/hero.webp",
+  "oxford-airport-taxi": "/airport-transfers/hero.webp",
+  "farnborough-airport-taxi": "/airport-transfers/hero.webp",
+  "birmingham-airport-taxi": "/airport-transfers/hero.webp",
 }

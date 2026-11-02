@@ -121,7 +121,7 @@ export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry
       usesDarkHeader ? "landing-header bg-background text-foreground" : "bg-background/80 backdrop-blur-md"
     )}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 2xl:max-w-7xl">
-        <Link href="/" className="flex items-center gap-2 font-semibold"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/95 ring-1 ring-white/35 shadow-sm"><Image src="/brand/logo-mark.png" alt="" width={32} height={32} className="size-8" /></span>{/* Below xl the full nav needs the room, so only the logo mark shows there. */}<span className="whitespace-nowrap text-lg tracking-tight md:max-xl:sr-only">ONE Airport Taxi</span></Link>
+        <Link href="/" className="flex items-center gap-2 font-semibold"><Image src="/brand/logo-circle-white.webp" alt="" width={40} height={40} className="size-10 shrink-0 rounded-full ring-1 ring-white/35 shadow-sm" />{/* Below xl the full nav needs the room, so only the logo mark shows there. */}<span className="whitespace-nowrap text-lg tracking-tight md:max-xl:sr-only">ONE Airport Taxi</span></Link>
         <nav className="hidden items-center gap-1 md:flex">
           <DesktopAirportNavigation airports={airports} />
           <Link href="/destinations" className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === "/destinations" && "text-foreground")}>Destinations</Link>

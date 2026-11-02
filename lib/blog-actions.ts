@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath, updateTag } from "next/cache"
-import { BLOG_TAG, createCategory, deletePost, getPostById, savePost, setPostStatus, uploadBlogImage } from "@/lib/blog"
+import { BLOG_TAG, createBlogVideoUpload, createCategory, deletePost, getPostById, savePost, setPostStatus, uploadBlogImage } from "@/lib/blog"
 import { blogCategoryInputSchema, blogPostInputSchema, publishProblems, sanitizeBlogDocument, type BlogCategory, type BlogPost } from "@/lib/blog-schema"
 import { getAdminUser, isAdminAuthenticated } from "@/lib/session"
 
@@ -82,4 +82,9 @@ export async function uploadBlogImageAction(formData: FormData): Promise<{ ok: t
   const file = formData.get("file")
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose an image to upload." }
   return uploadBlogImage(file)
+}
+
+export async function createBlogVideoUploadAction(file: { name: string; type: string; size: number }): Promise<{ ok: true; uploadUrl: string; url: string } | { ok: false; error: string }> {
+  if (!(await isAdminAuthenticated("content"))) return NOT_AUTHORIZED
+  return createBlogVideoUpload(file)
 }

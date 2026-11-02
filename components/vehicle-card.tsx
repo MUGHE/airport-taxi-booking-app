@@ -11,11 +11,14 @@ export function VehicleCard({
   index,
   href,
   bestFor,
+  description,
 }: {
   vehicle: Pick<VehicleClass, "id" | "name" | "image" | "capacity" | "luggage" | "handLuggage" | "handLuggageOnlyCapacity" | "luggageNote">
   index: number
   href: string
   bestFor?: string
+  /** A longer line under the "best for" text, for pages with their own vehicle copy. */
+  description?: string
 }) {
   const line = bestFor ?? VEHICLE_BEST_FOR[vehicle.id]
   return (
@@ -33,6 +36,7 @@ export function VehicleCard({
       <div className="landing-vehicle-copy">
         <h3>{vehicle.name}</h3>
         {line && <p className="landing-vehicle-best">{line}</p>}
+        {description && <p className="landing-vehicle-description">{description}</p>}
         <div className="landing-vehicle-meta">
           <span><Users aria-hidden="true" /> {vehicle.capacity} passengers</span>
           <span><Briefcase aria-hidden="true" /> {vehicle.luggage} suitcases{vehicle.luggageNote ? ` (${vehicle.luggageNote})` : ""}</span>
