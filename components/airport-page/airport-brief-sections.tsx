@@ -39,7 +39,7 @@ export type AirportBrief = {
   guide: { heading: string; paragraphs: React.ReactNode[]; groups: { title: string; columns: 2 | 3 | 4; cards: BriefCard[] }[] }
   departures: { eyebrow: string; heading: string; paragraphs: React.ReactNode[]; cards: BriefCard[] }
   travellers: { heading: string; lead: string; cards: BriefCard[] }
-  cities?: { heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; closing: string; cta: string }
+  cities?: { eyebrow?: string; heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; closing: string; cta: string }
   /** `origin` starts the booking buttons somewhere other than the airport itself. */
   airports: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; closing?: string; origin?: BriefPlace }
   ports?: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; note: string }
@@ -212,15 +212,21 @@ export function BriefAirportsSection({ page, brief }: { page: AirportPagePresent
   )
 }
 
-export function BriefPortsSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
-  if (!brief.ports) return null
-  const { heading, paragraphs, titleFrom, places, note } = brief.ports
+function BriefPortsSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+  return brief.ports ? <PortsSection page={page} ports={brief.ports} /> : null
+}
+
+export type PortsContent = Omit<NonNullable<AirportBrief["ports"]>, "note"> & { note?: string; body?: React.ReactNode }
+
+/** Ferry port and cruise terminal cards: used by the briefs and by the CMS "Ferry & cruise information" section. */
+export function PortsSection({ page, ports }: { page: AirportPagePresentation; ports: PortsContent }) {
+  const { heading, paragraphs, body, titleFrom, places, note } = ports
   return (
     <section className="airport-comfort" data-preview-section="ferry_cruise">
       <div className="airport-container">
-        <SectionHeading eyebrow="Fly-cruise transfers" title={heading} paragraphs={paragraphs} />
+        <SectionHeading eyebrow="Fly-cruise transfers" title={heading} paragraphs={paragraphs} body={body} />
         <PlaceCards page={page} places={places} titleFrom={titleFrom} icon={Ship} />
-        <p className="airport-note"><Info aria-hidden="true" /><span><strong>Important:</strong> {note}</span></p>
+        {note && <p className="airport-note"><Info aria-hidden="true" /><span><strong>Important:</strong> {note}</span></p>}
       </div>
     </section>
   )

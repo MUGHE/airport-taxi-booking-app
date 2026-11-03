@@ -11,11 +11,13 @@ type Changes = Partial<Pick<DestinationSection, "fields" | "items">>
 
 const textareaClass = "min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm"
 
-/** Card editors for the "Who we drive" and "Places you can book from" Content Sections. */
+/** Card editors for the "Who we drive", "Places you can book from" and "Ferry & cruise information" Content Sections. */
 export function SectionItemsEditor({ section, onChange }: { section: DestinationSection; onChange: (changes: Changes) => void }) {
   const items = section.items ?? []
-  const isPlaces = section.type === "place_links"
-  const noun = isPlaces ? "place" : "card"
+  const isPorts = section.type === "ferry_cruise"
+  // Ports are places too: each one needs a Google Places location for its booking buttons.
+  const isPlaces = section.type === "place_links" || isPorts
+  const noun = isPorts ? "port" : isPlaces ? "place" : "card"
 
   function setItems(next: DestinationSectionItem[]) { onChange({ items: next }) }
   function updateItem(index: number, changes: Partial<DestinationSectionItem>) { setItems(items.map((item, i) => i === index ? { ...item, ...changes } : item)) }
@@ -29,7 +31,10 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
 
   return (
     <div className="space-y-4 border-t border-border pt-4">
-      {isPlaces && (
+      {isPorts && (
+        <div className="space-y-1.5"><Label htmlFor={`${section.id}-note`}>Important note under the cards (optional)</Label><textarea id={`${section.id}-note`} className={textareaClass} value={section.fields.note ?? ""} onChange={(event) => setField("note", event.target.value)} /></div>
+      )}
+      {isPlaces && !isPorts && (
         <div className="grid gap-3">
           <div className="space-y-1.5"><Label htmlFor={`${section.id}-list-heading`}>List heading</Label><Input id={`${section.id}-list-heading`} value={section.fields.listHeading ?? ""} placeholder="You can arrange a taxi to the airport from places like:" onChange={(event) => setField("listHeading", event.target.value)} /></div>
           <div className="space-y-1.5"><Label htmlFor={`${section.id}-closing`}>Closing text (optional)</Label><textarea id={`${section.id}-closing`} className={textareaClass} value={section.fields.closing ?? ""} placeholder="You can also book a taxi from the airport to any of these places or further away." onChange={(event) => setField("closing", event.target.value)} /></div>
@@ -38,12 +43,12 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
       )}
 
       <div>
-        <Label>{isPlaces ? "Places" : "Cards"}</Label>
-        <p className="text-xs text-muted-foreground">{isPlaces ? "Each place gets two booking buttons, to and from the airport. Choose the place from Google Places so the booking form opens with the route filled in." : "Shown as a row of cards. Four cards fit one row."}</p>
+        <Label>{isPorts ? "Ports" : isPlaces ? "Places" : "Cards"}</Label>
+        <p className="text-xs text-muted-foreground">{isPlaces ? `Each ${noun} gets two booking buttons, to and from the airport. Choose it from Google Places so the booking form opens with the route filled in.` : "Shown as a row of cards. Four cards fit one row."}</p>
       </div>
 
       {items.map((item, index) => {
-        const label = `${isPlaces ? "Place" : "Card"} ${index + 1}`
+        const label = `${isPorts ? "Port" : isPlaces ? "Place" : "Card"} ${index + 1}`
         const missingLocation = isPlaces && (item.latitude === undefined || item.longitude === undefined)
         return (
           <div key={item.id} className="space-y-3 rounded-lg border border-border p-3">
@@ -57,10 +62,11 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
             </div>
             {isPlaces ? (
               <>
-                <div className="space-y-1.5"><Label htmlFor={`${item.id}-title`}>Name on the card</Label><Input id={`${item.id}-title`} value={item.title} placeholder="e.g. Reading" onChange={(event) => updateItem(index, { title: event.target.value })} /></div>
+                <div className="space-y-1.5"><Label htmlFor={`${item.id}-title`}>Name on the card</Label><Input id={`${item.id}-title`} value={item.title} placeholder={isPorts ? "e.g. Southampton Cruise Terminal" : "e.g. Reading"} onChange={(event) => updateItem(index, { title: event.target.value })} /></div>
+                {isPorts && <div className="space-y-1.5"><Label htmlFor={`${item.id}-text`}>Text</Label><textarea id={`${item.id}-text`} className={textareaClass} value={item.text} placeholder="Distance, journey time and what to check before you travel." onChange={(event) => updateItem(index, { text: event.target.value })} /></div>}
                 <div className="space-y-1.5">
                   <Label>Location</Label>
-                  <DestinationPicker defaultValue={item.address} placeholder="Search for the town or city in Google Places" onSelect={(place) => updateItem(index, { address: place.address, latitude: place.lat, longitude: place.lng, title: item.title || place.address.split(",")[0] })} onClear={() => updateItem(index, { address: "", latitude: undefined, longitude: undefined })} />
+                  <DestinationPicker defaultValue={item.address} placeholder={isPorts ? "Search for the port or terminal in Google Places" : "Search for the town or city in Google Places"} onSelect={(place) => updateItem(index, { address: place.address, latitude: place.lat, longitude: place.lng, title: item.title || place.address.split(",")[0] })} onClear={() => updateItem(index, { address: "", latitude: undefined, longitude: undefined })} />
                   {missingLocation ? <p className="text-xs text-destructive">Choose a location, or this place won&apos;t show on the page.</p> : <p className="text-xs text-muted-foreground">{item.address}</p>}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">

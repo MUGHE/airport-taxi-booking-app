@@ -150,7 +150,11 @@ const DEFAULT_TRAVELLER_CARDS: Partial<DestinationSectionItem>[] = [
   { icon: "long_distance", title: "Long-Distance Airport Journeys", text: "Arrange a private transfer to destinations across the UK, with the fare agreed up front.", linkHref: "#airport-destinations", linkLabel: "Popular journeys" },
 ]
 
-function defaultSectionContent(type: DestinationSectionType): Pick<DestinationSection, "body" | "fields" | "items"> {
+const DEFAULT_PORT_NOTE = "For cruise and ferry transfers, please tell us the port and terminal, the sailing time, the number of passengers and how much luggage you have. It helps us plan the right vehicle and pickup."
+
+function defaultSectionContent(type: DestinationSectionType, pageType: DestinationPageType): Pick<DestinationSection, "body" | "fields" | "items"> {
+  // Airport Pages show ports as cards; a Ferry & cruise section without `items` keeps the older text layout.
+  if (type === "ferry_cruise" && pageType === "airport") return { body: [], fields: { note: DEFAULT_PORT_NOTE }, items: [] }
   if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } }
   if (type === "traveller_types") return { body: makeBlock("Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all."), fields: {}, items: DEFAULT_TRAVELLER_CARDS.map((card, index) => createSectionItem({ ...card, id: `traveller-${index + 1}` })) }
   if (type === "place_links") return { body: [], fields: { listHeading: "", closing: "", cta: "" }, items: [] }
@@ -164,13 +168,13 @@ export function createDestinationSection(type: DestinationSectionType, id = `${t
     visible: true,
     required: isRequiredDestinationSectionType(type, pageType),
     title: sectionLabel(type, pageType),
-    ...defaultSectionContent(type),
+    ...defaultSectionContent(type, pageType),
     sourceNotes: [],
   }
 }
 
 /** Optional sections every new Airport Page starts with, after the required ones. */
-const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["traveller_types", "place_links"]
+const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["traveller_types", "place_links", "ferry_cruise"]
 
 export function createDefaultDestinationContent(heading: string, pageType: DestinationPageType = "airport"): DestinationContentDocument {
   const policy = getDestinationPagePolicy(pageType)

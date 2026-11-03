@@ -35,7 +35,7 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
-import { BriefPricingPanel, CitiesSection, TravellersSection, type BriefCard, type BriefPlace, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
+import { BriefPricingPanel, CitiesSection, PortsSection, TravellersSection, type BriefCard, type BriefPlace, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
 import { BRIEF_COPY } from "@/components/airport-page/airport-briefs"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
@@ -133,8 +133,26 @@ function cmsTravellerCards(section: AirportPageContentSection): BriefCard[] {
 /** Places for the CMS "Places you can book from" section; booking buttons need a place chosen from Google Places. */
 function cmsPlaces(section: AirportPageContentSection): BriefPlace[] {
   return (section.items ?? []).flatMap((item) => item.title && item.latitude !== undefined && item.longitude !== undefined
-    ? [{ label: item.title, name: item.title, address: item.address || item.title, latitude: item.latitude, longitude: item.longitude, href: item.linkHref || undefined, hrefLabel: item.linkHref ? item.linkLabel || `${item.title} taxi guide` : undefined }]
+    ? [{ label: item.title, name: item.title, address: item.address || item.title, latitude: item.latitude, longitude: item.longitude, text: item.text || undefined, href: item.linkHref || undefined, hrefLabel: item.linkHref ? item.linkLabel || `${item.title} taxi guide` : undefined }]
     : [])
+}
+
+/** A Ferry & cruise section with a card list shows port cards; one without keeps the original text layout. */
+function hasPortCards(section: AirportPageContentSection) {
+  return section.type === "ferry_cruise" && Array.isArray(section.items)
+}
+
+function CmsPortsSection({ section, page }: { section: AirportPageContentSection; page: AirportPagePresentation }) {
+  const places = cmsPlaces(section)
+  if (!places.length) return null
+  return <PortsSection page={page} ports={{
+    heading: headingFor(section.title, `${airportName(page)} to Ferry Ports and Cruise Terminals`),
+    paragraphs: [],
+    body: hasBodyText(section) ? <RichText blocks={section.body} document={section.bodyDocument} /> : undefined,
+    titleFrom: page.shortName,
+    places,
+    note: section.fields.note?.trim(),
+  }} />
 }
 
 function airportName(page: AirportPagePresentation) {
@@ -636,6 +654,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
 
   if (section.type === "traveller_types") return <CmsTravellersSection section={section} page={page} />
   if (section.type === "place_links") return <CmsPlacesSection section={section} page={page} />
+  if (hasPortCards(section)) return <CmsPortsSection section={section} page={page} />
   if (section.type === "reviews") return <ReviewSection page={page} title={section.title} />
   if (section.type === "related_destinations") return <RouteSection page={page} title={section.title} />
   if (section.type === "faq") return <FaqSection page={page} title={section.title} />
@@ -651,6 +670,7 @@ const SECTION_ORDER: Partial<Record<AirportPageContentSection["type"], number>> 
   map: 50,
   traveller_types: 62,
   place_links: 64,
+  ferry_cruise: 68,
   related_destinations: 70,
   reviews: 80,
   faq: 90,
@@ -664,7 +684,8 @@ const DEFAULT_ORDER = 60
 export function AirportPageRenderer({ page, canonicalPath, showFooter = true, googleRating, stopPricing }: { page: AirportPagePresentation; canonicalPath?: string; showFooter?: boolean; googleRating?: GoogleRating | null; stopPricing?: StopPricing }) {
   const copy = airportCopy(page)
   const hidden = new Set(copy.hiddenSections ?? [])
-  const visibleSections = page.sections.filter((section) => section.visible && !hidden.has(section.type))
+  // A brief that hides the CMS Ferry & cruise text still shows CMS port cards, which replace the brief's own ports.
+  const visibleSections = page.sections.filter((section) => section.visible && (!hidden.has(section.type) || (hasPortCards(section) && cmsPlaces(section).length > 0)))
   const configuredSectionTypes = new Set(page.sections.map((section) => section.type))
   const rank = (section: AirportPageContentSection) => SECTION_ORDER[section.type] ?? DEFAULT_ORDER
   const orderedSections = visibleSections.map((section, position) => ({ section, position })).sort((a, b) => rank(a.section) - rank(b.section) || a.position - b.position).map(({ section }) => section)
@@ -672,7 +693,7 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
   // A filled-in CMS section replaces the same section from the airport's code brief, so it isn't shown twice.
   const cmsReplaces = (type: AirportPageContentSection["type"], cards: (section: AirportPageContentSection) => unknown[]) => visibleSections.some((section) => section.type === type && cards(section).length > 0)
-  const replacedBriefKeys = [cmsReplaces("traveller_types", cmsTravellerCards) && "-travellers", cmsReplaces("place_links", cmsPlaces) && "-cities"].filter((suffix): suffix is string => Boolean(suffix))
+  const replacedBriefKeys = [cmsReplaces("traveller_types", cmsTravellerCards) && "-travellers", cmsReplaces("place_links", cmsPlaces) && "-cities", cmsReplaces("ferry_cruise", (section) => hasPortCards(section) ? cmsPlaces(section) : []) && "-ports"].filter((suffix): suffix is string => Boolean(suffix))
   for (const { key, order, Component } of copy.extraSections ?? []) if (!replacedBriefKeys.some((suffix) => key.endsWith(suffix))) blocks.push([order, <Component key={key} page={page} />])
   blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
   blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
