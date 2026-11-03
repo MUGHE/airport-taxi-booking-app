@@ -39,7 +39,7 @@ export type AirportPagePresentation = {
   bookingAvailable?: boolean
 }
 
-export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "bodyDocument" | "fields" | "image">
+export type AirportPageContentSection = Pick<DestinationSection, "id" | "type" | "visible" | "title" | "body" | "bodyDocument" | "fields" | "items" | "image">
 
 export type PublishedAirportPageContent = Pick<AirportPagePresentation, "heading" | "intro" | "benefits" | "faqs"> & Partial<Pick<AirportPagePresentation, "introDocument" | "serviceFacts" | "globalFaqs" | "airportFaqs" | "reviews" | "heroImage" | "sections" | "finalCta">>
 
