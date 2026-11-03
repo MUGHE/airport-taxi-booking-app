@@ -12,13 +12,23 @@ test("a new Airport Page starts with the Who we drive and Places you can book fr
   expect(places?.required).toBe(false)
   expect(places?.items).toEqual([])
   expect(places?.fields).toEqual({ listHeading: "", closing: "", cta: "" })
+  const ports = content.sections.find((section) => section.type === "ferry_cruise")
+  expect(ports?.required).toBe(false)
+  expect(ports?.items).toEqual([])
+  expect(ports?.fields.note).toContain("sailing time")
   expect(validateDestinationContent(content, "Exeter Airport Taxi")).toBeNull()
+})
+
+test("an older Ferry & cruise section without cards keeps its text layout", () => {
+  const content = normalizeDestinationContent({ sections: [{ id: "ferry", type: "ferry_cruise", title: "Ferry & cruise information", body: [{ type: "paragraph", text: "Ports text." }] }] }, "Gatwick Airport Taxi")
+  expect(content.sections.find((section) => section.id === "ferry")?.items).toBeUndefined()
 })
 
 test("Place Pages don't get the airport card sections", () => {
   const types = createDefaultDestinationContent("Reading Airport Taxi", "place").sections.map((section) => section.type)
   expect(types).not.toContain("traveller_types")
   expect(types).not.toContain("place_links")
+  expect(types).not.toContain("ferry_cruise")
 })
 
 test("card items keep safe links and complete coordinates only", () => {
