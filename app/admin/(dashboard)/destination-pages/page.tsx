@@ -17,14 +17,11 @@ export default async function AdminDestinationPagesPage() {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Destination Pages</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Find and manage Airport Page and Place Page drafts and published pages.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Find and manage Place Page drafts and published pages. Airport pages have their own tab.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" nativeButton={false} render={<Link href="/admin/destination-pages/new?type=airport" />}>Create Airport Page</Button>
-          <Button nativeButton={false} render={<Link href="/admin/destination-pages/new?type=place" />}>Create Place Page</Button>
-        </div>
+        <Button nativeButton={false} render={<Link href="/admin/destination-pages/new?type=place" />}>Create Place Page</Button>
       </div>
-      <DestinationPagesList pages={pages} />
+      <DestinationPagesList pages={pages} pageType="place" />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { getAdminDestinationPageById, getPlaceIdentityOptionsAction, getRelatedDestinationCandidatesAction, getReusableDestinationContentAction } from "@/lib/actions"
 import { DestinationPageEditor } from "@/components/admin/destination-page-editor"
 import { requireAdminSection } from "@/lib/session"
@@ -12,6 +12,7 @@ export default async function EditDestinationPage({ params }: { params: Promise<
   await requireAdminSection("content", `/admin/destination-pages/${id}`)
   const page = await getAdminDestinationPageById(id)
   if (!page) notFound()
+  if (page.pageType === "airport") redirect(`/admin/airport-pages/${id}`)
   const [relatedCandidates, reusableContent, placeIdentityOptions] = await Promise.all([
     getRelatedDestinationCandidatesAction(page.id),
     getReusableDestinationContentAction(),
