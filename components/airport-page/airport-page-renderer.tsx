@@ -2,9 +2,12 @@ import Image from "next/image"
 import Link from "next/link"
 import {
   ArrowRight,
+  Accessibility,
+  Baby,
   BadgeCheck,
   Banknote,
   BatteryCharging,
+  Briefcase,
   Check,
   DoorOpen,
   GlassWater,
@@ -14,6 +17,7 @@ import {
   Navigation,
   PlaneLanding,
   PlaneTakeoff,
+  Route,
   ShieldCheck,
   Ship,
   SlidersHorizontal,
@@ -31,7 +35,7 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
-import { BriefPricingPanel, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
+import { BriefPricingPanel, CitiesSection, TravellersSection, type BriefCard, type BriefPlace, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
 import { BRIEF_COPY } from "@/components/airport-page/airport-briefs"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
@@ -94,7 +98,7 @@ const sectionLabels: Partial<Record<AirportPageContentSection["type"], string>> 
 const storyIcons = [Navigation, PlaneLanding, Luggage, MapPin]
 
 // CMS template labels that tell visitors nothing; the page swaps in an airport-specific heading.
-const PLACEHOLDER_TITLES = new Set(["introduction", "benefits & service facts", "airport guide", "airport map", "popular transfer routes", "google reviews", "airport faqs", "frequently asked questions", "fleet & pricing", "find the right vehicle for your journey", "ready to book your airport transfer?", "ferry & cruise information"])
+const PLACEHOLDER_TITLES = new Set(["introduction", "benefits & service facts", "airport guide", "airport map", "popular transfer routes", "google reviews", "airport faqs", "frequently asked questions", "fleet & pricing", "find the right vehicle for your journey", "ready to book your airport transfer?", "ferry & cruise information", "who we drive", "places you can book from"])
 
 function headingFor(title: string | undefined, fallback: string) {
   return title && !PLACEHOLDER_TITLES.has(title.trim().toLowerCase()) ? title : fallback
@@ -106,9 +110,57 @@ function airportLabel(page: AirportPagePresentation) {
   return name ? name.replace(/(?<! Airport)\s*\(([A-Z]{3})\)/, " Airport ($1)") : `${page.shortName} Airport`
 }
 
+function hasBodyText(section: AirportPageContentSection) {
+  return section.bodyDocument ? JSON.stringify(section.bodyDocument).includes('"text"') : section.body.some((block) => block.text.trim())
+}
+
 function hasContent(section: AirportPageContentSection) {
-  const text = section.bodyDocument ? JSON.stringify(section.bodyDocument).includes('"text"') : section.body.some((block) => block.text.trim())
-  return text || Object.values(section.fields).some((value) => value.trim())
+  return hasBodyText(section) || Object.values(section.fields).some((value) => value.trim())
+}
+
+const TRAVELLER_ICONS: Record<string, BriefCard["icon"]> = { family: Baby, business: Briefcase, group: UsersRound, long_distance: Route, accessible: Accessibility, luggage: Luggage }
+
+/** Cards for the CMS "Who we drive" section; a card needs at least a title. */
+function cmsTravellerCards(section: AirportPageContentSection): BriefCard[] {
+  return (section.items ?? []).filter((item) => item.title).map((item) => ({
+    icon: TRAVELLER_ICONS[item.icon],
+    title: item.title,
+    text: item.text,
+    link: item.linkHref && item.linkLabel ? { href: item.linkHref, label: item.linkLabel } : undefined,
+  }))
+}
+
+/** Places for the CMS "Places you can book from" section; booking buttons need a place chosen from Google Places. */
+function cmsPlaces(section: AirportPageContentSection): BriefPlace[] {
+  return (section.items ?? []).flatMap((item) => item.title && item.latitude !== undefined && item.longitude !== undefined
+    ? [{ label: item.title, name: item.title, address: item.address || item.title, latitude: item.latitude, longitude: item.longitude, href: item.linkHref || undefined, hrefLabel: item.linkHref ? item.linkLabel || `${item.title} taxi guide` : undefined }]
+    : [])
+}
+
+function airportName(page: AirportPagePresentation) {
+  return /\bAirport$/.test(page.shortName) ? page.shortName : `${page.shortName} Airport`
+}
+
+function CmsTravellersSection({ section, page }: { section: AirportPageContentSection; page: AirportPagePresentation }) {
+  const cards = cmsTravellerCards(section)
+  if (!cards.length) return null
+  const heading = headingFor(section.title, `${airportName(page)} Taxi Service for Families, Business Travellers and Groups`)
+  return <TravellersSection page={page} travellers={{ heading, lead: "", body: hasBodyText(section) ? <RichText blocks={section.body} document={section.bodyDocument} /> : undefined, cards }} />
+}
+
+function CmsPlacesSection({ section, page }: { section: AirportPageContentSection; page: AirportPagePresentation }) {
+  const places = cmsPlaces(section)
+  if (!places.length) return null
+  return <CitiesSection page={page} cities={{
+    eyebrow: "Towns and cities",
+    heading: headingFor(section.title, `${airportName(page)} Taxi Transfers to Towns and Cities`),
+    paragraphs: [],
+    body: hasBodyText(section) ? <RichText blocks={section.body} document={section.bodyDocument} /> : undefined,
+    listHeading: section.fields.listHeading?.trim() || `You can arrange a taxi to ${page.shortName} from places like:`,
+    places,
+    closing: section.fields.closing?.trim() ?? "",
+    cta: section.fields.cta?.trim() || `Get a Quote for Your ${page.shortName} Journey`,
+  }} />
 }
 
 function terminalLabel(terminal: AirportPagePresentation["terminals"][number]) {
@@ -582,6 +634,8 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
     )
   }
 
+  if (section.type === "traveller_types") return <CmsTravellersSection section={section} page={page} />
+  if (section.type === "place_links") return <CmsPlacesSection section={section} page={page} />
   if (section.type === "reviews") return <ReviewSection page={page} title={section.title} />
   if (section.type === "related_destinations") return <RouteSection page={page} title={section.title} />
   if (section.type === "faq") return <FaqSection page={page} title={section.title} />
@@ -595,6 +649,8 @@ const SECTION_ORDER: Partial<Record<AirportPageContentSection["type"], number>> 
   benefits: 20,
   airport_guide: 40,
   map: 50,
+  traveller_types: 62,
+  place_links: 64,
   related_destinations: 70,
   reviews: 80,
   faq: 90,
@@ -614,7 +670,10 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
   const orderedSections = visibleSections.map((section, position) => ({ section, position })).sort((a, b) => rank(a.section) - rank(b.section) || a.position - b.position).map(({ section }) => section)
 
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
-  for (const { key, order, Component } of copy.extraSections ?? []) blocks.push([order, <Component key={key} page={page} />])
+  // A filled-in CMS section replaces the same section from the airport's code brief, so it isn't shown twice.
+  const cmsReplaces = (type: AirportPageContentSection["type"], cards: (section: AirportPageContentSection) => unknown[]) => visibleSections.some((section) => section.type === type && cards(section).length > 0)
+  const replacedBriefKeys = [cmsReplaces("traveller_types", cmsTravellerCards) && "-travellers", cmsReplaces("place_links", cmsPlaces) && "-cities"].filter((suffix): suffix is string => Boolean(suffix))
+  for (const { key, order, Component } of copy.extraSections ?? []) if (!replacedBriefKeys.some((suffix) => key.endsWith(suffix))) blocks.push([order, <Component key={key} page={page} />])
   blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
   blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
   blocks.push([DRIVERS_ORDER, <DriversSection key="drivers" page={page} />])

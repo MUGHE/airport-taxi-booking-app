@@ -68,14 +68,15 @@ function actionHref(page: AirportPagePresentation, action: BriefAction) {
   return action.kind === "to" ? links.toAirport : links.fromAirport
 }
 
-function SectionHeading({ eyebrow, title, paragraphs }: { eyebrow: string; title: string; paragraphs: React.ReactNode[] }) {
-  return <div className="airport-travel-info-intro"><p className="airport-eyebrow">{eyebrow}</p><h2>{title}</h2>{paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+/** `body` is CMS rich text, which brings its own paragraphs. */
+function SectionHeading({ eyebrow, title, paragraphs, body }: { eyebrow: string; title: string; paragraphs: React.ReactNode[]; body?: React.ReactNode }) {
+  return <div className="airport-travel-info-intro"><p className="airport-eyebrow">{eyebrow}</p><h2>{title}</h2>{paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}{body}</div>
 }
 
 function Buttons({ buttons }: { buttons: { href: string; label: string }[] }) {
   return (
     <div className="airport-card-actions">
-      {buttons.map((button, index) => <Button key={button.label} size="sm" variant={index === 0 ? "default" : "outline"} nativeButton={false} render={<Link href={button.href} />}>{button.label}{index === 0 && <ArrowRight aria-hidden="true" />}</Button>)}
+      {buttons.map((button, index) => <Button key={`${index}-${button.label}`} size="sm" variant={index === 0 ? "default" : "outline"} nativeButton={false} render={<Link href={button.href} />}>{button.label}{index === 0 && <ArrowRight aria-hidden="true" />}</Button>)}
     </div>
   )
 }
@@ -124,24 +125,37 @@ export function BriefDeparturesSection({ page, brief }: { page: AirportPagePrese
   )
 }
 
-export function BriefTravellersSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+export type TravellersContent = AirportBrief["travellers"] & { body?: React.ReactNode }
+
+/** "Who we drive": used by the briefs and by the CMS section of the same name. */
+export function TravellersSection({ page, travellers }: { page: AirportPagePresentation; travellers: TravellersContent }) {
   return (
     <section className="airport-benefits" data-preview-section="travellers">
       <div className="airport-container">
-        <SectionHeading eyebrow="Who we drive" title={brief.travellers.heading} paragraphs={[brief.travellers.lead]} />
-        <CardGrid page={page} cards={brief.travellers.cards} columns={brief.travellers.cards.length === 4 ? 4 : 3} />
+        <SectionHeading eyebrow="Who we drive" title={travellers.heading} paragraphs={travellers.lead ? [travellers.lead] : []} body={travellers.body} />
+        <CardGrid page={page} cards={travellers.cards} columns={travellers.cards.length === 4 ? 4 : 3} />
       </div>
     </section>
   )
 }
 
-export function BriefCitiesSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
-  if (!brief.cities) return null
-  const { heading, paragraphs, listHeading, places, closing, cta } = brief.cities
+function BriefTravellersSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+  return <TravellersSection page={page} travellers={brief.travellers} />
+}
+
+export type CitiesContent = NonNullable<AirportBrief["cities"]> & { eyebrow?: string; body?: React.ReactNode }
+
+function BriefCitiesSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+  return brief.cities ? <CitiesSection page={page} cities={brief.cities} /> : null
+}
+
+/** The town-by-town booking grid: used by the briefs and by the CMS "Places you can book from" section. */
+export function CitiesSection({ page, cities }: { page: AirportPagePresentation; cities: CitiesContent }) {
+  const { eyebrow = "London and the UK", heading, paragraphs, body, listHeading, places, closing, cta } = cities
   return (
     <section id={BRIEF_DESTINATIONS_ID} className="airport-comfort" data-preview-section="city_routes">
       <div className="airport-container">
-        <SectionHeading eyebrow="London and the UK" title={heading} paragraphs={paragraphs} />
+        <SectionHeading eyebrow={eyebrow} title={heading} paragraphs={paragraphs} body={body} />
         <h3 className="airport-card-group-title">{listHeading}</h3>
         <div className="airport-card-grid airport-card-grid-3">
           {places.map((place) => {
@@ -159,7 +173,7 @@ export function BriefCitiesSection({ page, brief }: { page: AirportPagePresentat
             <Buttons buttons={[{ href: page.bookingLinks.fromAirport, label: "Get a quote" }, { href: "/destinations", label: "All destinations" }]} />
           </article>
         </div>
-        <p className="airport-travel-info-closing">{closing}</p>
+        {closing && <p className="airport-travel-info-closing">{closing}</p>}
         <Button className="mt-6" nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>{cta} <ArrowRight className="size-4" /></Button>
       </div>
     </section>

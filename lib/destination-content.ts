@@ -11,6 +11,8 @@ export const DESTINATION_SECTION_TYPES = [
   "place_coverage",
   "airport_guide",
   "city_routes",
+  "place_links",
+  "traveller_types",
   "ferry_cruise",
   "travel_information",
   "faq",
@@ -39,6 +41,24 @@ export type TiptapNode = {
 
 export type TiptapDocument = { type: "doc"; content: TiptapNode[] }
 
+/**
+ * A card in a card-list section. "Who we drive" cards use the icon, text and link; "Places you can
+ * book from" cards use the title, the Google Places address and coordinates, and an optional page link.
+ */
+export type DestinationSectionItem = {
+  id: string
+  title: string
+  text: string
+  icon: string
+  address: string
+  latitude?: number
+  longitude?: number
+  linkHref: string
+  linkLabel: string
+}
+
+export const TRAVELLER_CARD_ICONS = { family: "Family", business: "Business", group: "Group", long_distance: "Long distance", accessible: "Accessible", luggage: "Luggage" } as const
+
 export type DestinationSection = {
   id: string
   type: DestinationSectionType
@@ -48,6 +68,7 @@ export type DestinationSection = {
   body: RichTextBlock[]
   bodyDocument?: TiptapDocument
   fields: Record<string, string>
+  items?: DestinationSectionItem[]
   image?: DestinationImageReference
   sourceNotes: SourceNote[]
 }
@@ -93,6 +114,8 @@ export const SECTION_LABELS: Record<DestinationSectionType, string> = {
   place_coverage: "Coverage & pickup information",
   airport_guide: "Airport Guide",
   city_routes: "Popular city routes",
+  place_links: "Places you can book from",
+  traveller_types: "Who we drive",
   ferry_cruise: "Ferry & cruise information",
   travel_information: "Travel information",
   faq: "Airport FAQs",
@@ -115,6 +138,25 @@ function makeBlock(text = ""): RichTextBlock[] {
   return text ? [{ type: "paragraph", text }] : []
 }
 
+export function createSectionItem(changes: Partial<DestinationSectionItem> = {}): DestinationSectionItem {
+  return { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, title: "", text: "", icon: "", address: "", linkHref: "", linkLabel: "", ...changes }
+}
+
+// Starting cards for a new "Who we drive" section; editors adjust them for each airport.
+const DEFAULT_TRAVELLER_CARDS: Partial<DestinationSectionItem>[] = [
+  { icon: "family", title: "Family Airport Transfers", text: "Travelling with children, pushchairs or a mountain of suitcases? Pick a vehicle with the space to match. You can request a child seat when booking, subject to availability and suitability.", linkHref: "#vehicles", linkLabel: "Compare family vehicles" },
+  { icon: "business", title: "Business Airport Transfers", text: "A professional airport taxi for meetings, corporate travel and flight connections. Executive vehicles are there for anyone who wants a more premium journey.", linkHref: "#vehicles", linkLabel: "See executive cars" },
+  { icon: "group", title: "Group Airport Transfers", text: "Friends, colleagues or the extended family? Our MPVs and 8-seater minibuses handle larger groups. Check the luggage capacity before you confirm your vehicle.", linkHref: "#vehicles", linkLabel: "See MPVs and minibuses" },
+  { icon: "long_distance", title: "Long-Distance Airport Journeys", text: "Arrange a private transfer to destinations across the UK, with the fare agreed up front.", linkHref: "#airport-destinations", linkLabel: "Popular journeys" },
+]
+
+function defaultSectionContent(type: DestinationSectionType): Pick<DestinationSection, "body" | "fields" | "items"> {
+  if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } }
+  if (type === "traveller_types") return { body: makeBlock("Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all."), fields: {}, items: DEFAULT_TRAVELLER_CARDS.map((card, index) => createSectionItem({ ...card, id: `traveller-${index + 1}` })) }
+  if (type === "place_links") return { body: [], fields: { listHeading: "", closing: "", cta: "" }, items: [] }
+  return { body: [], fields: {} }
+}
+
 export function createDestinationSection(type: DestinationSectionType, id = `${type}-${Date.now()}`, pageType: DestinationPageType = "airport"): DestinationSection {
   return {
     id,
@@ -122,18 +164,23 @@ export function createDestinationSection(type: DestinationSectionType, id = `${t
     visible: true,
     required: isRequiredDestinationSectionType(type, pageType),
     title: sectionLabel(type, pageType),
-    body: [],
-    fields: type === "airport_guide" ? { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } : {},
+    ...defaultSectionContent(type),
     sourceNotes: [],
   }
 }
+
+/** Optional sections every new Airport Page starts with, after the required ones. */
+const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["traveller_types", "place_links"]
 
 export function createDefaultDestinationContent(heading: string, pageType: DestinationPageType = "airport"): DestinationContentDocument {
   const policy = getDestinationPagePolicy(pageType)
   return {
     schemaVersion: DESTINATION_CONTENT_SCHEMA_VERSION,
     hero: { heading, body: [] },
-    sections: policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType)),
+    sections: [
+      ...policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType)),
+      ...(pageType === "airport" ? AIRPORT_STARTER_SECTION_TYPES.map((type) => createDestinationSection(type, `${type}-starter`, pageType)) : []),
+    ],
     finalCta: { heading: "Ready to book your airport transfer?", body: makeBlock("Get a fixed price for your journey in minutes.") },
     serviceFacts: [], globalFaqs: [], airportFaqs: [], placeFaqs: [], reviews: [],
   }
@@ -145,6 +192,30 @@ function isSectionType(value: unknown): value is DestinationSectionType {
 
 function safeText(value: unknown): string {
   return typeof value === "string" ? value : ""
+}
+
+function normalizeSectionItems(value: unknown): DestinationSectionItem[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  return value.flatMap((item, index): DestinationSectionItem[] => {
+    if (!item || typeof item !== "object") return []
+    const raw = item as Record<string, unknown>
+    const coordinate = (key: "latitude" | "longitude") => typeof raw[key] === "number" && Number.isFinite(raw[key]) ? raw[key] as number : undefined
+    const linkHref = safeText(raw.linkHref).trim()
+    const icon = safeText(raw.icon)
+    const next: DestinationSectionItem = {
+      id: safeText(raw.id).trim() || `item-${index + 1}`,
+      title: safeText(raw.title).trim(),
+      text: safeText(raw.text).trim(),
+      icon: Object.hasOwn(TRAVELLER_CARD_ICONS, icon) ? icon : "",
+      address: safeText(raw.address).trim(),
+      // Same-page anchors such as #vehicles are allowed alongside internal paths and HTTPS links.
+      linkHref: linkHref.startsWith("#") || isSafeDestinationContentLink(linkHref) ? linkHref : "",
+      linkLabel: safeText(raw.linkLabel).trim(),
+    }
+    const latitude = coordinate("latitude")
+    const longitude = coordinate("longitude")
+    return [latitude !== undefined && longitude !== undefined ? { ...next, latitude, longitude } : next]
+  })
 }
 
 function normalizeBlocks(value: unknown): RichTextBlock[] {
@@ -257,6 +328,7 @@ export function normalizeDestinationContent(value: unknown, fallbackHeading: str
       body: normalizeBlocks(raw.body),
       bodyDocument: normalizeTiptapDocument(raw.bodyDocument),
       fields: raw.fields && typeof raw.fields === "object" ? Object.fromEntries(Object.entries(raw.fields).map(([key, field]) => [key, safeText(field)])) : {},
+      ...(Array.isArray(raw.items) ? { items: normalizeSectionItems(raw.items) } : {}),
       image: raw.image && typeof raw.image === "object" ? normalizeImageReference(raw.image) : undefined,
       sourceNotes: Array.isArray(raw.sourceNotes) ? raw.sourceNotes.flatMap((item) => {
         if (!item || typeof item !== "object") return []
