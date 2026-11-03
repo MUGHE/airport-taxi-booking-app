@@ -11,7 +11,7 @@ import { BlogVideo } from "@/components/admin/blog-video-node"
 import { Button } from "@/components/ui/button"
 import { createBlogVideoUploadAction, uploadBlogImageAction } from "@/lib/blog-actions"
 import { BLOG_VIDEO_MAX_BYTES, isSafeBlogLink, parseBlogVideo, type BlogPost } from "@/lib/blog-schema"
-import type { TiptapDocument } from "@/lib/destination-content"
+import { toPlainTiptapDocument, type TiptapDocument } from "@/lib/destination-content"
 
 function ToolbarButton({ label, active, disabled, onClick, children }: { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return <Button type="button" variant={active ? "secondary" : "ghost"} size="icon-sm" aria-label={label} title={label} aria-pressed={active} disabled={disabled} onClick={onClick}>{children}</Button>
@@ -35,7 +35,7 @@ export function BlogRichTextEditor({ value, onChange }: { value: BlogPost["conte
     content: value.content.length ? value : "",
     immediatelyRender: false,
     editorProps: { attributes: { class: "blog-prose blog-editor-surface min-h-80 w-full rounded-lg border border-input bg-background px-4 py-3 outline-none focus-within:ring-3 focus-within:ring-ring/50" } },
-    onUpdate: ({ editor: current }) => onChange(current.getJSON() as TiptapDocument),
+    onUpdate: ({ editor: current }) => onChange(toPlainTiptapDocument(current.getJSON())),
   })
 
   function setLink() {
@@ -55,7 +55,7 @@ export function BlogRichTextEditor({ value, onChange }: { value: BlogPost["conte
     setUploading(true)
     const form = new FormData()
     form.set("file", file)
-    const result = await uploadBlogImageAction(form)
+    const result = await uploadBlogImageAction(form).catch(() => ({ ok: false as const, error: "The image could not be uploaded. Please try again." }))
     setUploading(false)
     if (!result.ok) return void toast.error(result.error)
     editor.chain().focus().setImage({ src: result.url, alt: alt.trim() }).run()

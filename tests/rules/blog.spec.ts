@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
 import { canAccess } from "@/lib/admin-roles"
 import { blogPostInputSchema, isSafeBlogLink, parseBlogVideo, publishProblems, readingMinutes, sanitizeBlogDocument, slugify } from "@/lib/blog-schema"
-import type { TiptapDocument } from "@/lib/destination-content"
+import { toPlainTiptapDocument, type TiptapDocument } from "@/lib/destination-content"
 
 const words = (count: number) => Array.from({ length: count }, (_, index) => `word${index}`).join(" ")
 const paragraph = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] })
@@ -16,6 +16,18 @@ const validInput = {
   seoTitle: "",
   seoDescription: "",
 }
+
+test("editor documents become plain objects that a Server Action can read", () => {
+  const nullPrototype = (values: Record<string, unknown>) => Object.assign(Object.create(null), values)
+  const plain = toPlainTiptapDocument({
+    type: "doc",
+    content: [{ type: "heading", attrs: nullPrototype({ level: 3 }), content: [{ type: "text", text: "Title", marks: [{ type: "link", attrs: nullPrototype({ href: "/book" }) }] }] }],
+  })
+  const heading = plain.content[0]
+  expect(Object.getPrototypeOf(heading.attrs)).toBe(Object.prototype)
+  expect(Object.getPrototypeOf(heading.content![0].marks![0].attrs)).toBe(Object.prototype)
+  expect(heading.attrs).toEqual({ level: 3 })
+})
 
 test("slugify makes clean, URL-safe slugs from titles", () => {
   expect(slugify("Heathrow T5: Where to meet your driver!")).toBe("heathrow-t5-where-to-meet-your-driver")

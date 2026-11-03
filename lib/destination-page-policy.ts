@@ -47,3 +47,8 @@ export function isDestinationPageType(value: unknown): value is DestinationPageT
 export function getDestinationPagePolicy(type: DestinationPageType): DestinationPagePolicy {
   return policies[type]
 }
+
+/** Airport Pages and Place Pages are listed and edited under separate admin tabs. */
+export function adminDestinationListPath(type: DestinationPageType) {
+  return type === "airport" ? "/admin/airport-pages" : "/admin/destination-pages"
+}

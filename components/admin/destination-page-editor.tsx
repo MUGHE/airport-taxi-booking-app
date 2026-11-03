@@ -21,7 +21,7 @@ import type { RelatedDestinationCandidate } from "@/lib/related-destinations"
 import { geographicDistanceKm, orderNearbyPlaceCandidates } from "@/lib/place-page-rules"
 import { getPublishBlockers, type PublishBlocker, type PublishWarning } from "@/lib/publish-readiness"
 import { createDestinationPageEditorSchema, type DestinationPageEditorValues } from "@/lib/destination-page-form-schema"
-import { getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
+import { adminDestinationListPath, getDestinationPagePolicy, type DestinationPageType } from "@/lib/destination-page-policy"
 import { FullPreviewButton } from "@/components/admin/full-preview-button"
 import { RichTextEditor } from "@/components/admin/rich-text-editor"
 import { SITE_URL } from "@/lib/site"
@@ -111,6 +111,7 @@ function PlaceRelationshipsEditor({ form, candidates, onAdd, onUpdate }: { form:
 
 export function DestinationPageEditor({ pageType, initialPage, relatedCandidates, reusableContent, placeIdentityOptions }: { pageType: DestinationPageType; initialPage?: AdminDestinationPage; relatedCandidates: RelatedDestinationCandidate[]; reusableContent: ReusableDestinationContent; placeIdentityOptions: { groups: AdminPlaceGroup[]; parents: AdminParentPlace[] } }) {
   const policy = getDestinationPagePolicy(pageType)
+  const listPath = adminDestinationListPath(pageType)
   const router = useRouter()
   const [form, setForm] = useState<SaveAdminDestinationPageInput>(() => initialForm(pageType, initialPage))
   const [activeTab, setActiveTab] = useState<EditorTab>("basic-info")
@@ -231,7 +232,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
       if (!form.id) {
         setSaveState("saved")
         toast.success("Draft saved.")
-        router.replace(`/admin/destination-pages/${result.page.id}`)
+        router.replace(`${listPath}/${result.page.id}`)
         return
       }
       setForm((current) => current.id ? current : { ...current, id: result.page.id })
@@ -372,7 +373,7 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
     void runPending(async () => {
       const result = await deleteAdminDestinationDraftAction(form.id!)
       if (!result.ok) { toast.error(result.error); return }
-      window.location.href = "/admin/destination-pages"
+      window.location.href = listPath
     })
   }
 
@@ -381,13 +382,13 @@ export function DestinationPageEditor({ pageType, initialPage, relatedCandidates
     void runPending(async () => {
       const result = await archiveAdminDestinationPageAction(form.id!, replacementSlug)
       if (!result.ok) { toast.error(result.error); return }
-      window.location.href = "/admin/destination-pages"
+      window.location.href = listPath
     })
   }
 
   return (
     <div className="mx-auto max-w-6xl">
-      <Link href="/admin/destination-pages" className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Destination Pages</Link>
+      <Link href={listPath} className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> {pageType === "airport" ? "Airport Pages" : "Destination Pages"}</Link>
       <form onSubmit={handleSubmit(submit, (invalid) => {
         const field = Object.keys(invalid)[0]
         setActiveTab(validationTab(field))

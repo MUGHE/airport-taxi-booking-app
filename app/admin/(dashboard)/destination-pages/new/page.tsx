@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 import { DestinationPageEditor } from "@/components/admin/destination-page-editor"
 import { getPlaceIdentityOptionsAction, getRelatedDestinationCandidatesAction, getReusableDestinationContentAction } from "@/lib/actions"
 import { isDestinationPageType } from "@/lib/destination-page-policy"
@@ -10,6 +11,7 @@ export default async function NewDestinationPage({ searchParams }: { searchParam
   await requireAdminSection("content", "/admin/destination-pages/new")
   const requestedType = (await searchParams).type
   const pageType = isDestinationPageType(requestedType) ? requestedType : "airport"
+  if (pageType === "airport") redirect("/admin/airport-pages/new")
   const [relatedCandidates, reusableContent, placeIdentityOptions] = await Promise.all([
     getRelatedDestinationCandidatesAction(),
     getReusableDestinationContentAction(),
