@@ -11,4 +11,5 @@ export const AIRPORT_IMAGES: Record<string, string> = {
   "oxford-airport-taxi": "/airport-transfers/hero.webp",
   "farnborough-airport-taxi": "/airport-transfers/hero.webp",
   "birmingham-airport-taxi": "/airport-transfers/hero.webp",
+  "manchester-airport-taxi": "/airport-transfers/hero.webp",
 }

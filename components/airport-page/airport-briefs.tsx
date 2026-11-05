@@ -22,6 +22,8 @@ const AIRPORTS = {
   birmingham: { label: "Birmingham", name: "Birmingham Airport", address: "Birmingham Airport (BHX)", latitude: 52.4531, longitude: -1.734 },
   eastMidlands: { label: "East Midlands", name: "East Midlands Airport", address: "East Midlands Airport (EMA)", latitude: 52.8311, longitude: -1.3281 },
   manchester: { label: "Manchester", name: "Manchester Airport", address: "Manchester Airport (MAN)", latitude: 53.3588, longitude: -2.2727 },
+  liverpool: { label: "Liverpool John Lennon", name: "Liverpool John Lennon Airport", address: "Liverpool John Lennon Airport (LPL)", latitude: 53.3336, longitude: -2.8497 },
+  leedsBradford: { label: "Leeds Bradford", name: "Leeds Bradford Airport", address: "Leeds Bradford Airport (LBA)", latitude: 53.8659, longitude: -1.6606 },
 } satisfies Record<string, BriefPlace>
 
 const PORTS = {
@@ -30,6 +32,8 @@ const PORTS = {
   portsmouth: { label: "Portsmouth", name: "Portsmouth International Port", address: "Portsmouth International Port, Portsmouth", latitude: 50.8131, longitude: -1.0886, href: "/destinations/portsmouth-taxi", hrefLabel: "Portsmouth taxi guide" },
   harwich: { label: "Harwich", name: "Harwich International Port", address: "Harwich International Port, Harwich", latitude: 51.9459, longitude: 1.2554 },
   tilbury: { label: "Tilbury", name: "Tilbury Cruise Terminal", address: "London International Cruise Terminal, Tilbury", latitude: 51.4547, longitude: 0.3593 },
+  hull: { label: "Hull", name: "Hull Ferry Terminal", address: "Hull Ferry Terminal, King George Dock, Hull", latitude: 53.7425, longitude: -0.2766 },
+  liverpool: { label: "Liverpool", name: "Liverpool Cruise Terminal", address: "Liverpool Cruise Terminal, Princes Parade, Liverpool", latitude: 53.4087, longitude: -2.9988 },
 } satisfies Record<string, BriefPlace>
 
 function town(label: string, address: string, latitude: number, longitude: number, page?: { href: string; hrefLabel: string }): BriefPlace {
@@ -1029,6 +1033,96 @@ const BIRMINGHAM_BRIEF: AirportBrief = {
       { ...PORTS.tilbury, text: "Tilbury Cruise Terminal is approximately 130–135 miles from Birmingham Airport, with a journey time of around 2 hours 15 minutes to 2 hours 45 minutes. Located in Essex, Tilbury serves cruise passengers travelling from the London area and other destinations. Confirm your cruise terminal and departure time before arranging your transfer." },
     ],
     note: "All distances and journey times are approximate road estimates. Traffic, roadworks and the exact port entrance can affect your journey, so allow sufficient time for check-in and boarding.",
+  },
+}
+
+const MANCHESTER_BRIEF: AirportBrief = {
+  guide: {
+    heading: "Manchester Airport Information and Travel Guide",
+    paragraphs: [
+      "Manchester Airport (MAN) is a big site with two terminals in passenger use, Terminal 2 and Terminal 3, so knowing which one you need saves a lot of walking.",
+    ],
+    groups: [
+      { title: "Manchester Airport Terminals", columns: 2, cards: [
+        { icon: PlaneTakeoff, title: "Terminal 2 and Terminal 3", text: "Terminal 1 closed in November 2025. Passenger flights now operate from Terminal 2 and Terminal 3. Tell us your terminal when you book, so your driver drops you at the right door rather than the wrong end of the airport." },
+        { icon: Clock, title: "Before you travel", text: "Check your airline’s terminal before you travel, and leave room in your timing for traffic, check-in and security." },
+      ] },
+      { title: "Getting to Manchester Airport", columns: 3, cards: [
+        { icon: Car, title: "By road", text: "The airport is reached from the M56 at Junction 5, with the M60, M6 and A5103 providing connections towards Manchester, Cheshire, Lancashire and the wider North West." },
+        { icon: TrainFront, title: "By rail and tram", text: "Manchester Airport railway station sits at the heart of the airport, connected to the terminals by covered walkways, with direct trains to Manchester Piccadilly and Metrolink tram services into the city." },
+        { icon: MapPin, title: "Door-to-door by taxi", text: "A private taxi makes sense when you have several suitcases, children or a group with you, or an early flight. With One Airport Taxi, your journey runs door-to-door, from your home, hotel or office straight to your terminal.", actions: [{ kind: "to", label: "Get my fixed price" }], highlight: true },
+      ] },
+    ],
+  },
+  departures: {
+    eyebrow: "Departures",
+    heading: "Taxi to Manchester Airport – Departures Made Simple",
+    paragraphs: ["Need a taxi to Manchester Airport? We run pre-booked transfers to both terminals from across the North West and the wider UK. When booking, tell us your terminal and add your flight details where asked. It helps us plan the journey and time the drop-off to align with check-in."],
+    cards: [
+      { icon: PlaneTakeoff, title: "Manchester Airport Departures Drop-Off", text: "Your driver takes you to the correct terminal drop-off area — Terminal 2 or Terminal 3 — with the airport charge covered in your fare. From there, it’s a short walk to check in.", actions: [{ kind: "to", label: "Book a drop-off" }] },
+      { icon: Clock, title: "Early Morning and Late Night Flights", text: "Manchester’s long-haul and short-haul schedules run at all hours. A pre-booked taxi means your driver is outside at the agreed time, whatever the hour, so you’re not chasing a rank at 3 am.", actions: [{ kind: "to", label: "Book an early transfer" }] },
+      { icon: UsersRound, title: "Group and Family Departures", text: "Travelling with the whole family or a group on the same flight? Book an MPV or 8-seater minibus and travel together, with luggage space to match.", actions: [{ kind: "to", label: "Book a group transfer" }], link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+    ],
+  },
+  travellers: {
+    heading: "Manchester Airport Taxi Service for Families, Business Travellers and Groups",
+    lead: "Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all.",
+    cards: [
+      { icon: Baby, title: "Family Airport Transfers", text: "Travelling with children, pushchairs or several suitcases? Choose a vehicle with the space to match. Child seats can be requested when booking, subject to availability and suitability.", link: { href: "#vehicles", label: "Compare family vehicles" } },
+      { icon: Briefcase, title: "Business Airport Transfers", text: "A professional Manchester Airport taxi for meetings, corporate travel and flight connections, with executive vehicles available for a more premium journey.", link: { href: "#vehicles", label: "See executive cars" } },
+      { icon: UsersRound, title: "Group Airport Transfers", text: "Friends, colleagues or the extended family? Our MPVs and 8-seater minibuses handle larger groups comfortably.", link: { href: "#vehicles", label: "See MPVs and minibuses" } },
+      { icon: Route, title: "Long-Distance Airport Journeys", text: "Manchester is a common starting point for journeys across the UK — including transfers to Liverpool John Lennon, Leeds Bradford and East Midlands. Arrange a private transfer with the fare agreed up front.", link: { href: `#${BRIEF_DESTINATIONS_ID}`, label: "Popular journeys" } },
+    ],
+  },
+  cities: {
+    eyebrow: "The North West and beyond",
+    heading: "Manchester Airport Taxi Transfers Across the UK",
+    paragraphs: ["From Manchester, Stockport, Warrington or a town further afield, we can arrange a pre-booked transfer to Manchester Airport. We cover journeys between Manchester Airport and homes, hotels, business addresses and other destinations across the UK."],
+    listHeading: "You can arrange a taxi to Manchester Airport from places like:",
+    places: [
+      town("Manchester City Centre", "Manchester city centre, Greater Manchester", 53.4808, -2.2426),
+      town("Stockport", "Stockport, Greater Manchester", 53.4106, -2.1575),
+      town("Warrington", "Warrington, Cheshire", 53.39, -2.597),
+      town("Wigan", "Wigan, Greater Manchester", 53.545, -2.6318),
+      town("Bolton", "Bolton, Greater Manchester", 53.5769, -2.4282),
+      town("Oldham", "Oldham, Greater Manchester", 53.5409, -2.1114),
+      town("Chester", "Chester, Cheshire", 53.1934, -2.8931),
+      town("Liverpool", "Liverpool city centre, Merseyside", 53.4084, -2.9916),
+      town("Blackpool", "Blackpool, Lancashire", 53.8175, -3.0357),
+      town("Preston", "Preston, Lancashire", 53.7632, -2.7031),
+      town("Runcorn", "Runcorn, Cheshire", 53.3417, -2.7313),
+      town("Widnes", "Widnes, Cheshire", 53.3613, -2.7334),
+    ],
+    closing: "If you have an early flight or need to get home to the North West after your trip, One Airport Taxi makes booking your Manchester Airport transfer simple. You can check your fare before booking, pick the right vehicle for your group and luggage, and plan your journey. With fixed prices, professional drivers and easy airport pickup, every trip is comfortable and stress-free.",
+    cta: "Get a Quote for Your Manchester Airport Journey",
+  },
+  airports: {
+    heading: "Manchester Airport to Other Airports – Private Airport Transfers",
+    paragraphs: ["Liverpool John Lennon, Leeds Bradford and East Midlands are among the nearby airports you can reach by private transfer, with your fare confirmed before travel."],
+    titleFrom: "Manchester",
+    places: [
+      { ...AIRPORTS.liverpool, text: "Liverpool John Lennon Airport is around 35 miles from Manchester Airport by road." },
+      { ...AIRPORTS.leedsBradford, text: "Leeds Bradford Airport is around 50 miles from Manchester Airport by road." },
+      { ...AIRPORTS.eastMidlands, text: "East Midlands Airport is roughly 70 miles from Manchester Airport by road." },
+    ],
+    closing: "Distances vary with route and terminal.",
+  },
+  ports: {
+    heading: "Manchester Airport to Ferry Ports and Cruise Terminals",
+    paragraphs: [
+      "Some international passengers arriving at Manchester Airport need onward transport to a UK ferry port or cruise terminal. Whether you are travelling for a cruise holiday, an international ferry crossing or returning home after a trip, arranging your onward transport in advance can make the journey easier and more convenient.",
+      "We offer pre-booked private transfers from Manchester Airport to major ferry ports and cruise terminals across the UK.",
+    ],
+    titleFrom: "Manchester Airport",
+    places: [
+      { ...PORTS.southampton, text: "Travelling from Manchester Airport to Southampton for a cruise holiday? Book a private taxi to your specific Southampton cruise terminal and allow enough time for traffic, check-in and embarkation." },
+      { ...PORTS.dover, text: "Heading from Manchester Airport to Dover? Arrange a pre-booked private transfer to Dover Ferry Port or the cruise facilities. Please confirm your exact terminal or dock before travelling." },
+      { ...PORTS.portsmouth, text: "Arrange a private transfer from Manchester Airport to Portsmouth International Port for international ferry departures and cruise journeys. Our drivers can take you directly to your designated terminal." },
+      { ...PORTS.harwich, text: "Book a private transfer from Manchester Airport to Harwich International Port for onward ferry travel. Check your sailing time before choosing your airport pickup time." },
+      { ...PORTS.hull, text: "Travelling from Manchester Airport to Hull? Arrange a pre-booked taxi to Hull Ferry Terminal for ferry services to Rotterdam. Plan your pickup around your sailing time." },
+      { ...PORTS.liverpool, text: "Heading to Liverpool Cruise Terminal? Book a private transfer from Manchester Airport to Liverpool’s cruise facilities. Allow sufficient time for traffic and embarkation." },
+    ],
+    note: "For cruise and ferry transfers, please tell us the port and terminal, the sailing time, the number of passengers, and the amount of luggage you have. This information helps us plan the right vehicle and pickup for your journey.",
   },
 }
 
@@ -2106,6 +2200,102 @@ export const BRIEF_COPY: Record<string, AirportCopy> = {
     travelInfoOrder: 67,
     comfortOrder: 75,
     extraSections: briefSections("birmingham", BIRMINGHAM_BRIEF),
+    hiddenSections: ["ferry_cruise", "related_destinations"],
+  },
+  Manchester: {
+    heroHeading: "Manchester Airport Taxi – Reliable Transfers to and from MAN",
+    heroSubhead: "Book your Manchester Airport taxi and see your fare upfront. One Airport Taxi offers pre-booked transfers from Greater Manchester, Cheshire, Lancashire, Merseyside, and more. Our professional, licensed drivers can pick you up in a saloon, an executive car, an MPV, or an 8-seater minibus. Whether you’re travelling for business, with family, or in a group with lots of luggage, pick the right vehicle for your needs, and we’ll take care of the rest.",
+    heroCallLine: true,
+    heroCallText: "Get a free instant quote for your Manchester Airport taxi online and plan your whole journey before you travel, or call our team on",
+    intro: {
+      heading: "Manchester Airport Taxi Transfers – Your Fare Confirmed Before You Travel",
+      paragraphs: [
+        "You shouldn’t have to wait in line late at night to get a taxi to Manchester Airport. With One Airport Taxi, book ahead, enter your pickup and drop-off details, and see your fare before you decide.",
+        "Whether you need a taxi to Manchester Airport from the city centre, a ride in from Stockport or Warrington, or a taxi from the airport to your home, hotel, or office, every trip is pre-booked and tailored to your plans.",
+        <>Terminal 1 closed in November 2025 as part of the airport’s £1.3 billion transformation, with airlines moving to <Link className={linkClass} href={`#${BRIEF_GUIDE_ID}`}>the expanded Terminal 2 and Terminal 3</Link>. Check your airline’s terminal before you travel — and tell us when you book, so your driver drops you at the right door rather than the wrong end of the airport.</>,
+        <>Your fare is confirmed before you travel, and the drop-off charge is already included. There’s no meter, no surge pricing, and no last-minute mark-ups. Whether it’s a short city trip or a long-distance transfer, booking <Link className={linkClass} href="#vehicles">the right vehicle</Link> with us in Manchester is easy.</>,
+      ],
+      cta: "Get Your Manchester Airport Taxi Quote",
+      points: [
+        { title: "Fare first", text: "See your fare before you decide." },
+        { title: "Drop-off included", text: "No meter, no surge pricing, no mark-ups." },
+        { title: "T2 and T3", text: "Tell us your terminal and we’ll drop you at the right door." },
+      ],
+    },
+    benefitsHeading: "Why Choose One Airport Taxi for Manchester Airport Transfers?",
+    benefitsSubhead: "A good airport transfer service makes your whole journey better, not just the drive. We offer clear pricing, planned pickups, comfortable cars, and real support when you need it.",
+    benefitCards: [
+      { icon: Banknote, title: "Fixed and Transparent Fares", text: "You’ll know the cost of your Manchester Airport taxi before you confirm. Our fixed fares mean no meter pricing and no surprise charges. Check what’s included before you book." },
+      { icon: PlaneTakeoff, title: "Flight Monitoring", text: "We track your flight. If your arrival time changes, our team uses live updates to adjust your pickup, so you’re not left waiting at arrivals." },
+      { icon: ShieldCheck, title: "Professional Licensed Drivers", text: "Our drivers are licensed, fully checked, and know the M56, M60, and the airport approach roads well. You can count on punctuality, safe driving, and good manners every time." },
+      { icon: UsersRound, title: "Meet and Greet Service", text: "Add Meet and Greet when you book and your driver can meet you inside the arrivals hall at an agreed meeting point. Availability depends on the service selected and your booking details." },
+      { icon: Headphones, title: "24/7 Customer Support", text: "Manchester has flights all day and night, and so do we. Call or message us anytime if you have booking questions or need help on the day." },
+      { icon: Car, title: "Vehicles for Different Travel Needs", text: "Choose from a saloon, executive, estate, MPV, or 8-seater minibus, depending on how many people are travelling and how much luggage you have. Whether it’s a business trip, family holiday, or group transfer, we have a vehicle to suit you." },
+    ],
+    fleet: {
+      heading: "Manchester Airport Taxi Fleet and Pricing",
+      paragraphs: [
+        "Picking the right vehicle is important when booking a taxi to or from Manchester Airport. Consider how many seats and how much luggage space you’ll need before you decide.",
+        "We run a range of vehicles, from everyday airport runs to executive travel and group transport.",
+      ],
+      closing: "Choose your vehicle based on your passenger count and luggage. Check the vehicle details and capacity before confirming your booking.",
+      descriptions: VEHICLE_TEXT,
+      pricing: {
+        heading: "Fixed Manchester Airport Taxi Prices",
+        paragraphs: [
+          "Your quote comes before you confirm. Enter your pickup, destination, travel date, and passenger requirements to see what’s available.",
+          "The pricing is set out clearly so you can compare vehicles and plan without wading through fine print. Wondering how much a taxi to Manchester Airport costs? It depends on distance and vehicle — but the figure you’re quoted is the figure you pay, with the drop-off charge included.",
+        ],
+        cta: "Compare Manchester Airport Taxi Prices",
+      },
+    },
+    pickup: {
+      heading: "Taxi from Manchester Airport – Meet Your Driver and Travel with Confidence",
+      lead: [
+        "Landed at Manchester after a long flight? Pre-booking your taxi takes the guesswork out of what happens next.",
+        "We provide airport pickups from Terminal 2 and Terminal 3. Give us your flight number, arrival date and destination when you book, and we’ll plan the collection around your flight.",
+      ],
+      stepsHeading: "How Your Manchester Airport Pickup Works",
+      steps: [
+        PICKUP_STEP_ONE,
+        { title: "Follow the arrival signs.", text: "After landing, follow signs for passport control and baggage reclaim, then head for arrivals. Your booking confirmation has your specific driver meeting instructions." },
+        { title: "Meet your driver.", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation. The first 60 minutes of waiting after landing are free, counted from your actual arrival time." },
+        { title: "Head to your destination.", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
+      ],
+      dropHeading: "Manchester Airport Drop-Off Service",
+      dropText: "Travelling into Manchester Airport from elsewhere in the UK? Your driver takes you to the correct terminal drop-off area and covers the charge. Just make sure you’ve given the right terminal, and leave room in your timing for traffic and security.",
+    },
+    travelInfo: {
+      heading: "Manchester Airport Taxis and Transfers",
+      lead: [
+        "Manchester Airport (MAN) is the busiest airport in the North of England, sitting around 9 miles south of Manchester city centre and serving well over 200 destinations worldwide. It’s a genuinely big site with two terminals in passenger use — Terminal 2 and Terminal 3 — so knowing which one you need saves a lot of walking. Whether you’re on an early departure or need a taxi after landing, One Airport Taxi provides reliable pre-booked transfers with professional drivers, comfortable vehicles and clear pricing.",
+        "Book online for a reliable Manchester Airport taxi with Meet and Greet, flight monitoring and up to 60 minutes of free waiting time on airport pickups. The drop-off charge is included in your fare, so there’s nothing extra to pay at the barrier.",
+      ],
+      cards: [
+        { icon: TrainFront, title: "Key Travel Information", items: [
+          "Location: Manchester Airport is approximately 9 miles south of Manchester city centre by road, close to Wythenshawe and the M56.",
+          "Terminals: Terminal 1 closed in November 2025. Passenger flights now operate from Terminal 2 and Terminal 3 — always check your airline’s terminal before travelling.",
+          "Nearby airports: Liverpool John Lennon Airport is around 35 miles away by road, Leeds Bradford around 50 miles, and East Midlands Airport roughly 70 miles. Distances vary with route and terminal.",
+          "Nearest rail link: Manchester Airport railway station sits at the heart of the airport, connected to the terminals by covered walkways, with direct trains to Manchester Piccadilly, and Metrolink tram services into the city.",
+          "Road access: The airport is reached from the M56 at Junction 5, with the M60, M6 and A5103 providing connections towards Manchester, Cheshire, Lancashire and the wider North West.",
+          "Airport drop-off charge: Manchester charges around £5.50 for a short stay in the terminal drop-off zones, with higher rates for longer. With One Airport Taxi, the drop-off charge is included in your fare.",
+        ] },
+        { icon: Car, title: "Driving Times to Major Cities", items: [
+          "Manchester city centre: Approximately 25–35 minutes (9–10 miles).",
+          "Stockport: Approximately 15–20 minutes (8 miles).",
+          "Warrington: Approximately 25–35 minutes (15–20 miles).",
+          "Liverpool: Approximately 45–55 minutes (34–36 miles).",
+          "Chester: Approximately 45–55 minutes (33–40 miles).",
+          "Sheffield: Approximately 1 hour 15 minutes–1 hour 30 minutes (38–45 miles).",
+          "Leeds: Approximately 1 hour 15 minutes (50–55 miles).",
+          "Distances and times are approximate and measured by road to central destinations. Your journey time can change due to traffic, roadworks, events, and the route taken.",
+        ] },
+      ],
+      closing: "From Manchester, Stockport, Warrington or a town further afield, One Airport Taxi offers convenient pre-booked transfers with fares confirmed before travel. Choose from saloon cars, executive vehicles, estate cars, MPVs and 8-seater vehicles to suit your passengers and luggage.",
+    },
+    travelInfoOrder: 67,
+    comfortOrder: 75,
+    extraSections: briefSections("manchester", MANCHESTER_BRIEF),
     hiddenSections: ["ferry_cruise", "related_destinations"],
   },
 }
