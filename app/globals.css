@@ -1305,6 +1305,8 @@ html:has(.faq-page) { scroll-behavior: smooth; }
 .airport-pickup-head { display: grid; gap: 1.25rem; }
 .airport-pickup-head h2 { max-width: 24ch; margin-top: .65rem; font-size: clamp(1.9rem, 3.2vw, 2.75rem); }
 .airport-pickup-head .airport-map-lead:first-child { margin-top: 0; }
+.airport-map-rich > div { color: rgba(255,255,255,.75); }
+.airport-map-rich .text-foreground { color: #fff; }
 .airport-pickup-layout { display: grid; gap: 2rem; margin-top: 2.5rem; }
 .airport-pickup-layout .airport-pickup-title { margin-top: 0; }
 .airport-pickup-cards { display: grid; gap: 1rem; margin-top: 1rem; }

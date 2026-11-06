@@ -574,6 +574,61 @@ const arrivalSteps = [
   { title: "Walk to the car together.", text: "Your driver takes you door to door at your fixed fare." },
 ]
 
+type PickupGuideContent = { heading: string; lead: React.ReactNode; stepsHeading: string; steps: { title: string; text: string }[]; dropHeading: string; dropText: string }
+
+/** Steps for the CMS pickup guide; a step needs at least a title. */
+function cmsPickupSteps(section: AirportPageContentSection) {
+  return (section.items ?? []).filter((item) => item.title.trim()).map((item) => ({ title: item.title, text: item.text }))
+}
+
+function cmsPickup(section: AirportPageContentSection, page: AirportPagePresentation): PickupGuideContent {
+  const name = airportName(page)
+  return {
+    heading: headingFor(section.title, `Taxi from ${name} – Meet Your Driver and Travel with Confidence`),
+    lead: hasBodyText(section) ? <div className="airport-map-rich"><RichText blocks={section.body} document={section.bodyDocument} /></div> : null,
+    stepsHeading: section.fields.stepsHeading?.trim() || `How Your ${name} Pickup Works`,
+    steps: cmsPickupSteps(section),
+    dropHeading: section.fields.dropHeading?.trim() || `${name} Drop-Off Service`,
+    dropText: section.fields.dropText?.trim() || `If you are travelling to ${name} from elsewhere in the UK, your driver will take you to the terminal drop-off area. Allow enough time for traffic, check-in and airport security.`,
+  }
+}
+
+/** "Know before you land": numbered pickup steps beside the airport map and a drop-off card. */
+function PickupGuide({ page, pickup, reversed }: { page: AirportPagePresentation; pickup: PickupGuideContent; reversed: boolean }) {
+  return (
+    <section className={`airport-map-chapter ${reversed ? "airport-map-reversed" : ""}`} data-preview-section="map">
+      <div className="airport-container">
+        <div className="airport-pickup-head">
+          <div>
+            <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
+            <h2>{pickup.heading}</h2>
+          </div>
+          <div>{pickup.lead}</div>
+        </div>
+        <div className="airport-pickup-layout">
+          <div>
+            <h3 className="airport-pickup-title">{pickup.stepsHeading}</h3>
+            <ol className="airport-pickup-cards">
+              {pickup.steps.map((step, stepIndex) => <li key={`${stepIndex}-${step.title}`}><span>{String(stepIndex + 1).padStart(2, "0")}</span><h4>{step.title.replace(/\.$/, "")}</h4><p>{step.text}</p></li>)}
+            </ol>
+          </div>
+          <div className="airport-pickup-side">
+            {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
+            <div className="airport-dropoff-card">
+              <h3><PlaneTakeoff aria-hidden="true" />{pickup.dropHeading}</h3>
+              <p>{pickup.dropText}</p>
+              <div className="airport-card-actions">
+                <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Book a {page.shortName} pickup <ArrowRight className="size-4" /></Button>
+                <Button variant="secondary" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Book a drop-off</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function BuilderSection({ section, page, index }: { section: AirportPageContentSection; page: AirportPagePresentation; index: number }) {
   const reversed = index % 2 === 1
   if (section.type === "introduction") {
@@ -593,41 +648,10 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
   // the map section answers "where do I meet my driver?" instead.
   if (section.type === "airport_guide") return null
 
+  // Pickup steps filled in on the CMS Airport map section replace the brief's pickup guide.
+  if (section.type === "map" && cmsPickupSteps(section).length > 0) return <PickupGuide page={page} reversed={reversed} pickup={cmsPickup(section, page)} />
   const pickup = airportCopy(page).pickup
-  if (section.type === "map" && pickup) {
-    return (
-      <section className={`airport-map-chapter ${reversed ? "airport-map-reversed" : ""}`} data-preview-section="map">
-        <div className="airport-container">
-          <div className="airport-pickup-head">
-            <div>
-              <p className="airport-eyebrow airport-eyebrow-light">Know before you land</p>
-              <h2>{pickup.heading}</h2>
-            </div>
-            <div>{pickup.lead.map((paragraph) => <p key={paragraph} className="airport-map-lead">{paragraph}</p>)}</div>
-          </div>
-          <div className="airport-pickup-layout">
-            <div>
-              <h3 className="airport-pickup-title">{pickup.stepsHeading}</h3>
-              <ol className="airport-pickup-cards">
-                {pickup.steps.map((step, stepIndex) => <li key={step.title}><span>{String(stepIndex + 1).padStart(2, "0")}</span><h4>{step.title.replace(/\.$/, "")}</h4><p>{step.text}</p></li>)}
-              </ol>
-            </div>
-            <div className="airport-pickup-side">
-              {page.mapLocation && <AirportMapPreview location={page.mapLocation} terminals={page.terminals.length > 1 ? page.terminals.map((terminal) => ({ id: terminal.id, label: terminalLabel(terminal), latitude: terminal.latitude, longitude: terminal.longitude })) : []} />}
-              <div className="airport-dropoff-card">
-                <h3><PlaneTakeoff aria-hidden="true" />{pickup.dropHeading}</h3>
-                <p>{pickup.dropText}</p>
-                <div className="airport-card-actions">
-                  <Button nativeButton={false} render={<Link href={page.bookingLinks.fromAirport} />}>Book a {page.shortName} pickup <ArrowRight className="size-4" /></Button>
-                  <Button variant="secondary" nativeButton={false} render={<Link href={page.bookingLinks.toAirport} />}>Book a drop-off</Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    )
-  }
+  if (section.type === "map" && pickup) return <PickupGuide page={page} reversed={reversed} pickup={{ ...pickup, lead: pickup.lead.map((paragraph) => <p key={paragraph} className="airport-map-lead">{paragraph}</p>) }} />
 
   if (section.type === "map") {
     return (

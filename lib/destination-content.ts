@@ -150,6 +150,14 @@ const DEFAULT_TRAVELLER_CARDS: Partial<DestinationSectionItem>[] = [
   { icon: "long_distance", title: "Long-Distance Airport Journeys", text: "Arrange a private transfer to destinations across the UK, with the fare agreed up front.", linkHref: "#airport-destinations", linkLabel: "Popular journeys" },
 ]
 
+// Starting steps for the pickup guide on a new Airport Page; editors adjust them for each airport.
+const DEFAULT_PICKUP_STEPS: Partial<DestinationSectionItem>[] = [
+  { title: "Share your flight and arrival details", text: "Add your flight number and arrival information when you book so we know when to expect you." },
+  { title: "Follow the arrival signs", text: "After landing, follow the signs for passport control and baggage reclaim, then head for arrivals. Your booking confirmation has your driver meeting instructions." },
+  { title: "Meet your driver", text: "If you’ve chosen Meet and Greet, your driver waits inside arrivals at the agreed point. If not, follow the pickup instructions in your confirmation." },
+  { title: "Head to your destination", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
+]
+
 const DEFAULT_PORT_NOTE = "For cruise and ferry transfers, please tell us the port and terminal, the sailing time, the number of passengers and how much luggage you have. It helps us plan the right vehicle and pickup."
 
 function defaultSectionContent(type: DestinationSectionType, pageType: DestinationPageType): Pick<DestinationSection, "body" | "fields" | "items"> {
@@ -158,6 +166,8 @@ function defaultSectionContent(type: DestinationSectionType, pageType: Destinati
   if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } }
   if (type === "traveller_types") return { body: makeBlock("Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all."), fields: {}, items: DEFAULT_TRAVELLER_CARDS.map((card, index) => createSectionItem({ ...card, id: `traveller-${index + 1}` })) }
   if (type === "place_links") return { body: [], fields: { listHeading: "", closing: "", cta: "" }, items: [] }
+  // The Airport map section is the "Know before you land" pickup guide; one without `items` keeps the older layout.
+  if (type === "map" && pageType === "airport") return { body: [], fields: { stepsHeading: "", dropHeading: "", dropText: "" }, items: DEFAULT_PICKUP_STEPS.map((step, index) => createSectionItem({ ...step, id: `pickup-step-${index + 1}` })) }
   return { body: [], fields: {} }
 }
 
