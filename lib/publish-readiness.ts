@@ -49,8 +49,9 @@ const REQUIRED_SECTIONS = ["introduction", "benefits", "fleet_pricing", "airport
 const SAFE_INTERNAL_PATHS = new Set(["/", "/book", "/airport-transfers", "/airport-guide", "/Contact-Us", "/faqs", "/help", "/About-Us", "/privacy", "/terms"])
 
 function hasText(value: string | undefined): boolean { return Boolean(value?.trim()) }
-function hasContent(section: { body: { text: string }[]; fields: Record<string, string> }): boolean {
-  return section.body.some((block) => hasText(block.text)) || Object.values(section.fields).some(hasText)
+// Card sections (Airport Guide cards, pickup steps) count as content even with no body text.
+function hasContent(section: { body: { text: string }[]; fields: Record<string, string>; items?: { title: string }[] }): boolean {
+  return section.body.some((block) => hasText(block.text)) || Object.values(section.fields).some(hasText) || Boolean(section.items?.some((item) => hasText(item.title)))
 }
 function imageIsComplete(image: DestinationImageReference | undefined): boolean {
   return Boolean(image && image.assetId && image.publicId && image.secureUrl.startsWith("https://") && image.altText.trim())

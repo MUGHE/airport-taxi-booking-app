@@ -8,10 +8,14 @@ import {
   Banknote,
   BatteryCharging,
   Briefcase,
+  Bus,
+  Car,
   Check,
+  Clock,
   DoorOpen,
   GlassWater,
   Headphones,
+  Info,
   Luggage,
   MapPin,
   Navigation,
@@ -21,7 +25,9 @@ import {
   ShieldCheck,
   Ship,
   SlidersHorizontal,
+  SquareParking,
   Star,
+  TrainFront,
   UsersRound,
 } from "lucide-react"
 import { AirportMapPreview } from "@/components/airport-page/airport-map-preview"
@@ -35,7 +41,7 @@ import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { GoogleBusinessReviewsWidget } from "@/components/google-business-reviews-widget"
-import { BriefPricingPanel, CitiesSection, PortsSection, TravellersSection, type BriefCard, type BriefPlace, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
+import { BriefPricingPanel, CitiesSection, GuideSection, PortsSection, TravellersSection, type BriefCard, type BriefPlace, type BriefPricing } from "@/components/airport-page/airport-brief-sections"
 import { BRIEF_COPY } from "@/components/airport-page/airport-briefs"
 import { GOOGLE_REVIEW_PLACE_ID } from "@/lib/company"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
@@ -118,7 +124,7 @@ function hasContent(section: AirportPageContentSection) {
   return hasBodyText(section) || Object.values(section.fields).some((value) => value.trim())
 }
 
-const TRAVELLER_ICONS: Record<string, BriefCard["icon"]> = { family: Baby, business: Briefcase, group: UsersRound, long_distance: Route, accessible: Accessibility, luggage: Luggage }
+const TRAVELLER_ICONS: Record<string, BriefCard["icon"]> = { family: Baby, business: Briefcase, group: UsersRound, long_distance: Route, accessible: Accessibility, luggage: Luggage, terminal: PlaneTakeoff, arrivals: PlaneLanding, clock: Clock, car: Car, train: TrainFront, bus: Bus, map_pin: MapPin, parking: SquareParking, info: Info }
 
 /** Cards for the CMS "Who we drive" section; a card needs at least a title. */
 function cmsTravellerCards(section: AirportPageContentSection): BriefCard[] {
@@ -157,6 +163,37 @@ function CmsPortsSection({ section, page }: { section: AirportPageContentSection
 
 function airportName(page: AirportPagePresentation) {
   return /\bAirport$/.test(page.shortName) ? page.shortName : `${page.shortName} Airport`
+}
+
+/** Cards for the CMS Airport Guide, in rows of consecutive cards that share a group heading. */
+function cmsGuideGroups(section: AirportPageContentSection) {
+  const groups: { title: string; cards: BriefCard[] }[] = []
+  for (const item of section.items ?? []) {
+    if (!item.title) continue
+    const title = item.group ?? ""
+    const card: BriefCard = {
+      icon: TRAVELLER_ICONS[item.icon],
+      title: item.title,
+      text: item.text,
+      // Button text turns the card into the highlighted booking card.
+      ...(item.linkLabel ? { actions: [{ kind: "to" as const, label: item.linkLabel }], highlight: true } : {}),
+    }
+    const last = groups[groups.length - 1]
+    if (last && last.title === title) last.cards.push(card)
+    else groups.push({ title, cards: [card] })
+  }
+  return groups.map((group) => ({ ...group, columns: (group.cards.length === 2 ? 2 : group.cards.length === 4 ? 4 : 3) as 2 | 3 | 4 }))
+}
+
+function CmsGuideSection({ section, page }: { section: AirportPageContentSection; page: AirportPagePresentation }) {
+  const groups = cmsGuideGroups(section)
+  if (!groups.length) return null
+  return <GuideSection page={page} guide={{
+    heading: headingFor(section.title, `${airportName(page)} Information and Travel Guide`),
+    paragraphs: [],
+    body: hasBodyText(section) ? <RichText blocks={section.body} document={section.bodyDocument} /> : undefined,
+    groups,
+  }} />
 }
 
 function CmsTravellersSection({ section, page }: { section: AirportPageContentSection; page: AirportPagePresentation }) {
@@ -644,9 +681,9 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
     return null
   }
 
-  // Facility cards (food, hotels, Wi-Fi) don't help someone booking a transfer; the pickup guide in
-  // the map section answers "where do I meet my driver?" instead.
-  if (section.type === "airport_guide") return null
+  // Guide cards show as "Plan your journey". The older text fields (food, hotels, Wi-Fi) don't help
+  // someone booking a transfer, so an Airport Guide without cards shows nothing.
+  if (section.type === "airport_guide") return <CmsGuideSection section={section} page={page} />
 
   // Pickup steps filled in on the CMS Airport map section replace the brief's pickup guide.
   if (section.type === "map" && cmsPickupSteps(section).length > 0) return <PickupGuide page={page} reversed={reversed} pickup={cmsPickup(section, page)} />
@@ -717,7 +754,7 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
   // A filled-in CMS section replaces the same section from the airport's code brief, so it isn't shown twice.
   const cmsReplaces = (type: AirportPageContentSection["type"], cards: (section: AirportPageContentSection) => unknown[]) => visibleSections.some((section) => section.type === type && cards(section).length > 0)
-  const replacedBriefKeys = [cmsReplaces("traveller_types", cmsTravellerCards) && "-travellers", cmsReplaces("place_links", cmsPlaces) && "-cities", cmsReplaces("ferry_cruise", (section) => hasPortCards(section) ? cmsPlaces(section) : []) && "-ports"].filter((suffix): suffix is string => Boolean(suffix))
+  const replacedBriefKeys = [cmsReplaces("airport_guide", cmsGuideGroups) && "-guide", cmsReplaces("traveller_types", cmsTravellerCards) && "-travellers", cmsReplaces("place_links", cmsPlaces) && "-cities", cmsReplaces("ferry_cruise", (section) => hasPortCards(section) ? cmsPlaces(section) : []) && "-ports"].filter((suffix): suffix is string => Boolean(suffix))
   for (const { key, order, Component } of copy.extraSections ?? []) if (!replacedBriefKeys.some((suffix) => key.endsWith(suffix))) blocks.push([order, <Component key={key} page={page} />])
   blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
   blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])

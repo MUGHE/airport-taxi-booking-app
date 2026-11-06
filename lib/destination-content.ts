@@ -44,6 +44,8 @@ export type TiptapDocument = { type: "doc"; content: TiptapNode[] }
 /**
  * A card in a card-list section. "Who we drive" cards use the icon, text and link; "Places you can
  * book from" cards use the title, the Google Places address and coordinates, and an optional page link.
+ * Airport guide cards use the icon, title and text, a `group` heading shared by the cards shown
+ * together in one row, and `linkLabel` as the text of a booking button that highlights the card.
  */
 export type DestinationSectionItem = {
   id: string
@@ -55,9 +57,10 @@ export type DestinationSectionItem = {
   longitude?: number
   linkHref: string
   linkLabel: string
+  group?: string
 }
 
-export const TRAVELLER_CARD_ICONS = { family: "Family", business: "Business", group: "Group", long_distance: "Long distance", accessible: "Accessible", luggage: "Luggage" } as const
+export const TRAVELLER_CARD_ICONS = { family: "Family", business: "Business", group: "Group", long_distance: "Long distance", accessible: "Accessible", luggage: "Luggage", terminal: "Plane / terminal", arrivals: "Arrivals", clock: "Clock", car: "Car", train: "Train", bus: "Bus", map_pin: "Map pin", parking: "Parking", info: "Information" } as const
 
 export type DestinationSection = {
   id: string
@@ -158,12 +161,32 @@ const DEFAULT_PICKUP_STEPS: Partial<DestinationSectionItem>[] = [
   { title: "Head to your destination", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
 ]
 
+/** Starting cards for the Airport Guide ("Plan your journey") on a new Airport Page; editors adjust them for each airport. */
+function defaultGuideCards(airport: string): Partial<DestinationSectionItem>[] {
+  const terminals = `${airport} Terminals`
+  const gettingThere = `Getting to ${airport}`
+  return [
+    { group: terminals, icon: "terminal", title: "Check your terminal", text: "Confirm which terminal your flight uses before you travel, and choose it when you book so your driver goes straight to the right place." },
+    { group: terminals, icon: "clock", title: "Before you travel", text: "Confirm your flight time with your airline before arranging your taxi, and allow enough time to reach the airport, check in and clear security." },
+    { group: gettingThere, icon: "car", title: "By road", text: "A pre-booked taxi takes the stress out of parking, traffic and heavy luggage, with the journey planned around your flight time." },
+    { group: gettingThere, icon: "train", title: "By public transport", text: "Trains and buses can work well if you’re travelling light. Check timetables and connections before you travel, especially for early or late flights." },
+    { group: gettingThere, icon: "map_pin", title: "Door-to-door by taxi", text: "A private taxi earns its keep when you’re carrying several suitcases, travelling with children or moving as a group. With One Airport Taxi, your journey runs door-to-door, from your home, hotel or office straight to your terminal.", linkLabel: "Get my fixed price" },
+  ]
+}
+
+/** "Exeter Airport Taxi" -> "Exeter Airport". */
+function airportFromHeading(heading: string) {
+  const name = heading.replace(/\s+(taxis?|transfers?)$/i, "").trim()
+  return !name ? "the Airport" : /\bairport$/i.test(name) ? name : `${name} Airport`
+}
+
 const DEFAULT_PORT_NOTE = "For cruise and ferry transfers, please tell us the port and terminal, the sailing time, the number of passengers and how much luggage you have. It helps us plan the right vehicle and pickup."
 
-function defaultSectionContent(type: DestinationSectionType, pageType: DestinationPageType): Pick<DestinationSection, "body" | "fields" | "items"> {
+function defaultSectionContent(type: DestinationSectionType, pageType: DestinationPageType, airport: string): Pick<DestinationSection, "body" | "fields" | "items"> {
   // Airport Pages show ports as cards; a Ferry & cruise section without `items` keeps the older text layout.
   if (type === "ferry_cruise" && pageType === "airport") return { body: [], fields: { note: DEFAULT_PORT_NOTE }, items: [] }
-  if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" } }
+  // Guide cards replace the brief's "Plan your journey" section; an Airport Guide without `items` shows nothing, as before.
+  if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" }, ...(pageType === "airport" ? { items: defaultGuideCards(airport).map((card, index) => createSectionItem({ ...card, id: `guide-card-${index + 1}` })) } : {}) }
   if (type === "traveller_types") return { body: makeBlock("Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all."), fields: {}, items: DEFAULT_TRAVELLER_CARDS.map((card, index) => createSectionItem({ ...card, id: `traveller-${index + 1}` })) }
   if (type === "place_links") return { body: [], fields: { listHeading: "", closing: "", cta: "" }, items: [] }
   // The Airport map section is the "Know before you land" pickup guide; one without `items` keeps the older layout.
@@ -171,14 +194,15 @@ function defaultSectionContent(type: DestinationSectionType, pageType: Destinati
   return { body: [], fields: {} }
 }
 
-export function createDestinationSection(type: DestinationSectionType, id = `${type}-${Date.now()}`, pageType: DestinationPageType = "airport"): DestinationSection {
+/** `heading` (the page H1, e.g. "Exeter Airport Taxi") names the airport in starting guide cards. */
+export function createDestinationSection(type: DestinationSectionType, id = `${type}-${Date.now()}`, pageType: DestinationPageType = "airport", heading = ""): DestinationSection {
   return {
     id,
     type,
     visible: true,
     required: isRequiredDestinationSectionType(type, pageType),
     title: sectionLabel(type, pageType),
-    ...defaultSectionContent(type, pageType),
+    ...defaultSectionContent(type, pageType, airportFromHeading(heading)),
     sourceNotes: [],
   }
 }
@@ -192,7 +216,7 @@ export function createDefaultDestinationContent(heading: string, pageType: Desti
     schemaVersion: DESTINATION_CONTENT_SCHEMA_VERSION,
     hero: { heading, body: [] },
     sections: [
-      ...policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType)),
+      ...policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType, heading)),
       ...(pageType === "airport" ? AIRPORT_STARTER_SECTION_TYPES.map((type) => createDestinationSection(type, `${type}-starter`, pageType)) : []),
     ],
     finalCta: { heading: "Ready to book your airport transfer?", body: makeBlock("Get a fixed price for your journey in minutes.") },
@@ -216,6 +240,7 @@ function normalizeSectionItems(value: unknown): DestinationSectionItem[] | undef
     const coordinate = (key: "latitude" | "longitude") => typeof raw[key] === "number" && Number.isFinite(raw[key]) ? raw[key] as number : undefined
     const linkHref = safeText(raw.linkHref).trim()
     const icon = safeText(raw.icon)
+    const group = safeText(raw.group).trim()
     const next: DestinationSectionItem = {
       id: safeText(raw.id).trim() || `item-${index + 1}`,
       title: safeText(raw.title).trim(),
@@ -225,6 +250,7 @@ function normalizeSectionItems(value: unknown): DestinationSectionItem[] | undef
       // Same-page anchors such as #vehicles are allowed alongside internal paths and HTTPS links.
       linkHref: linkHref.startsWith("#") || isSafeDestinationContentLink(linkHref) ? linkHref : "",
       linkLabel: safeText(raw.linkLabel).trim(),
+      ...(group ? { group } : {}),
     }
     const latitude = coordinate("latitude")
     const longitude = coordinate("longitude")

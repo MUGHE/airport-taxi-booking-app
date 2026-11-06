@@ -84,8 +84,8 @@ function Buttons({ buttons }: { buttons: { href: string; label: string }[] }) {
 function CardGrid({ page, cards, columns, className = "airport-link-card" }: { page: AirportPagePresentation; cards: BriefCard[]; columns: 2 | 3 | 4; className?: string }) {
   return (
     <div className={`airport-card-grid airport-card-grid-${columns}`}>
-      {cards.map(({ icon: Icon, badge, title, text, actions, link, highlight }) => (
-        <article key={title} className={`${className} ${highlight ? "airport-info-card-highlight" : ""}`}>
+      {cards.map(({ icon: Icon, badge, title, text, actions, link, highlight }, index) => (
+        <article key={`${index}-${title}`} className={`${className} ${highlight ? "airport-info-card-highlight" : ""}`}>
           {badge ? <span className="airport-info-card-badge">{badge}</span> : Icon && <span className="airport-info-card-icon"><Icon aria-hidden="true" /></span>}
           <h3>{title}</h3>
           <p>{text}</p>
@@ -97,20 +97,27 @@ function CardGrid({ page, cards, columns, className = "airport-link-card" }: { p
   )
 }
 
-export function BriefGuideSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+export type GuideContent = AirportBrief["guide"] & { body?: React.ReactNode }
+
+/** "Plan your journey": used by the briefs and by the CMS Airport Guide cards. */
+export function GuideSection({ page, guide }: { page: AirportPagePresentation; guide: GuideContent }) {
   return (
     <section id={BRIEF_GUIDE_ID} className="airport-travel-info" data-preview-section="travel_information">
       <div className="airport-container">
-        <SectionHeading eyebrow="Plan your journey" title={brief.guide.heading} paragraphs={brief.guide.paragraphs} />
-        {brief.guide.groups.map((group) => (
-          <div key={group.title}>
-            <h3 className="airport-card-group-title">{group.title}</h3>
+        <SectionHeading eyebrow="Plan your journey" title={guide.heading} paragraphs={guide.paragraphs} body={guide.body} />
+        {guide.groups.map((group, index) => (
+          <div key={`${index}-${group.title}`}>
+            {group.title && <h3 className="airport-card-group-title">{group.title}</h3>}
             <CardGrid page={page} cards={group.cards} columns={group.columns} className="airport-info-card" />
           </div>
         ))}
       </div>
     </section>
   )
+}
+
+export function BriefGuideSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
+  return <GuideSection page={page} guide={brief.guide} />
 }
 
 export function BriefDeparturesSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
