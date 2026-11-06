@@ -46,6 +46,7 @@ export type TiptapDocument = { type: "doc"; content: TiptapNode[] }
  * book from" cards use the title, the Google Places address and coordinates, and an optional page link.
  * Airport guide cards use the icon, title and text, a `group` heading shared by the cards shown
  * together in one row, and `linkLabel` as the text of a booking button that highlights the card.
+ * Travel information cards use the icon, title and text, one bullet point per line of text.
  */
 export type DestinationSectionItem = {
   id: string
@@ -180,6 +181,13 @@ function airportFromHeading(heading: string) {
   return !name ? "the Airport" : /\bairport$/i.test(name) ? name : `${name} Airport`
 }
 
+// Starting cards for Travel information ("Plan your journey") on a new Airport Page. With no bullet
+// points yet they don't show on the page, so nothing generic is published by accident.
+const DEFAULT_TRAVEL_CARDS: Partial<DestinationSectionItem>[] = [
+  { icon: "train", title: "Key Travel Information" },
+  { icon: "car", title: "Driving Times to Major Cities" },
+]
+
 const DEFAULT_PORT_NOTE = "For cruise and ferry transfers, please tell us the port and terminal, the sailing time, the number of passengers and how much luggage you have. It helps us plan the right vehicle and pickup."
 
 function defaultSectionContent(type: DestinationSectionType, pageType: DestinationPageType, airport: string): Pick<DestinationSection, "body" | "fields" | "items"> {
@@ -188,6 +196,8 @@ function defaultSectionContent(type: DestinationSectionType, pageType: Destinati
   // Guide cards replace the brief's "Plan your journey" section; an Airport Guide without `items` shows nothing, as before.
   if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" }, ...(pageType === "airport" ? { items: defaultGuideCards(airport).map((card, index) => createSectionItem({ ...card, id: `guide-card-${index + 1}` })) } : {}) }
   if (type === "traveller_types") return { body: makeBlock("Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all."), fields: {}, items: DEFAULT_TRAVELLER_CARDS.map((card, index) => createSectionItem({ ...card, id: `traveller-${index + 1}` })) }
+  // Airport Pages show travel information as cards of bullet points; one without `items` keeps the older text layout.
+  if (type === "travel_information" && pageType === "airport") return { body: [], fields: { closing: "" }, items: DEFAULT_TRAVEL_CARDS.map((card, index) => createSectionItem({ ...card, id: `travel-card-${index + 1}` })) }
   if (type === "place_links") return { body: [], fields: { listHeading: "", closing: "", cta: "" }, items: [] }
   // The Airport map section is the "Know before you land" pickup guide; one without `items` keeps the older layout.
   if (type === "map" && pageType === "airport") return { body: [], fields: { stepsHeading: "", dropHeading: "", dropText: "" }, items: DEFAULT_PICKUP_STEPS.map((step, index) => createSectionItem({ ...step, id: `pickup-step-${index + 1}` })) }
@@ -208,7 +218,7 @@ export function createDestinationSection(type: DestinationSectionType, id = `${t
 }
 
 /** Optional sections every new Airport Page starts with, after the required ones. */
-const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["traveller_types", "place_links", "ferry_cruise"]
+const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["travel_information", "traveller_types", "place_links", "ferry_cruise"]
 
 export function createDefaultDestinationContent(heading: string, pageType: DestinationPageType = "airport"): DestinationContentDocument {
   const policy = getDestinationPagePolicy(pageType)

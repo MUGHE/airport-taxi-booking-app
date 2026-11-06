@@ -19,6 +19,7 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
   const isPlaces = section.type === "place_links" || isPorts
   const isSteps = section.type === "map"
   const isGuide = section.type === "airport_guide"
+  const isTravel = section.type === "travel_information"
   const groupNames = [...new Set(items.map((item) => item.group?.trim()).filter((name): name is string => Boolean(name)))]
   const noun = isSteps ? "step" : isPorts ? "port" : isPlaces ? "place" : "card"
 
@@ -54,11 +55,17 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
         </div>
       )}
 
+      {isTravel && (
+        <div className="grid gap-3">
+          <p className="text-xs text-muted-foreground">Shown as &ldquo;Plan your journey&rdquo;. The Content above is the introduction under the heading. Leave the Section heading as &ldquo;Travel information&rdquo; to use &ldquo;… Airport Taxis and Transfers&rdquo;.</p>
+          <div className="space-y-1.5"><Label htmlFor={`${section.id}-closing`}>Closing text under the cards (optional)</Label><textarea id={`${section.id}-closing`} className={textareaClass} value={section.fields.closing ?? ""} placeholder="Whether you are travelling for a holiday, business trip or international flight…" onChange={(event) => setField("closing", event.target.value)} /></div>
+        </div>
+      )}
       {isGuide && <p className="text-xs text-muted-foreground">Shown as &ldquo;Plan your journey&rdquo;. The Content above is the introduction under the heading. Leave the Section heading as &ldquo;Airport Guide&rdquo; to use &ldquo;… Airport Information and Travel Guide&rdquo;.</p>}
 
       <div>
-        <Label>{isGuide ? "Guide cards" : isSteps ? "Pickup steps" : isPorts ? "Ports" : isPlaces ? "Places" : "Cards"}</Label>
-        <p className="text-xs text-muted-foreground">{isGuide ? "Cards next to each other with the same group heading show together in one row, under that heading. Two cards fit a row of two, four a row of four, anything else rows of three. With no cards, this section doesn't show on the page." : isSteps ? "Numbered cards beside the airport map. With no steps, the page keeps the older map layout." : isPlaces ? `Each ${noun} gets two booking buttons, to and from the airport. Choose it from Google Places so the booking form opens with the route filled in.` : "Shown as a row of cards. Four cards fit one row."}</p>
+        <Label>{isTravel ? "Travel cards" : isGuide ? "Guide cards" : isSteps ? "Pickup steps" : isPorts ? "Ports" : isPlaces ? "Places" : "Cards"}</Label>
+        <p className="text-xs text-muted-foreground">{isTravel ? "Cards side by side, each with a list of bullet points. A card without bullet points doesn't show on the page; with no cards at all, the section keeps the older text layout." : isGuide ? "Cards next to each other with the same group heading show together in one row, under that heading. Two cards fit a row of two, four a row of four, anything else rows of three. With no cards, this section doesn't show on the page." : isSteps ? "Numbered cards beside the airport map. With no steps, the page keeps the older map layout." : isPlaces ? `Each ${noun} gets two booking buttons, to and from the airport. Choose it from Google Places so the booking form opens with the route filled in.` : "Shown as a row of cards. Four cards fit one row."}</p>
       </div>
 
       {items.map((item, index) => {
@@ -74,7 +81,19 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
                 <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${label}`} onClick={() => setItems(items.filter((_, i) => i !== index))}><Trash2 /></Button>
               </div>
             </div>
-            {isGuide ? (
+            {isTravel ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)]">
+                  <div className="space-y-1.5"><Label htmlFor={`${item.id}-icon`}>Icon</Label><select id={`${item.id}-icon`} className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm" value={item.icon} onChange={(event) => updateItem(index, { icon: event.target.value })}><option value="">No icon</option>{Object.entries(TRAVELLER_CARD_ICONS).map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></div>
+                  <div className="space-y-1.5"><Label htmlFor={`${item.id}-title`}>Title</Label><Input id={`${item.id}-title`} value={item.title} placeholder="e.g. Key Travel Information" onChange={(event) => updateItem(index, { title: event.target.value })} /></div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`${item.id}-text`}>Bullet points</Label>
+                  <textarea id={`${item.id}-text`} className={`${textareaClass} min-h-40`} value={item.text} placeholder={"Nearest railway station: Birmingham International, linked to the terminal by the free Air-Rail Link.\nRoad access: Via the M42 at Junction 6 and the A45."} onChange={(event) => updateItem(index, { text: event.target.value })} />
+                  <p className="text-xs text-muted-foreground">One bullet point per line. Start a line with &ldquo;Label: &rdquo; to make the label bold.</p>
+                </div>
+              </>
+            ) : isGuide ? (
               <>
                 <div className="space-y-1.5"><Label htmlFor={`${item.id}-group`}>Group heading</Label><Input id={`${item.id}-group`} list={`${section.id}-groups`} value={item.group ?? ""} placeholder="e.g. Getting to Birmingham Airport" onChange={(event) => updateItem(index, { group: event.target.value })} /></div>
                 <div className="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)]">
@@ -123,7 +142,7 @@ export function SectionItemsEditor({ section, onChange }: { section: Destination
       {isGuide && <datalist id={`${section.id}-groups`}>{groupNames.map((name) => <option key={name} value={name} />)}</datalist>}
       {/* A new guide card joins the last card's group, which is usually where the next card goes. */}
       <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, createSectionItem(isGuide && items.length ? { group: items[items.length - 1].group ?? "" } : {})])}><Plus className="size-4" /> Add {noun}</Button>
-      {!isSteps && !isGuide && <p className="text-xs text-muted-foreground">Links can be a page on this site (starting with /), a section of this page (#vehicles), or an https:// address.</p>}
+      {!isSteps && !isGuide && !isTravel && <p className="text-xs text-muted-foreground">Links can be a page on this site (starting with /), a section of this page (#vehicles), or an https:// address.</p>}
     </div>
   )
 }

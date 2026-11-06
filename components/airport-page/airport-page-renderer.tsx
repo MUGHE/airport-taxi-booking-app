@@ -104,7 +104,7 @@ const sectionLabels: Partial<Record<AirportPageContentSection["type"], string>> 
 const storyIcons = [Navigation, PlaneLanding, Luggage, MapPin]
 
 // CMS template labels that tell visitors nothing; the page swaps in an airport-specific heading.
-const PLACEHOLDER_TITLES = new Set(["introduction", "benefits & service facts", "airport guide", "airport map", "popular transfer routes", "google reviews", "airport faqs", "frequently asked questions", "fleet & pricing", "find the right vehicle for your journey", "ready to book your airport transfer?", "ferry & cruise information", "who we drive", "places you can book from"])
+const PLACEHOLDER_TITLES = new Set(["introduction", "benefits & service facts", "airport guide", "airport map", "popular transfer routes", "google reviews", "airport faqs", "frequently asked questions", "fleet & pricing", "find the right vehicle for your journey", "ready to book your airport transfer?", "ferry & cruise information", "who we drive", "places you can book from", "travel information"])
 
 function headingFor(title: string | undefined, fallback: string) {
   return title && !PLACEHOLDER_TITLES.has(title.trim().toLowerCase()) ? title : fallback
@@ -274,7 +274,7 @@ const trustItems = [
   { icon: Headphones, title: "24/7 support", text: "Phone or WhatsApp" },
 ]
 
-type InfoCard = { icon: typeof Banknote; title: string; items: string[] }
+type InfoCard = { icon?: typeof Banknote; title: string; items: string[] }
 
 export type AirportCopy = {
   heroHeading?: string
@@ -541,28 +541,52 @@ function ComfortCards({ comfort }: { comfort: NonNullable<AirportCopy["comfort"]
   )
 }
 
-function TravelInfoSection({ page }: { page: AirportPagePresentation }) {
-  const info = airportCopy(page).travelInfo
-  if (!info) return null
+type TravelInfoContent = { heading: string; lead: React.ReactNode; cards: InfoCard[]; closing: string }
+
+function TravelInfoPanel({ info }: { info: TravelInfoContent }) {
   return (
     <section className="airport-travel-info" data-preview-section="travel_information">
       <div className="airport-container">
-        <div className="airport-travel-info-intro"><p className="airport-eyebrow">Plan your journey</p><h2>{info.heading}</h2>{[info.lead].flat().map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+        <div className="airport-travel-info-intro"><p className="airport-eyebrow">Plan your journey</p><h2>{info.heading}</h2>{info.lead}</div>
         <div className="airport-travel-info-grid">
-          {info.cards.map(({ icon: Icon, title, items }) => (
-            <article key={title} className="airport-travel-info-card">
-              <h3><Icon aria-hidden="true" />{title}</h3>
-              <ul>{items.map((item) => {
+          {info.cards.map(({ icon: Icon, title, items }, index) => (
+            <article key={`${index}-${title}`} className="airport-travel-info-card">
+              <h3>{Icon && <Icon aria-hidden="true" />}{title}</h3>
+              <ul>{items.map((item, itemIndex) => {
                 const [label, ...rest] = item.split(": ")
-                return <li key={item}>{rest.length ? <><strong>{label}:</strong> {rest.join(": ")}</> : item}</li>
+                return <li key={`${itemIndex}-${item}`}>{rest.length ? <><strong>{label}:</strong> {rest.join(": ")}</> : item}</li>
               })}</ul>
             </article>
           ))}
         </div>
-        <p className="airport-travel-info-closing">{info.closing}</p>
+        {info.closing && <p className="airport-travel-info-closing">{info.closing}</p>}
       </div>
     </section>
   )
+}
+
+function TravelInfoSection({ page }: { page: AirportPagePresentation }) {
+  const info = airportCopy(page).travelInfo
+  if (!info) return null
+  return <TravelInfoPanel info={{ ...info, lead: [info.lead].flat().map((paragraph) => <p key={paragraph}>{paragraph}</p>) }} />
+}
+
+/** Cards for the CMS Travel information section: one bullet point per line, so a card needs a title and a line. */
+function cmsTravelCards(section: AirportPageContentSection): InfoCard[] {
+  if (section.type !== "travel_information") return []
+  return (section.items ?? []).flatMap((item) => {
+    const lines = item.text.split("\n").map((line) => line.trim()).filter(Boolean)
+    return item.title && lines.length ? [{ icon: TRAVELLER_ICONS[item.icon], title: item.title, items: lines }] : []
+  })
+}
+
+function CmsTravelInfoSection({ section, page }: { section: AirportPageContentSection; page: AirportPagePresentation }) {
+  return <TravelInfoPanel info={{
+    heading: headingFor(section.title, `${airportName(page)} Taxis and Transfers`),
+    lead: hasBodyText(section) ? <RichText blocks={section.body} document={section.bodyDocument} /> : null,
+    cards: cmsTravelCards(section),
+    closing: section.fields.closing?.trim() ?? "",
+  }} />
 }
 
 /** Driver vetting, shown on every airport and destination page; an airport can override it in AIRPORT_COPY. */
@@ -713,6 +737,7 @@ function BuilderSection({ section, page, index }: { section: AirportPageContentS
     )
   }
 
+  if (cmsTravelCards(section).length > 0) return <CmsTravelInfoSection section={section} page={page} />
   if (section.type === "traveller_types") return <CmsTravellersSection section={section} page={page} />
   if (section.type === "place_links") return <CmsPlacesSection section={section} page={page} />
   if (hasPortCards(section)) return <CmsPortsSection section={section} page={page} />
@@ -748,7 +773,9 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
   // A brief that hides the CMS Ferry & cruise text still shows CMS port cards, which replace the brief's own ports.
   const visibleSections = page.sections.filter((section) => section.visible && (!hidden.has(section.type) || (hasPortCards(section) && cmsPlaces(section).length > 0)))
   const configuredSectionTypes = new Set(page.sections.map((section) => section.type))
-  const rank = (section: AirportPageContentSection) => SECTION_ORDER[section.type] ?? DEFAULT_ORDER
+  // CMS travel information cards take the slot of the brief's travel information, which they replace.
+  const cmsTravelInfo = visibleSections.some((section) => cmsTravelCards(section).length > 0)
+  const rank = (section: AirportPageContentSection) => cmsTravelCards(section).length > 0 ? copy.travelInfoOrder ?? TRAVEL_INFO_ORDER : SECTION_ORDER[section.type] ?? DEFAULT_ORDER
   const orderedSections = visibleSections.map((section, position) => ({ section, position })).sort((a, b) => rank(a.section) - rank(b.section) || a.position - b.position).map(({ section }) => section)
 
   const blocks: [number, React.ReactNode][] = orderedSections.map((section, index) => [rank(section), <BuilderSection key={section.id} section={section} page={page} index={index} />])
@@ -757,7 +784,7 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
   const replacedBriefKeys = [cmsReplaces("airport_guide", cmsGuideGroups) && "-guide", cmsReplaces("traveller_types", cmsTravellerCards) && "-travellers", cmsReplaces("place_links", cmsPlaces) && "-cities", cmsReplaces("ferry_cruise", (section) => hasPortCards(section) ? cmsPlaces(section) : []) && "-ports"].filter((suffix): suffix is string => Boolean(suffix))
   for (const { key, order, Component } of copy.extraSections ?? []) if (!replacedBriefKeys.some((suffix) => key.endsWith(suffix))) blocks.push([order, <Component key={key} page={page} />])
   blocks.push([copy.comfortOrder ?? COMFORT_ORDER, <ComfortSection key="comfort" page={page} />])
-  blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
+  if (!cmsTravelInfo) blocks.push([copy.travelInfoOrder ?? TRAVEL_INFO_ORDER, <TravelInfoSection key="travel-info" page={page} />])
   blocks.push([DRIVERS_ORDER, <DriversSection key="drivers" page={page} />])
   blocks.push([VEHICLES_ORDER, <VehicleSection key="vehicles" page={page} fleetSection={visibleSections.find((section) => section.type === "fleet_pricing")} />])
   if (!configuredSectionTypes.has("related_destinations") && !hidden.has("related_destinations")) blocks.push([SECTION_ORDER.related_destinations!, <RouteSection key="routes" page={page} />])
