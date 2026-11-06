@@ -91,3 +91,44 @@ test("card items survive publishing", () => {
   expect(published.sections?.find((section) => section.type === "place_links")?.items).toEqual(places.items)
   expect(published.sections?.find((section) => section.type === "traveller_types")?.items).toHaveLength(4)
 })
+
+test("a new Airport Page's Airport Guide starts with grouped Plan your journey cards", () => {
+  const guide = createDefaultDestinationContent("Exeter Airport Taxi").sections.find((section) => section.type === "airport_guide")
+  expect(guide?.required).toBe(true)
+  expect(guide?.items?.map((item) => item.group)).toEqual(["Exeter Airport Terminals", "Exeter Airport Terminals", "Getting to Exeter Airport", "Getting to Exeter Airport", "Getting to Exeter Airport"])
+  expect(guide?.items?.map((item) => item.icon)).toEqual(["terminal", "clock", "car", "train", "map_pin"])
+  expect(guide?.items?.at(-1)?.linkLabel).toBe("Get my fixed price")
+})
+
+test("an older Airport Guide without cards keeps showing nothing, and Place Pages get no guide cards", () => {
+  const content = normalizeDestinationContent({ sections: [{ id: "guide", type: "airport_guide", title: "Airport Guide", body: [], fields: { overview: "Old notes" } }] }, "Gatwick Airport Taxi")
+  expect(content.sections.find((section) => section.id === "guide")?.items).toBeUndefined()
+})
+
+test("guide card groups and new icons survive normalizing and publishing", () => {
+  const content = normalizeDestinationContent({ sections: [{ id: "guide", type: "airport_guide", title: "Airport Guide", items: [
+    { id: "a", group: " Birmingham Airport Terminal ", icon: "terminal", title: "One terminal", text: "Text" },
+    { id: "b", icon: "rocket", title: "No group" },
+  ] }] }, "Birmingham Airport Taxi")
+  const items = content.sections.find((section) => section.id === "guide")!.items!
+  expect(items[0]).toMatchObject({ group: "Birmingham Airport Terminal", icon: "terminal" })
+  expect(items[1].group).toBeUndefined()
+  expect(items[1].icon).toBe("")
+
+  const published = publishedContentFromSnapshot({ h1: "Exeter Airport Taxi", content: createDefaultDestinationContent("Exeter Airport Taxi") })
+  expect(published.sections?.find((section) => section.type === "airport_guide")?.items?.[2].group).toBe("Getting to Exeter Airport")
+})
+
+test("a new Airport Page starts with Travel information cards that have no bullet points yet", () => {
+  const travel = createDefaultDestinationContent("Exeter Airport Taxi").sections.find((section) => section.type === "travel_information")
+  expect(travel?.required).toBe(false)
+  expect(travel?.items?.map((item) => [item.icon, item.title, item.text])).toEqual([["train", "Key Travel Information", ""], ["car", "Driving Times to Major Cities", ""]])
+  expect(travel?.fields).toEqual({ closing: "" })
+})
+
+test("Place Pages and older airport Travel information keep the text layout", () => {
+  const placeTravel = createDefaultDestinationContent("Reading Airport Taxi", "place").sections.find((section) => section.type === "travel_information")
+  expect(placeTravel?.items).toBeUndefined()
+  const content = normalizeDestinationContent({ sections: [{ id: "travel", type: "travel_information", title: "Travel information", body: [{ type: "paragraph", text: "Old text." }] }] }, "Gatwick Airport Taxi")
+  expect(content.sections.find((section) => section.id === "travel")?.items).toBeUndefined()
+})
