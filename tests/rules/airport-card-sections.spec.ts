@@ -19,6 +19,30 @@ test("a new Airport Page starts with the Who we drive and Places you can book fr
   expect(validateDestinationContent(content, "Exeter Airport Taxi")).toBeNull()
 })
 
+test("a new Airport Page's map section starts as the pickup guide with four steps", () => {
+  const map = createDefaultDestinationContent("Exeter Airport Taxi").sections.find((section) => section.type === "map")
+  expect(map?.required).toBe(true)
+  expect(map?.items?.map((item) => item.title)).toEqual(["Share your flight and arrival details", "Follow the arrival signs", "Meet your driver", "Head to your destination"])
+  expect(map?.fields).toEqual({ stepsHeading: "", dropHeading: "", dropText: "" })
+})
+
+test("an older map section without steps keeps its layout, and Place Pages get no steps", () => {
+  const content = normalizeDestinationContent({ sections: [{ id: "map", type: "map", title: "Airport map", body: [] }] }, "Gatwick Airport Taxi")
+  expect(content.sections.find((section) => section.id === "map")?.items).toBeUndefined()
+  const placeMap = createDefaultDestinationContent("Reading Airport Taxi", "place").sections.find((section) => section.type === "map")
+  expect(placeMap?.items).toBeUndefined()
+})
+
+test("pickup steps survive publishing", () => {
+  const draft = createDefaultDestinationContent("Exeter Airport Taxi")
+  const map = draft.sections.find((section) => section.type === "map")!
+  map.fields = { stepsHeading: "How your Exeter pickup works", dropHeading: "", dropText: "" }
+  const published = publishedContentFromSnapshot({ h1: "Exeter Airport Taxi", content: draft })
+  const publishedMap = published.sections?.find((section) => section.type === "map")
+  expect(publishedMap?.items).toHaveLength(4)
+  expect(publishedMap?.fields?.stepsHeading).toBe("How your Exeter pickup works")
+})
+
 test("an older Ferry & cruise section without cards keeps its text layout", () => {
   const content = normalizeDestinationContent({ sections: [{ id: "ferry", type: "ferry_cruise", title: "Ferry & cruise information", body: [{ type: "paragraph", text: "Ports text." }] }] }, "Gatwick Airport Taxi")
   expect(content.sections.find((section) => section.id === "ferry")?.items).toBeUndefined()
