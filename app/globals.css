@@ -891,6 +891,8 @@
   .landing-airport-card.is-compact .landing-arrow-link { margin-top: .85rem; }
   .landing-review-grid { grid-template-columns: 1.2fr .8fr; }
   .landing-faq-grid { grid-template-columns: .72fr 1.28fr; }
+  /* The heading stays in view beside the long question list, and scrolls away with the section's end. */
+  .landing-faq-heading { position: sticky; top: 6.5rem; }
   .landing-final-cta { grid-template-columns: 1.35fr .65fr; }
 }
 @media (max-width: 639px) {
