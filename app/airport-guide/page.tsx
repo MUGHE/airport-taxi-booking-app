@@ -16,13 +16,14 @@ import { cn } from "@/lib/utils"
 
 export const revalidate = 300
 
-const TITLE = "London Airport Guide: Terminals, Journey Times and Taxi Transfers"
+const SEO_TITLE = "London Airport Guide & Other UK Airports | ONE Airport Taxi"
+const H1 = "London Airport Guide: London and Other UK Airports"
 const DESCRIPTION =
-  "Heathrow, Gatwick, Stansted, Luton, London City and Southend: where each airport is, which terminals it has, how long it takes to reach central London and what to expect at pickup."
+  "Explore our London airport guide covering Heathrow, Gatwick, Stansted, Luton, London City and Southend, plus Manchester, Birmingham and other UK airports. Discover terminals, travel options and taxi transfers."
 
 // openGraph and twitter replace the root layout ones wholesale, so the shared fields are repeated here.
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ONE Airport Taxi` },
+  title: { absolute: SEO_TITLE },
   description: DESCRIPTION,
   alternates: { canonical: "/airport-guide" },
   openGraph: {
@@ -30,13 +31,13 @@ export const metadata: Metadata = {
     locale: "en_GB",
     url: "/airport-guide",
     siteName: "ONE Airport Taxi",
-    title: TITLE,
+    title: SEO_TITLE,
     description: DESCRIPTION,
     images: [{ url: "/hero-airport-transfer-og.jpg", alt: "ONE Airport Taxi" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
+    title: SEO_TITLE,
     description: DESCRIPTION,
     images: ["/hero-airport-transfer-og.jpg"],
   },
@@ -65,7 +66,7 @@ export default async function AirportGuidePage() {
           <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-14">
             <div>
               <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Airport Guide" }]} />
-              <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{TITLE}</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{H1}</h1>
               <h2 className="mt-6 text-lg font-semibold">London airports explained</h2>
               <p className="mt-2 max-w-xl leading-7 text-muted-foreground text-pretty">
                 This London airport guide covers Heathrow, Gatwick, Stansted, Luton, London City and Southend: where each airport is, which terminals it has, how long it takes to reach central London and what to expect at pickup. If you would rather skip trains, tubes and coaches, you can book a fixed-price airport transfer to or from any of them with ONE Airport Taxi.
