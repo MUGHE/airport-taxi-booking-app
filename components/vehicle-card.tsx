@@ -2,7 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Backpack, Briefcase, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { seatCount, VEHICLE_BEST_FOR } from "@/lib/fleet"
+import { seatCount, VEHICLE_BEST_FOR, vehicleImageAlt } from "@/lib/fleet"
 import type { VehicleClass } from "@/lib/types"
 
 /** Fleet card shared by the homepage and every airport page; sits in a `.landing-fleet-grid`. */
@@ -27,7 +27,7 @@ export function VehicleCard({
       <div className="landing-vehicle-image relative" style={{ position: "relative" }}>
         <Image
           src={vehicle.image || "/placeholder.svg"}
-          alt={vehicle.name}
+          alt={vehicleImageAlt(vehicle)}
           fill
           className="object-contain"
           sizes="(max-width: 640px) 85vw, (max-width: 1024px) 50vw, 33vw"

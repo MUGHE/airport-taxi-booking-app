@@ -741,6 +741,15 @@
 .landing-intro-copy h2 { margin-top: .75rem; }
 .landing-intro-copy p { margin-top: 1.25rem; max-width: 36rem; color: #4d5f72; line-height: 1.75; }
 .landing-intro-copy .landing-arrow-link { margin-top: 1.75rem; color: var(--landing-blue); }
+.landing-local-areas { margin-top: 2.25rem; padding-top: 1.5rem; border-top: 1px solid #dbe5ec; }
+.landing-local-areas p { display: flex; gap: .7rem; margin-top: .75rem; color: #4d5f72; line-height: 1.65; }
+.landing-local-areas svg { flex: none; width: 1.15rem; height: 1.15rem; margin-top: .25rem; color: var(--landing-blue); }
+.landing-local-areas a, .landing-long-distance a { color: var(--landing-blue); font-weight: 650; text-decoration: underline; text-decoration-color: rgba(7,95,189,.3); text-underline-offset: 3px; }
+.landing-local-areas a:hover, .landing-long-distance a:hover { text-decoration-color: currentColor; }
+.landing-long-distance { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: center; margin-top: 1.5rem; padding: 1.1rem 1.35rem; border: 1px solid #dbe5ec; border-radius: var(--landing-radius-xl); background: #fff; }
+.landing-long-distance p { flex: 1 1 18rem; color: #4d5f72; line-height: 1.6; }
+.landing-long-distance-badge { display: inline-flex; flex: none; gap: .4rem; align-items: center; padding: .35rem .7rem; border-radius: 999px; background: var(--landing-warm); color: #071d33; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.landing-long-distance-badge svg { width: .95rem; height: .95rem; }
 .landing-intro-list-title { color: #617285; font-size: .7rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .landing-intro-list { display: grid; margin-top: 1rem; border-top: 1px solid #dbe5ec; }
 .landing-intro-list li { display: flex; gap: .9rem; padding: 1.15rem 0; border-bottom: 1px solid #dbe5ec; }

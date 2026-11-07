@@ -14,7 +14,7 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-secondary/30 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi" width={48} height={48} className="size-12" />
+          <Image src="/brand/logo-mark.png" alt="ONE Airport Taxi logo" width={48} height={48} className="size-12" />
           <h1 className="mt-3 text-xl font-semibold tracking-tight">Admin sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in with your staff account to access the operations dashboard.

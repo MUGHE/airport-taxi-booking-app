@@ -243,3 +243,9 @@ function inPolygon(lat: number, lng: number, polygon: [number, number][]): boole
 export function congestionChargeFor(points: { lat: number; lng: number }[], zones: Pick<CongestionZone, "fee" | "zone">[]): number {
   return zones.reduce((total, z) => (z.zone.length >= 3 && points.some((p) => inPolygon(p.lat, p.lng, z.zone)) ? total + z.fee : total), 0)
 }
+
+/** Alt text for a vehicle photo, e.g. "ONE Airport Taxi 6 Seater MPV airport transfer vehicle". */
+export function vehicleImageAlt(vehicle: Pick<VehicleClass, "id" | "name">): string {
+  if (vehicle.id === "executive") return "ONE Airport Taxi executive Mercedes E-Class transfer vehicle"
+  return `ONE Airport Taxi ${vehicle.name} airport transfer vehicle`
+}

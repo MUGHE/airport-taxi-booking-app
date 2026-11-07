@@ -13,3 +13,9 @@ export const AIRPORT_IMAGES: Record<string, string> = {
   "birmingham-airport-taxi": "/airport-transfers/hero.webp",
   "manchester-airport-taxi": "/airport-transfers/hero.webp",
 }
+
+/** Alt text for an airport card photo, e.g. "Heathrow Airport (LHR) taxi transfer service". */
+export function airportImageAlt(name: string, iataCode?: string): string {
+  const airport = /\bairport$/i.test(name.trim()) ? name.trim() : `${name.trim()} Airport`
+  return `${airport}${iataCode ? ` (${iataCode})` : ""} taxi transfer service`
+}

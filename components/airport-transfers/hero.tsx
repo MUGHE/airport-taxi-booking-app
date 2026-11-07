@@ -15,7 +15,7 @@ export function AirportTransfersHero({ stopPricing, googleRating }: { stopPricin
         <div className="landing-hero-image absolute inset-0" style={{ position: "absolute" }}>
           <Image
             src="/airport-transfers/hero.webp"
-            alt="A driver welcoming airport passengers beside a car"
+            alt="ONE Airport Taxi driver welcoming airport passengers beside a car"
             fill
             preload
             loading="eager"
