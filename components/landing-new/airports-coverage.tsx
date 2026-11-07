@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Route } from "lucide-react"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
 import { AIRPORT_IMAGES } from "@/lib/airport-images"
 
@@ -12,16 +12,37 @@ const AIRPORT_TERMINALS: Record<string, string> = {
 
 const MAX_AIRPORT_CARDS = 6
 
-// Every published airport, featured ones first: a wide + narrow pair on top, then four compact cards.
+// The London airports always lead, Heathrow first as the wide card; any space left goes to featured airports.
+const LONDON_AIRPORTS = ["heathrow-airport-taxi", "gatwick-airport-taxi", "luton-airport-taxi", "stansted-airport-taxi", "london-city-airport-taxi"]
+
+// Long-distance destinations in the notice under the cards. Airport pages link only once published.
+const LONG_DISTANCE: { label: string; href?: string; airportSlug?: string }[] = [
+  { label: "Birmingham", airportSlug: "birmingham-airport-taxi" },
+  { label: "Bristol", href: "/destinations/bristol-taxi" },
+  { label: "Manchester", airportSlug: "manchester-airport-taxi" },
+  { label: "Southampton Cruise Port", href: "/destinations/southampton-taxi" },
+]
+
+function listJoin(items: React.ReactNode[]) {
+  return items.flatMap((item, index) => index === 0 ? [item] : [index === items.length - 1 ? ", and " : ", ", item])
+}
+
+// A wide + narrow pair on top, then four compact cards.
 export async function AirportsCoverage() {
   const published = await listPublishedAirportDirectory()
-  const airports = [...published.filter((a) => a.featured), ...published.filter((a) => !a.featured)].slice(0, MAX_AIRPORT_CARDS)
+  const rank = (slug: string) => { const index = LONDON_AIRPORTS.indexOf(slug); return index === -1 ? LONDON_AIRPORTS.length : index }
+  const airports = [...published].sort((a, b) => rank(a.slug) - rank(b.slug) || Number(b.featured) - Number(a.featured)).slice(0, MAX_AIRPORT_CARDS)
+  const publishedSlugs = new Set(published.map((airport) => airport.slug))
+  const longDistance = LONG_DISTANCE.map(({ label, href, airportSlug }) => {
+    const link = href ?? (airportSlug && publishedSlugs.has(airportSlug) ? `/airport-transfers/${airportSlug}` : undefined)
+    return link ? <Link key={label} href={link}>{label}</Link> : <span key={label}>{label}</span>
+  })
   return (
     <section className="landing-airports">
       <div className="landing-container">
       <div className="landing-section-heading">
         <div><span className="landing-eyebrow">Every London airport</span><h2>Your airport. Your driver. Right on time.</h2></div>
-        <p>Heathrow, Gatwick, Stansted, Luton, City and Southend, to anywhere in London and across the UK.</p>
+        <p>London Heathrow (LHR), Gatwick, Luton, Stansted and London City, to anywhere in London and across the UK.</p>
       </div>
 
       <div className="landing-airport-grid">
@@ -43,6 +64,11 @@ export async function AirportsCoverage() {
           </Link>
         ))}
       </div>
+
+      <aside className="landing-long-distance" aria-label="Long-distance transfers">
+        <span className="landing-long-distance-badge"><Route aria-hidden="true" /> Long-distance</span>
+        <p>Need transfers beyond London? We provide nationwide long-distance airport transfers to {listJoin(longDistance)}.</p>
+      </aside>
       </div>
     </section>
   )

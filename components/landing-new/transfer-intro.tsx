@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ArrowRight, Check } from "lucide-react"
+import { ArrowRight, Check, MapPin } from "lucide-react"
 
 const INCLUDED = [
   {
@@ -26,11 +26,13 @@ export function TransferIntro() {
       <div className="landing-container landing-intro-grid">
         <div className="landing-intro-copy">
           <span className="landing-eyebrow">Airport taxis across London</span>
-          <h2 id="landing-intro-title">Chauffeur service, honest taxi pricing.</h2>
+          <h2 id="landing-intro-title">Reliable Heathrow Airport Transfers, Honest Fixed Pricing</h2>
           <p>
-            Whether you're catching an early flight from Heathrow or landing at Gatwick late at
-            night, ONE Airport Taxi takes you between the terminal and your door without the
-            taxi queue, the guesswork or a surprise fare.
+            Based in Slough, ONE Airport Taxi provides dependable 24/7 transfers directly connecting
+            London Heathrow (LHR), Central London, and all UK airports. Whether travelling for
+            business or leisure from Slough, Windsor, or across Berkshire, enjoy guaranteed fixed
+            fares, live flight tracking, and complimentary waiting time with licensed professional
+            drivers.
           </p>
           <p>
             We cover Heathrow, Gatwick, Stansted, Luton, London City and Southend, with
@@ -39,6 +41,18 @@ export function TransferIntro() {
           <Link href="/airport-transfers" className="landing-arrow-link">
             See all airports and fares <ArrowRight aria-hidden="true" />
           </Link>
+
+          <div className="landing-local-areas">
+            <h3 className="landing-intro-list-title">Local service areas</h3>
+            {/* Only towns with a published page are links. */}
+            <p>
+              <MapPin aria-hidden="true" />
+              <span>
+                Serving Slough, Windsor, Maidenhead, <Link href="/destinations/reading-taxi">Reading</Link>, Ascot,
+                and surrounding areas with fast pickups to <Link href="/airport-transfers/heathrow-airport-taxi">Heathrow</Link>.
+              </span>
+            </p>
+          </div>
         </div>
 
         <div>
