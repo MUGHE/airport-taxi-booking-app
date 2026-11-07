@@ -65,7 +65,7 @@ export default async function FaqsPage() {
             <div className="relative aspect-[16/10] overflow-hidden rounded-2xl ring-1 ring-border shadow-lg">
               <Image
                 src="/airport-transfers/chauffeur-terminal-hero.webp"
-                alt="A driver beside an executive car outside an airport terminal"
+                alt="ONE Airport Taxi chauffeur beside an executive car outside an airport terminal"
                 fill
                 preload
                 loading="eager"

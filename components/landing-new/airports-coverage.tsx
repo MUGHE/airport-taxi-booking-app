@@ -2,7 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Route } from "lucide-react"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
-import { AIRPORT_IMAGES } from "@/lib/airport-images"
+import { AIRPORT_IMAGES, airportImageAlt } from "@/lib/airport-images"
 
 // Terminals travellers recognise, shown instead of the council-area service name.
 const AIRPORT_TERMINALS: Record<string, string> = {
@@ -53,7 +53,7 @@ export async function AirportsCoverage() {
             className={`landing-airport-card group ${index === 0 ? "is-wide" : index === 1 ? "is-side" : "is-compact"}`}
           >
             <div className="landing-airport-image absolute inset-0" style={{ position: "absolute" }}>
-              <Image src={AIRPORT_IMAGES[airport.slug] ?? "/placeholder.svg"} alt="" fill className="object-cover" sizes={index === 0 ? "(max-width: 900px) 100vw, 75vw" : "(max-width: 640px) 50vw, 25vw"} />
+              <Image src={AIRPORT_IMAGES[airport.slug] ?? "/placeholder.svg"} alt={airportImageAlt(airport.displayName, airport.iataCode)} fill className="object-cover" sizes={index === 0 ? "(max-width: 900px) 100vw, 75vw" : "(max-width: 640px) 50vw, 25vw"} />
             </div>
             <div className="landing-airport-copy">
               <small>Airport {String(index + 1).padStart(2, "0")}</small>

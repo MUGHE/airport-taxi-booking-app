@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Briefcase, Check, ChevronLeft, ChevronRight, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { formatCurrency } from "@/lib/fleet"
+import { formatCurrency, vehicleImageAlt } from "@/lib/fleet"
 import type { VehicleClass } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -68,7 +68,7 @@ export function FleetCarousel({ vehicles }: { vehicles: VehicleClass[] }) {
             <div className="relative aspect-[4/3] bg-secondary">
               <Image
                 src={v.image || "/placeholder.svg"}
-                alt={v.name}
+                alt={vehicleImageAlt(v)}
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 80vw, 288px"

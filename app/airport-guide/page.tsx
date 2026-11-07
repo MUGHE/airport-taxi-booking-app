@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { getStopPricing } from "@/lib/actions"
 import { AIRPORT_GUIDE_FAQS, CHOOSE_AIRPORT_TIPS, GUIDE_AIRPORTS, PICKUP_STEPS, TRAVEL_TIPS, UK_GUIDE_AIRPORTS, type GuideAirport } from "@/lib/airport-guide"
 import { serializeJsonLd } from "@/lib/json-ld"
+import { airportImageAlt } from "@/lib/airport-images"
 import { cn } from "@/lib/utils"
 
 export const revalidate = 300
@@ -79,7 +80,7 @@ export default async function AirportGuidePage() {
             <div className="relative aspect-[16/10] overflow-hidden rounded-2xl ring-1 ring-border shadow-lg">
               <Image
                 src="/airport-transfers/chauffeur-terminal-hero.webp"
-                alt="A driver beside an executive car outside an airport terminal"
+                alt="ONE Airport Taxi chauffeur beside an executive car outside an airport terminal"
                 fill
                 preload
                 loading="eager"
@@ -270,7 +271,7 @@ function AirportCard({ airport }: { airport: GuideAirport }) {
             twice the box width: request that, and keep the box short enough for the source on 2x screens. */}
         {airport.image && (
           <div className="relative hidden aspect-[4/5] self-center overflow-hidden rounded-xl md:block">
-            <Image src={airport.image} alt={`${airport.name} Airport`} fill sizes="34rem" className="object-cover" />
+            <Image src={airport.image} alt={airportImageAlt(airport.name)} fill sizes="34rem" className="object-cover" />
           </div>
         )}
       </div>

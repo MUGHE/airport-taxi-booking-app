@@ -11,7 +11,7 @@ export async function Hero() {
       <div className="landing-hero-image absolute inset-0" style={{ position: "absolute" }}>
         <Image
           src="/airport-transfers/chauffeur-terminal-hero.webp"
-          alt="A driver beside an executive car outside an airport terminal"
+          alt="ONE Airport Taxi chauffeur beside an executive car outside an airport terminal"
           fill
           preload
           loading="eager"

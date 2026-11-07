@@ -10,7 +10,7 @@ export function FleetGuidance() {
         <div className="relative aspect-[16/9] overflow-hidden rounded-2xl">
           <Image
             src="/hero-airport-transfer.webp"
-            alt="Chauffeur loading luggage beside an airport transfer car"
+            alt="ONE Airport Taxi chauffeur loading luggage into an airport transfer car"
             fill
             className="object-cover"
             sizes="(max-width: 1024px) 100vw, 55vw"

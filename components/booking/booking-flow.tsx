@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { TimePicker } from "@/components/ui/time-picker"
-import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, formatCurrency, maxBags, seatCount } from "@/lib/fleet"
+import { applyPromotion, computeDiscount, computeFare, congestionChargeFor, formatCurrency, maxBags, seatCount, vehicleImageAlt } from "@/lib/fleet"
 import { createBooking, createReturnBooking, getDistanceQuote, getSignedInCustomer, previewPromoCode } from "@/lib/actions"
 import { DestinationPicker, type PlaceSelection } from "@/components/destination-picker"
 import { RouteCard } from "@/components/route-search"
@@ -584,7 +584,7 @@ function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, 
           className={cn("animate-card-in flex w-full items-center gap-3 rounded-xl border bg-card p-2.5 text-left", selected ? "border-primary" : "border-border")}
           style={{ borderWidth: selected ? "1.5px" : "1px", boxShadow: selected ? "0 0 0 3px oklch(0.48 0.16 256 / 0.12)" : undefined, animationDelay: `${index * 60}ms` }}>
           <span className="relative flex size-[58px] w-21 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary">
-            <Image src={item.image || "/placeholder.svg"} alt={item.name} width={76} height={52} className="h-[52px] w-[76px] object-contain" />
+            <Image src={item.image || "/placeholder.svg"} alt={vehicleImageAlt(item)} width={76} height={52} className="h-[52px] w-[76px] object-contain" />
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="truncate text-[15px] font-semibold tracking-[-0.005em]">{item.name}</span>
@@ -615,7 +615,7 @@ function VehicleStep({ vehicleId, setVehicleId, distanceMiles, durationMinutes, 
           className={cn("animate-card-in overflow-hidden rounded-2xl border bg-card text-left", selected ? "border-primary" : "border-border")}
           style={{ borderWidth: selected ? "1.5px" : "1px", boxShadow: selected ? "0 0 0 3px oklch(0.48 0.16 256 / 0.12), 0 6px 16px oklch(0.48 0.16 256 / 0.14)" : "0 1px 2px oklch(0.21 0.03 256 / 0.04)", animationDelay: `${index * 150}ms` }}>
           <div className="relative aspect-[4/3] bg-secondary">
-            <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-contain p-1.5" sizes="(max-width: 640px) 100vw, 320px" />
+            <Image src={item.image || "/placeholder.svg"} alt={vehicleImageAlt(item)} fill className="object-contain p-1.5" sizes="(max-width: 640px) 100vw, 320px" />
             {selected && <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-primary shadow-sm"><Check className="size-3.5 text-primary-foreground" strokeWidth={3} /></span>}
           </div>
           <div className="p-4"><h3 className="font-semibold">{item.name}</h3><div className="mt-1 flex gap-3 text-xs text-muted-foreground"><span className="flex items-center gap-1"><Users className="size-3.5" />{item.capacity}</span><span className="flex items-center gap-1"><Briefcase className="size-3.5" />{item.luggage}</span>{item.handLuggage ? <span className="flex items-center gap-1" title="Hand bags"><Backpack className="size-3.5" />{item.handLuggage}</span> : null}</div><div className="my-3 border-t border-border" /><div className="flex items-baseline gap-1.5">{promotion.active && <span className="text-sm text-muted-foreground line-through">{formatCurrency(original)}</span>}<span className={cn("font-semibold", promotion.active && "text-primary")}>{quoted ? formatCurrency(price) : `from ${formatCurrency(price)}`}</span></div>{promotion.active && <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{promotion.discountPercent}% off</span>}</div>

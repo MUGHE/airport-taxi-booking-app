@@ -204,7 +204,7 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
           <CardContent className="space-y-3">
             {form.featuredImageUrl
               // eslint-disable-next-line @next/next/no-img-element -- admin preview of an uploaded image
-              ? <img src={form.featuredImageUrl} alt="" className="aspect-[16/9] w-full rounded-md object-cover" />
+              ? <img src={form.featuredImageUrl} alt={form.featuredImageAlt || "Featured image preview"} className="aspect-[16/9] w-full rounded-md object-cover" />
               : <div className="grid aspect-[16/9] place-items-center rounded-md border border-dashed text-xs text-muted-foreground">No image yet</div>}
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => imageInput.current?.click()}>{uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}{form.featuredImageUrl ? "Replace" : "Upload"}</Button>

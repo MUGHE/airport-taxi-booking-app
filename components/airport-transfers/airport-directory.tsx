@@ -4,7 +4,7 @@ import Link from "next/link"
 import { ArrowRight, PlaneTakeoff } from "lucide-react"
 import { useMemo, useState } from "react"
 import type { AirportDirectoryEntry } from "@/lib/airport-directory"
-import { AIRPORT_IMAGES } from "@/lib/airport-images"
+import { AIRPORT_IMAGES, airportImageAlt } from "@/lib/airport-images"
 
 function matchesSearch(airport: AirportDirectoryEntry, query: string) {
   const searchable = `${airport.displayName} ${airport.iataCode} ${airport.serviceArea}`.toLowerCase()
@@ -50,7 +50,7 @@ export function AirportDirectory({ airports }: { airports: AirportDirectoryEntry
               <div className="relative aspect-[16/9] overflow-hidden">
                 <img
                   src={AIRPORT_IMAGES[airport.slug] ?? "/placeholder.svg"}
-                  alt={`${airport.displayName} airport transfer service`}
+                  alt={airportImageAlt(airport.displayName, airport.iataCode)}
                   className="size-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 group-focus-visible:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/65 via-transparent to-foreground/10" />
