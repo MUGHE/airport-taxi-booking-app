@@ -228,7 +228,10 @@ export function BlogPostEditor({ post: initialPost, categories: initialCategorie
               <option value="">No category</option>
               {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
             </select>
-            <Button type="button" variant="ghost" size="sm" onClick={addCategory}>+ New category</Button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={addCategory}>+ New category</Button>
+              <Link href="/admin/blog#categories" className="text-xs text-muted-foreground underline-offset-4 hover:underline">Manage categories</Link>
+            </div>
           </CardContent>
         </Card>
 
