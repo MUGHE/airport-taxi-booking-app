@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { createDefaultDestinationContent, normalizeDestinationContent, validateDestinationContent } from "@/lib/destination-content"
+import { createDefaultDestinationContent, createDestinationSection, normalizeDestinationContent, validateDestinationContent } from "@/lib/destination-content"
 import { publishedContentFromSnapshot } from "@/lib/destination-pages"
 
 test("a new Airport Page starts with the Who we drive and Places you can book from sections", () => {
@@ -92,12 +92,33 @@ test("card items survive publishing", () => {
   expect(published.sections?.find((section) => section.type === "traveller_types")?.items).toHaveLength(4)
 })
 
-test("a new Airport Page's Airport Guide starts with grouped Plan your journey cards", () => {
-  const guide = createDefaultDestinationContent("Exeter Airport Taxi").sections.find((section) => section.type === "airport_guide")
-  expect(guide?.required).toBe(true)
-  expect(guide?.items?.map((item) => item.group)).toEqual(["Exeter Airport Terminals", "Exeter Airport Terminals", "Getting to Exeter Airport", "Getting to Exeter Airport", "Getting to Exeter Airport"])
-  expect(guide?.items?.map((item) => item.icon)).toEqual(["terminal", "clock", "car", "train", "map_pin"])
-  expect(guide?.items?.at(-1)?.linkLabel).toBe("Get my fixed price")
+test("a new Airport Page starts with Know Before You Land, Departures, Airport Terminal, Getting To and Plan Your Journey", () => {
+  const sections = createDefaultDestinationContent("Exeter Airport Taxi").sections
+  const byType = (type: string) => sections.find((section) => section.type === type)
+  expect(["map", "departures", "airport_guide", "getting_to", "travel_information"].map((type) => byType(type)?.title)).toEqual(["Know Before You Land", "Departures", "Airport Terminal", "Getting To", "Plan Your Journey"])
+
+  const terminal = byType("airport_guide")
+  expect(terminal?.required).toBe(true)
+  expect(terminal?.items?.map((item) => [item.icon, item.group])).toEqual([["terminal", undefined], ["clock", undefined]])
+
+  const gettingTo = byType("getting_to")
+  expect(gettingTo?.required).toBe(false)
+  expect(gettingTo?.items?.map((item) => item.icon)).toEqual(["car", "train", "map_pin"])
+  expect(gettingTo?.items?.at(-1)?.linkLabel).toBe("Get my fixed price")
+
+  const departures = byType("departures")
+  expect(departures?.required).toBe(false)
+  expect(departures?.items?.[0].title).toBe("Exeter Airport Departures Drop-Off")
+  expect(departures?.items?.map((item) => item.linkLabel)).toEqual(["Book a drop-off", "Book an early transfer", "Book a group transfer"])
+})
+
+test("Departures and Getting To sections added later name the airport, and keep their cards when published", () => {
+  const departures = createDestinationSection("departures", "departures-1", "airport", "Bristol Airport Taxi")
+  expect(departures.items?.[0].title).toBe("Bristol Airport Departures Drop-Off")
+  const draft = { ...createDefaultDestinationContent("Exeter Airport Taxi") }
+  const published = publishedContentFromSnapshot({ h1: "Exeter Airport Taxi", content: draft })
+  expect(published.sections?.find((section) => section.type === "departures")?.items).toHaveLength(3)
+  expect(published.sections?.find((section) => section.type === "getting_to")?.items).toHaveLength(3)
 })
 
 test("an older Airport Guide without cards keeps showing nothing, and Place Pages get no guide cards", () => {
@@ -116,7 +137,7 @@ test("guide card groups and new icons survive normalizing and publishing", () =>
   expect(items[1].icon).toBe("")
 
   const published = publishedContentFromSnapshot({ h1: "Exeter Airport Taxi", content: createDefaultDestinationContent("Exeter Airport Taxi") })
-  expect(published.sections?.find((section) => section.type === "airport_guide")?.items?.[2].group).toBe("Getting to Exeter Airport")
+  expect(published.sections?.find((section) => section.type === "airport_guide")?.items?.[0].icon).toBe("terminal")
 })
 
 test("a new Airport Page starts with Travel information cards that have no bullet points yet", () => {

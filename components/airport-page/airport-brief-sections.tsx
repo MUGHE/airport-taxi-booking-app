@@ -97,14 +97,14 @@ function CardGrid({ page, cards, columns, className = "airport-link-card" }: { p
   )
 }
 
-export type GuideContent = AirportBrief["guide"] & { body?: React.ReactNode }
+export type GuideContent = AirportBrief["guide"] & { body?: React.ReactNode; eyebrow?: string; id?: string }
 
-/** "Plan your journey": used by the briefs and by the CMS Airport Guide cards. */
+/** "Plan your journey": used by the briefs, and by the CMS Airport Terminal and Getting To cards. */
 export function GuideSection({ page, guide }: { page: AirportPagePresentation; guide: GuideContent }) {
   return (
-    <section id={BRIEF_GUIDE_ID} className="airport-travel-info" data-preview-section="travel_information">
+    <section id={guide.id ?? BRIEF_GUIDE_ID} className="airport-travel-info" data-preview-section="travel_information">
       <div className="airport-container">
-        <SectionHeading eyebrow="Plan your journey" title={guide.heading} paragraphs={guide.paragraphs} body={guide.body} />
+        <SectionHeading eyebrow={guide.eyebrow ?? "Plan your journey"} title={guide.heading} paragraphs={guide.paragraphs} body={guide.body} />
         {guide.groups.map((group, index) => (
           <div key={`${index}-${group.title}`}>
             {group.title && <h3 className="airport-card-group-title">{group.title}</h3>}
@@ -121,11 +121,18 @@ export function BriefGuideSection({ page, brief }: { page: AirportPagePresentati
 }
 
 export function BriefDeparturesSection({ page, brief }: { page: AirportPagePresentation; brief: AirportBrief }) {
-  const { eyebrow, heading, paragraphs, cards } = brief.departures
+  return <DeparturesSection page={page} departures={brief.departures} />
+}
+
+export type DeparturesContent = AirportBrief["departures"] & { body?: React.ReactNode }
+
+/** Drop-off and departure cards: used by the briefs and by the CMS Departures section. */
+export function DeparturesSection({ page, departures }: { page: AirportPagePresentation; departures: DeparturesContent }) {
+  const { eyebrow, heading, paragraphs, body, cards } = departures
   return (
     <section className="airport-comfort" data-preview-section="departures">
       <div className="airport-container">
-        <SectionHeading eyebrow={eyebrow} title={heading} paragraphs={paragraphs} />
+        <SectionHeading eyebrow={eyebrow} title={heading} paragraphs={paragraphs} body={body} />
         <CardGrid page={page} cards={cards} columns={cards.length === 4 ? 4 : 3} />
       </div>
     </section>
