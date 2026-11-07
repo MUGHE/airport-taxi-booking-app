@@ -834,7 +834,7 @@ export function AirportPageRenderer({ page, canonicalPath, showFooter = true, go
       <main className="flex-1">
         {page.heroImage ? (
           <section className="airport-hero">
-            <div className="airport-hero-image"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} sizes="100vw" priority /></div>
+            <div className="airport-hero-image"><ResilientImage className="size-full object-cover" src={page.heroImage.secureUrl} alt={page.heroImage.altText} sizes="(max-width: 639px) 75vw, 100vw" priority overlay /></div>
             <div className="airport-hero-shade" />
             <div className="airport-container airport-hero-content">
               <AirportHeroCopy page={page} canonicalPath={canonicalPath} googleRating={googleRating} />
