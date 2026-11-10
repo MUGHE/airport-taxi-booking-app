@@ -14,9 +14,11 @@ import './globals.css'
 import 'react-toastify/dist/ReactToastify.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
+// Only booking references and codes use the mono font, so it isn't preloaded on every page.
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  preload: false,
 })
 
 const SITE_TITLE = 'London Airport Transfers at Fixed Prices | ONE Airport Taxi'
@@ -78,15 +80,17 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} bg-background`}
     >
       <head>
-        {/* Google tag (gtag.js), in <head> as Google asks (Search Console verification looks for it here).
-            The library loads async, so it never blocks the page from rendering. */}
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+        {/* Google tag (gtag.js). The page view is queued in dataLayer straight away, and the ~200 KB
+            library loads once the page has finished loading, so on phones it doesn't compete with the
+            hero image and page scripts. Search Console is verified by the meta tag above, not this tag. */}
         <script
           id="google-analytics"
           dangerouslySetInnerHTML={{ __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '${GA_MEASUREMENT_ID}');` }}
+gtag('config', '${GA_MEASUREMENT_ID}');
+(function(){function load(){var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}';document.head.appendChild(s)}
+if(document.readyState==='complete')setTimeout(load,0);else window.addEventListener('load',function(){setTimeout(load,0)})})();` }}
         />
       </head>
       <body className="font-sans antialiased">

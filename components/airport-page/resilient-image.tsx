@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from "react"
 import { cloudinaryDeliveryUrl } from "@/lib/cloudinary-image-url"
 
 // Cloudinary sends a resized WebP/AVIF for each width instead of the full-size upload (often a 2 MB PNG).
-const WIDTHS = [480, 800, 1200, 1600, 2000]
+// 640 fits most phones, so they don't fall through to the 800 version.
+const WIDTHS = [480, 640, 800, 1200, 1600, 2000]
 
-/** `fallbackSrc` is shown if `src` fails (for example a CMS image deleted from Cloudinary); without it, a branded placeholder. */
-export function ResilientImage({ src: primarySrc, alt, className, sizes = "(min-width: 900px) 50vw, 100vw", priority = false, fallbackSrc }: { src: string; alt: string; className?: string; sizes?: string; priority?: boolean; fallbackSrc?: string }) {
+/**
+ * `fallbackSrc` is shown if `src` fails (for example a CMS image deleted from Cloudinary); without it, a branded placeholder.
+ * `overlay` marks a photo shown under a dark overlay (page heroes), which can use a smaller, lower-quality file.
+ */
+export function ResilientImage({ src: primarySrc, alt, className, sizes = "(min-width: 900px) 50vw, 100vw", priority = false, overlay = false, fallbackSrc }: { src: string; alt: string; className?: string; sizes?: string; priority?: boolean; overlay?: boolean; fallbackSrc?: string }) {
   const [attempt, setAttempt] = useState(0)
   const src = attempt === 1 && fallbackSrc ? fallbackSrc : primarySrc
   const failed = attempt >= (fallbackSrc && fallbackSrc !== primarySrc ? 2 : 1)
@@ -25,13 +29,13 @@ export function ResilientImage({ src: primarySrc, alt, className, sizes = "(min-
   }
 
   const isCloudinary = src.includes("res.cloudinary.com") && src.includes("/upload/")
-  const srcSet = isCloudinary ? WIDTHS.map((width) => `${cloudinaryDeliveryUrl(src, width)} ${width}w`).join(", ") : undefined
+  const srcSet = isCloudinary ? WIDTHS.map((width) => `${cloudinaryDeliveryUrl(src, width, overlay ? "eco" : "auto")} ${width}w`).join(", ") : undefined
   return (
     <img
       key={src}
       ref={imgRef}
       className={className}
-      src={isCloudinary ? cloudinaryDeliveryUrl(src, 1200) : src}
+      src={isCloudinary ? cloudinaryDeliveryUrl(src, 1200, overlay ? "eco" : "auto") : src}
       srcSet={srcSet}
       sizes={srcSet ? sizes : undefined}
       alt={alt}

@@ -891,6 +891,8 @@
   .landing-airport-card.is-compact .landing-arrow-link { margin-top: .85rem; }
   .landing-review-grid { grid-template-columns: 1.2fr .8fr; }
   .landing-faq-grid { grid-template-columns: .72fr 1.28fr; }
+  /* The heading stays in view beside the long question list, and scrolls away with the section's end. */
+  .landing-faq-heading { position: sticky; top: 6.5rem; }
   .landing-final-cta { grid-template-columns: 1.35fr .65fr; }
 }
 @media (max-width: 639px) {
@@ -1284,6 +1286,13 @@ footer.site-footer h2 { max-width: none; margin: 0; font-size: .75rem; font-weig
 /* Homepage H1: one sentence per line from tablet width up (on phones the sentences flow).
    The subheading balances into even lines. */
 .landing-hero-intro { text-wrap: balance; }
+/* Phones: one line each too, sized so the longest line ("Heathrow & London", about 8.6em in Geist)
+   fits the container. The heading is then three lines in Geist and in its fallback font, so it doesn't
+   grow and push the quote form down when the web font arrives (a layout shift). */
+@media (max-width: 639px) {
+  .landing-hero-copy h1:has(.landing-hero-line) { max-width: none; font-size: min(calc((100vw - 1.5rem) / 8.9), 3.2rem); }
+  .landing-hero-line { display: block; }
+}
 @media (min-width: 640px) {
   .landing-hero-copy h1 { max-width: none; font-size: clamp(2.5rem, 3.5vw, 3.2rem); line-height: 1.06; }
   .landing-hero-intro { max-width: 34rem; }
