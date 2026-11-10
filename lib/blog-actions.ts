@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath, updateTag } from "next/cache"
-import { BLOG_TAG, createBlogVideoUpload, createCategory, deletePost, getPostById, savePost, setPostStatus, uploadBlogImage } from "@/lib/blog"
+import { BLOG_TAG, createBlogVideoUpload, createCategory, deleteCategory, deletePost, getPostById, savePost, setPostStatus, uploadBlogImage } from "@/lib/blog"
 import { blogCategoryInputSchema, blogPostInputSchema, publishProblems, sanitizeBlogDocument, type BlogCategory, type BlogPost } from "@/lib/blog-schema"
 import { getAdminUser, isAdminAuthenticated } from "@/lib/session"
 
@@ -99,6 +99,16 @@ export async function createBlogCategoryAction(name: string): Promise<{ ok: true
     const result = await createCategory(parsed.data.name)
     if (result.ok) refreshBlog()
     return result
+  })
+}
+
+export async function deleteBlogCategoryAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  return guarded("delete category", "The category could not be deleted. Please try again.", async () => {
+    if (!(await isAdminAuthenticated("content"))) return NOT_AUTHORIZED
+    if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return { ok: false as const, error: "Category not found." }
+    const result = await deleteCategory(id)
+    if (result.ok) refreshBlog()
+    return result.ok ? { ok: true as const } : result
   })
 }
 

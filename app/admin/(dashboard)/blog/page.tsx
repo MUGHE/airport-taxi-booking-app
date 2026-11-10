@@ -4,7 +4,8 @@ import { Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { listAllPosts } from "@/lib/blog"
+import { BlogCategoriesManager } from "@/components/admin/blog-categories-manager"
+import { listAllCategories, listAllPosts } from "@/lib/blog"
 import { requireAdminSection } from "@/lib/session"
 
 export const metadata: Metadata = { title: "Blog" }
@@ -16,7 +17,8 @@ function date(value: string | null) {
 
 export default async function AdminBlogPage() {
   await requireAdminSection("content", "/admin/blog")
-  const posts = await listAllPosts()
+  const [posts, categories] = await Promise.all([listAllPosts(), listAllCategories()])
+  const postCounts = Object.fromEntries(categories.map((category) => [category.id, posts.filter((post) => post.categoryId === category.id).length]))
 
   return (
     <div>
@@ -27,6 +29,8 @@ export default async function AdminBlogPage() {
         </div>
         <Button nativeButton={false} render={<Link href="/admin/blog/new" />}><Plus className="size-4" />New post</Button>
       </div>
+
+      <BlogCategoriesManager categories={categories} postCounts={postCounts} />
 
       {posts.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center">

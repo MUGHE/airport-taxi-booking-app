@@ -115,6 +115,9 @@ export async function listRelatedPosts(post: BlogPost, limit = 3): Promise<BlogP
 
 export const listCategories = unstable_cache(loadCategories, ["blog-categories"], { revalidate: 300, tags: [BLOG_TAG] })
 
+/** Uncached, for the admin: a category added or deleted shows straight away. */
+export const listAllCategories = loadCategories
+
 async function loadCategories(): Promise<BlogCategory[]> {
   const supabase = getSupabase()
   if (!supabase) return []
@@ -199,6 +202,14 @@ export async function createCategory(name: string): Promise<Result<{ category: B
   const { data, error } = await supabase.from("blog_categories").insert({ name, slug }).select("id, name, slug").single()
   if (error) return { ok: false, error: error.code === "23505" ? "That category already exists." : "The category could not be saved." }
   return { ok: true, category: data as BlogCategory }
+}
+
+/** Posts in a deleted category keep their place on the blog, uncategorised (the foreign key sets their category to null). */
+export async function deleteCategory(id: string): Promise<Result<object>> {
+  const supabase = getSupabase()
+  if (!supabase) return { ok: false, error: NOT_CONNECTED }
+  const { error } = await supabase.from("blog_categories").delete().eq("id", id)
+  return error ? { ok: false, error: "The category could not be deleted. Please try again." } : { ok: true }
 }
 
 /** Stores an uploaded image in the public blog bucket and returns its public URL. */
