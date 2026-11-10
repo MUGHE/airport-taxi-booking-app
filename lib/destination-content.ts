@@ -10,6 +10,8 @@ export const DESTINATION_SECTION_TYPES = [
   "airport_routes",
   "place_coverage",
   "airport_guide",
+  "getting_to",
+  "departures",
   "city_routes",
   "place_links",
   "traveller_types",
@@ -116,15 +118,17 @@ export const SECTION_LABELS: Record<DestinationSectionType, string> = {
   fleet_pricing: "Fleet & pricing",
   airport_routes: "Airport routes",
   place_coverage: "Coverage & pickup information",
-  airport_guide: "Airport Guide",
+  airport_guide: "Airport Terminal",
+  getting_to: "Getting To",
+  departures: "Departures",
   city_routes: "Popular city routes",
   place_links: "Places you can book from",
   traveller_types: "Who we drive",
   ferry_cruise: "Ferry & cruise information",
-  travel_information: "Travel information",
+  travel_information: "Plan Your Journey",
   faq: "Airport FAQs",
   video: "Approved video",
-  map: "Airport map",
+  map: "Know Before You Land",
   related_destinations: "Related Routes",
 }
 
@@ -162,16 +166,26 @@ const DEFAULT_PICKUP_STEPS: Partial<DestinationSectionItem>[] = [
   { title: "Head to your destination", text: "From there it’s a straight run to your home, hotel, office or wherever else in the UK you’re heading." },
 ]
 
-/** Starting cards for the Airport Guide ("Plan your journey") on a new Airport Page; editors adjust them for each airport. */
-function defaultGuideCards(airport: string): Partial<DestinationSectionItem>[] {
-  const terminals = `${airport} Terminals`
-  const gettingThere = `Getting to ${airport}`
+// Starting cards for the Airport Terminal section (type `airport_guide`) on a new Airport Page. The
+// section heading names the airport, so the cards need no group heading. Editors adjust them for each airport.
+const DEFAULT_TERMINAL_CARDS: Partial<DestinationSectionItem>[] = [
+  { icon: "terminal", title: "Check your terminal", text: "Confirm which terminal your flight uses before you travel, and choose it when you book so your driver goes straight to the right place." },
+  { icon: "clock", title: "Before you travel", text: "Confirm your flight time with your airline before arranging your taxi, and allow enough time to reach the airport, check in and clear security." },
+]
+
+// Starting cards for the Getting To section on a new Airport Page.
+const DEFAULT_GETTING_TO_CARDS: Partial<DestinationSectionItem>[] = [
+  { icon: "car", title: "By road", text: "A pre-booked taxi takes the stress out of parking, traffic and heavy luggage, with the journey planned around your flight time." },
+  { icon: "train", title: "By public transport", text: "Trains and buses can work well if you’re travelling light. Check timetables and connections before you travel, especially for early or late flights." },
+  { icon: "map_pin", title: "Door-to-door by taxi", text: "A private taxi earns its keep when you’re carrying several suitcases, travelling with children or moving as a group. With One Airport Taxi, your journey runs door-to-door, from your home, hotel or office straight to your terminal.", linkLabel: "Get my fixed price" },
+]
+
+// Starting cards for the Departures section on a new Airport Page. Each button books a journey to the airport.
+function defaultDepartureCards(airport: string): Partial<DestinationSectionItem>[] {
   return [
-    { group: terminals, icon: "terminal", title: "Check your terminal", text: "Confirm which terminal your flight uses before you travel, and choose it when you book so your driver goes straight to the right place." },
-    { group: terminals, icon: "clock", title: "Before you travel", text: "Confirm your flight time with your airline before arranging your taxi, and allow enough time to reach the airport, check in and clear security." },
-    { group: gettingThere, icon: "car", title: "By road", text: "A pre-booked taxi takes the stress out of parking, traffic and heavy luggage, with the journey planned around your flight time." },
-    { group: gettingThere, icon: "train", title: "By public transport", text: "Trains and buses can work well if you’re travelling light. Check timetables and connections before you travel, especially for early or late flights." },
-    { group: gettingThere, icon: "map_pin", title: "Door-to-door by taxi", text: "A private taxi earns its keep when you’re carrying several suitcases, travelling with children or moving as a group. With One Airport Taxi, your journey runs door-to-door, from your home, hotel or office straight to your terminal.", linkLabel: "Get my fixed price" },
+    { icon: "terminal", title: `${airport} Departures Drop-Off`, text: "Your driver takes you straight to the terminal drop-off area, so you can head inside and check in without any detours.", linkLabel: "Book a drop-off" },
+    { icon: "clock", title: "Early Morning and Late Night Flights", text: "Early departures can mean leaving home before the trains and buses start. With a pre-booked taxi, your driver is outside at the agreed time, whatever the hour.", linkLabel: "Book an early transfer" },
+    { icon: "group", title: "Group and Family Departures", text: "Travelling with the whole family or a group of friends? Book an MPV or 8-seater minibus to keep everyone together, with space for all your luggage.", linkLabel: "Book a group transfer" },
   ]
 }
 
@@ -194,7 +208,9 @@ function defaultSectionContent(type: DestinationSectionType, pageType: Destinati
   // Airport Pages show ports as cards; a Ferry & cruise section without `items` keeps the older text layout.
   if (type === "ferry_cruise" && pageType === "airport") return { body: [], fields: { note: DEFAULT_PORT_NOTE }, items: [] }
   // Guide cards replace the brief's "Plan your journey" section; an Airport Guide without `items` shows nothing, as before.
-  if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" }, ...(pageType === "airport" ? { items: defaultGuideCards(airport).map((card, index) => createSectionItem({ ...card, id: `guide-card-${index + 1}` })) } : {}) }
+  if (type === "airport_guide") return { body: [], fields: { overview: "", terminals: "", pickup: "", meetingPoints: "", waiting: "", accessibility: "", hotels: "", food: "", officialLink: "", sourceNotes: "" }, ...(pageType === "airport" ? { items: DEFAULT_TERMINAL_CARDS.map((card, index) => createSectionItem({ ...card, id: `guide-card-${index + 1}` })) } : {}) }
+  if (type === "getting_to") return { body: [], fields: {}, items: pageType === "airport" ? DEFAULT_GETTING_TO_CARDS.map((card, index) => createSectionItem({ ...card, id: `getting-to-card-${index + 1}` })) : [] }
+  if (type === "departures") return { body: [], fields: {}, items: pageType === "airport" ? defaultDepartureCards(airport).map((card, index) => createSectionItem({ ...card, id: `departure-card-${index + 1}` })) : [] }
   if (type === "traveller_types") return { body: makeBlock("Different trips need different things. We offer vehicle options and pre-booked journeys to cover them all."), fields: {}, items: DEFAULT_TRAVELLER_CARDS.map((card, index) => createSectionItem({ ...card, id: `traveller-${index + 1}` })) }
   // Airport Pages show travel information as cards of bullet points; one without `items` keeps the older text layout.
   if (type === "travel_information" && pageType === "airport") return { body: [], fields: { closing: "" }, items: DEFAULT_TRAVEL_CARDS.map((card, index) => createSectionItem({ ...card, id: `travel-card-${index + 1}` })) }
@@ -218,7 +234,7 @@ export function createDestinationSection(type: DestinationSectionType, id = `${t
 }
 
 /** Optional sections every new Airport Page starts with, after the required ones. */
-const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["travel_information", "traveller_types", "place_links", "ferry_cruise"]
+const AIRPORT_STARTER_SECTION_TYPES: DestinationSectionType[] = ["departures", "getting_to", "travel_information", "traveller_types", "place_links", "ferry_cruise"]
 
 export function createDefaultDestinationContent(heading: string, pageType: DestinationPageType = "airport"): DestinationContentDocument {
   const policy = getDestinationPagePolicy(pageType)
@@ -227,7 +243,7 @@ export function createDefaultDestinationContent(heading: string, pageType: Desti
     hero: { heading, body: [] },
     sections: [
       ...policy.content.requiredSectionTypes.map((type) => createDestinationSection(type, `${type}-required`, pageType, heading)),
-      ...(pageType === "airport" ? AIRPORT_STARTER_SECTION_TYPES.map((type) => createDestinationSection(type, `${type}-starter`, pageType)) : []),
+      ...(pageType === "airport" ? AIRPORT_STARTER_SECTION_TYPES.map((type) => createDestinationSection(type, `${type}-starter`, pageType, heading)) : []),
     ],
     finalCta: { heading: "Ready to book your airport transfer?", body: makeBlock("Get a fixed price for your journey in minutes.") },
     serviceFacts: [], globalFaqs: [], airportFaqs: [], placeFaqs: [], reviews: [],
