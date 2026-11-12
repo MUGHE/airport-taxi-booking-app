@@ -28,7 +28,7 @@ create table if not exists public.route_pages (
 );
 
 -- One page per pair, whichever way round it was entered.
-create unique index if not exists route_pages_pair_idx on public.route_pages (least(endpoint_a_id, endpoint_b_id), greatest(endpoint_a_id, endpoint_b_id));
+create unique index if not exists route_pages_pair_idx on public.route_pages ((least(endpoint_a_id, endpoint_b_id)), (greatest(endpoint_a_id, endpoint_b_id)));
 create index if not exists route_pages_status_idx on public.route_pages (status);
 
 -- A route URL must never also be the other way round of a different route.
