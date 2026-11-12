@@ -3,12 +3,14 @@ import { SITE_URL } from "@/lib/site"
 import { listPublishedAirportDirectory } from "@/lib/airport-directory"
 import { listPublishedPlaceDirectory } from "@/lib/place-directory"
 import { listPublishedPostSlugs } from "@/lib/blog"
+import { listPublishedRoutePages } from "@/lib/route-pages"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date()
   const airports = await listPublishedAirportDirectory()
   const destinations = await listPublishedPlaceDirectory()
   const posts = await listPublishedPostSlugs()
+  const routes = await listPublishedRoutePages()
 
   return [
     { url: SITE_URL, lastModified, changeFrequency: "weekly", priority: 1 },
@@ -27,6 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.7,
+    })),
+    ...routes.map((route) => ({
+      url: `${SITE_URL}/${route.slug}`,
+      lastModified: new Date(route.updatedAt),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
     { url: `${SITE_URL}/blog`, lastModified, changeFrequency: "weekly", priority: 0.7 },
     ...posts.map((post) => ({
