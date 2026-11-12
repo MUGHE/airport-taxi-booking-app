@@ -1,13 +1,12 @@
 import { unstable_cache } from "next/cache"
 import { createClient } from "@supabase/supabase-js"
-import { computeFare } from "@/lib/fleet"
+import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { calculateDrivingRoute } from "@/lib/google-distance"
 import { createRouteBookingLinks } from "@/lib/airport-page-data"
-import { listVehiclesWithPricing } from "@/lib/store"
 import {
   defaultDirectionText, defaultRouteFaqs, defaultRouteHeading, defaultRouteIntro, defaultRouteSeoDescription, defaultRouteSeoTitle,
   reverseRouteSlug, slugifyRoutePart,
-  type RouteCustomText, type RouteEndpoint, type RouteFaq, type RouteStatus,
+  type RouteCustomText, type RouteEndpoint, type RouteFaq, type RoutePrice, type RouteStatus,
 } from "@/lib/route-page-content"
 
 // Route pages storage. Like the rest of the site this talks to Supabase with the service role key,
@@ -21,11 +20,11 @@ type Result<T> = ({ ok: true } & T) | { ok: false; error: string }
 type RouteRow = {
   id: string; endpoint_a_id: string; endpoint_b_id: string; slug: string; reverse_slug: string
   heading: string; intro: string; a_to_b_text: string; b_to_a_text: string; faqs: unknown
-  seo_title: string; seo_description: string; distance_miles: number | string | null; duration_minutes: number | null
+  seo_title: string; seo_description: string; prices: unknown; distance_miles: number | string | null; duration_minutes: number | null
   status: RouteStatus; published_at: string | null; created_at: string; updated_at: string
 }
 
-const ROUTE_COLUMNS = "id, endpoint_a_id, endpoint_b_id, slug, reverse_slug, heading, intro, a_to_b_text, b_to_a_text, faqs, seo_title, seo_description, distance_miles, duration_minutes, status, published_at, created_at, updated_at"
+const ROUTE_COLUMNS = "id, endpoint_a_id, endpoint_b_id, slug, reverse_slug, heading, intro, a_to_b_text, b_to_a_text, faqs, seo_title, seo_description, prices, distance_miles, duration_minutes, status, published_at, created_at, updated_at"
 
 export type AdminRoutePage = {
   id: string
@@ -34,6 +33,7 @@ export type AdminRoutePage = {
   slug: string
   reverseSlug: string
   text: RouteCustomText
+  prices: RoutePrice[]
   distanceMiles: number | null
   durationMinutes: number | null
   status: RouteStatus
@@ -47,6 +47,7 @@ export type RoutePageInput = {
   endpointBId: string
   slug: string
   text: RouteCustomText
+  prices: RoutePrice[]
   distanceMiles: number | null
   durationMinutes: number | null
 }
@@ -64,7 +65,8 @@ export type RoutePagePresentation = {
   distanceMiles: number | null
   durationMinutes: number | null
   fromFare: number | null
-  fares: { id: string; name: string; image: string; capacity: number; luggage: number; fare: number }[]
+  /** The admin's price quotes, in the order they entered them. */
+  fares: { key: string; name: string; note: string; image: string | null; capacity: number | null; luggage: number | null; fare: number }[]
   faqs: RouteFaq[]
   seoTitle: string
   seoDescription: string
@@ -91,6 +93,16 @@ function readFaqs(value: unknown): RouteFaq[] {
   return value.flatMap((item) => item && typeof item === "object" && typeof item.question === "string" && typeof item.answer === "string" ? [{ question: item.question, answer: item.answer }] : [])
 }
 
+function readPrices(value: unknown): RoutePrice[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object" || typeof item.label !== "string") return []
+    const price = Number(item.price)
+    if (!Number.isFinite(price)) return []
+    return [{ vehicleId: typeof item.vehicleId === "string" ? item.vehicleId : "", label: item.label, price, note: typeof item.note === "string" ? item.note : "" }]
+  })
+}
+
 function toAdminRoute(row: RouteRow): AdminRoutePage {
   return {
     id: row.id,
@@ -99,6 +111,7 @@ function toAdminRoute(row: RouteRow): AdminRoutePage {
     slug: row.slug,
     reverseSlug: row.reverse_slug,
     text: { heading: row.heading, intro: row.intro, aToBText: row.a_to_b_text, bToAText: row.b_to_a_text, seoTitle: row.seo_title, seoDescription: row.seo_description, faqs: readFaqs(row.faqs) },
+    prices: readPrices(row.prices),
     distanceMiles: row.distance_miles == null ? null : Number(row.distance_miles),
     durationMinutes: row.duration_minutes,
     status: row.status,
@@ -213,6 +226,9 @@ export async function saveRoutePage(input: RoutePageInput): Promise<Result<{ rou
     heading: input.text.heading.trim(), intro: input.text.intro.trim(), a_to_b_text: input.text.aToBText.trim(), b_to_a_text: input.text.bToAText.trim(),
     faqs: input.text.faqs.map((faq) => ({ question: faq.question.trim(), answer: faq.answer.trim() })).filter((faq) => faq.question && faq.answer),
     seo_title: input.text.seoTitle.trim(), seo_description: input.text.seoDescription.trim(),
+    prices: input.prices
+      .map((item) => ({ vehicleId: VEHICLE_CLASSES.some((vehicle) => vehicle.id === item.vehicleId) ? item.vehicleId : "", label: item.label.trim(), price: Math.round(item.price * 100) / 100, note: item.note.trim() }))
+      .filter((item) => item.label && item.price > 0),
     distance_miles: distanceMiles, duration_minutes: durationMinutes,
   }
   const { data, error } = input.id
@@ -281,16 +297,18 @@ async function loadPublicRoutePage(slug: string): Promise<Exclude<PublicRoutePag
     const route = toAdminRoute(data as RouteRow)
     if (route.slug !== slug) return { status: "redirect", slug: route.slug }
 
-    const [endpoints, vehicles, related] = await Promise.all([listRouteEndpoints(), listVehiclesWithPricing(), listPublishedRoutePages()])
+    const [endpoints, related] = await Promise.all([listRouteEndpoints(), listPublishedRoutePages()])
     const a = endpoints.find((endpoint) => endpoint.id === route.endpointAId)
     const b = endpoints.find((endpoint) => endpoint.id === route.endpointBId)
     // A route only shows while both of its places are published.
     if (!a || !b) return { status: "missing" }
 
-    const fares = route.distanceMiles != null && route.durationMinutes != null
-      ? vehicles.map((vehicle) => ({ id: vehicle.id, name: vehicle.name, image: vehicle.image, capacity: vehicle.capacity, luggage: vehicle.luggage, fare: computeFare(vehicle, route.distanceMiles as number, route.durationMinutes as number).fare })).sort((left, right) => left.fare - right.fare)
-      : []
-    const fromFare = fares[0]?.fare ?? null
+    // Prices are exactly what the admin typed; with none, the page shows no prices at all.
+    const fares = route.prices.map((item, index) => {
+      const vehicle = VEHICLE_CLASSES.find((candidate) => candidate.id === item.vehicleId)
+      return { key: `${index}-${item.label}`, name: item.label, note: item.note, image: vehicle?.image ?? null, capacity: vehicle?.capacity ?? null, luggage: vehicle?.luggage ?? null, fare: item.price }
+    })
+    const fromFare = fares.length ? Math.min(...fares.map((fare) => fare.fare)) : null
     const facts = { a, b, distanceMiles: route.distanceMiles, durationMinutes: route.durationMinutes, fromFare }
     const links = createRouteBookingLinks(a.bookingPoint, b.bookingPoint)
     const text = route.text

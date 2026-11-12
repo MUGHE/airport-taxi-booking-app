@@ -1433,6 +1433,7 @@ html:has(.faq-page) { scroll-behavior: smooth; }
 .route-fare-meta { display: flex; gap: 1rem; margin-top: .35rem; color: #617285; font-size: .85rem; }
 .route-fare-meta span { display: inline-flex; gap: .3rem; align-items: center; }
 .route-fare-meta svg { width: .95rem; height: .95rem; }
+.route-fare-note { margin-top: .35rem; color: #617285; font-size: .85rem; line-height: 1.45; }
 .route-fare-price { margin-top: .75rem; font-size: 1.6rem; font-weight: 750; letter-spacing: -.03em; }
 .route-fare-price small { color: #617285; font-size: .8rem; font-weight: 600; letter-spacing: 0; }
 .route-related { padding-block: clamp(4rem, 7vw, 5.5rem); }

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeftRight, ExternalLink, Loader2, Plus, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowLeftRight, ArrowUp, ExternalLink, Loader2, Plus, Trash2 } from "lucide-react"
 import { toast } from "react-toastify"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,16 +11,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { deleteRoutePageAction, saveRoutePageAction, setRoutePageStatusAction } from "@/lib/route-page-actions"
 import {
-  EMPTY_ROUTE_TEXT, ROUTE_FAQ_LIMIT, ROUTE_TEXT_LIMITS,
+  EMPTY_ROUTE_TEXT, ROUTE_FAQ_LIMIT, ROUTE_PRICE_LIMIT, ROUTE_TEXT_LIMITS,
   defaultDirectionText, defaultRouteFaqs, defaultRouteHeading, defaultRouteIntro, defaultRouteSeoDescription, defaultRouteSeoTitle,
   reverseRouteSlug, routeSlug,
   type RouteCustomText, type RouteEndpoint,
 } from "@/lib/route-page-content"
 import type { AdminRoutePage } from "@/lib/route-pages"
 
-type Form = { endpointAId: string; endpointBId: string; slug: string; text: RouteCustomText; distanceMiles: string; durationMinutes: string }
+/** A price row while editing; the price stays text until it is saved. */
+type PriceRow = { vehicleId: string; label: string; price: string; note: string }
+
+type Form = { endpointAId: string; endpointBId: string; slug: string; text: RouteCustomText; prices: PriceRow[]; distanceMiles: string; durationMinutes: string }
 
 function toForm(route?: AdminRoutePage): Form {
   return {
@@ -28,6 +32,7 @@ function toForm(route?: AdminRoutePage): Form {
     endpointBId: route?.endpointBId ?? "",
     slug: route?.slug ?? "",
     text: route?.text ?? EMPTY_ROUTE_TEXT,
+    prices: (route?.prices ?? []).map((item) => ({ vehicleId: item.vehicleId, label: item.label, price: String(item.price), note: item.note })),
     distanceMiles: route?.distanceMiles != null ? String(route.distanceMiles) : "",
     durationMinutes: route?.durationMinutes != null ? String(route.durationMinutes) : "",
   }
@@ -100,6 +105,33 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
     setDirty(true)
   }
 
+  function updatePrices(prices: PriceRow[]) {
+    setForm((current) => ({ ...current, prices }))
+    setErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith("prices"))))
+    setDirty(true)
+  }
+
+  function updatePrice(index: number, change: Partial<PriceRow>) {
+    updatePrices(form.prices.map((item, itemIndex) => itemIndex === index ? { ...item, ...change } : item))
+  }
+
+  function chooseVehicle(index: number, vehicleId: string) {
+    const current = form.prices[index]
+    const previous = VEHICLE_CLASSES.find((vehicle) => vehicle.id === current.vehicleId)
+    const next = VEHICLE_CLASSES.find((vehicle) => vehicle.id === vehicleId)
+    // The name follows the vehicle unless the admin has typed their own.
+    const label = next && (!current.label.trim() || current.label === previous?.name) ? next.name : current.label
+    updatePrice(index, { vehicleId, label })
+  }
+
+  function movePrice(index: number, by: -1 | 1) {
+    const target = index + by
+    if (target < 0 || target >= form.prices.length) return
+    const next = [...form.prices]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    updatePrices(next)
+  }
+
   function save(after?: (saved: AdminRoutePage) => void) {
     startTransition(async () => {
       const result = await saveRoutePageAction({
@@ -108,6 +140,10 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
         endpointBId: form.endpointBId,
         slug: form.slug.trim(),
         text: form.text,
+        // Rows with no name and no price are blank rows; anything else is checked on the server.
+        prices: form.prices
+          .filter((item) => item.label.trim() || item.price.trim())
+          .map((item) => ({ vehicleId: item.vehicleId, label: item.label, price: item.price.trim() ? Number(item.price.replace(/[£,\s]/g, "")) : Number.NaN, note: item.note })),
         distanceMiles: form.distanceMiles.trim() ? Number(form.distanceMiles) : null,
         durationMinutes: form.durationMinutes.trim() ? Number(form.durationMinutes) : null,
       })
@@ -185,7 +221,54 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
             <div className="space-y-1.5"><Label htmlFor="route-distance">Distance (miles)</Label><Input id="route-distance" inputMode="decimal" value={form.distanceMiles} placeholder="Filled from Google Maps" onChange={(event) => { setDirty(true); setForm((current) => ({ ...current, distanceMiles: event.target.value })) }} /><FieldError message={errors.distanceMiles} /></div>
             <div className="space-y-1.5"><Label htmlFor="route-duration">Driving time (minutes)</Label><Input id="route-duration" inputMode="numeric" value={form.durationMinutes} placeholder="Filled from Google Maps" onChange={(event) => { setDirty(true); setForm((current) => ({ ...current, durationMinutes: event.target.value })) }} /><FieldError message={errors.durationMinutes} /></div>
           </div>
-          <p className="text-xs text-muted-foreground">Leave these empty and Google Maps fills them when you save. They set the fares shown on the page.</p>
+          <p className="text-xs text-muted-foreground">Leave these empty and Google Maps fills them when you save. They are shown on the page as the distance and driving time.</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Prices</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">Add a price for each car or quote you want on the page, in the order you want them shown. The same prices are shown for both directions. With no prices, the page shows no prices.</p>
+          {form.prices.map((item, index) => {
+            const label = `Price ${index + 1}`
+            return (
+              <div key={index} className="space-y-3 rounded-lg border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">{label}</p>
+                  <div className="flex gap-1">
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Move ${label} up`} disabled={index === 0} onClick={() => movePrice(index, -1)}><ArrowUp className="size-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Move ${label} down`} disabled={index === form.prices.length - 1} onClick={() => movePrice(index, 1)}><ArrowDown className="size-4" /></Button>
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${label}`} onClick={() => updatePrices(form.prices.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="size-4" /></Button>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_1fr_8rem]">
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`route-price-vehicle-${index}`}>Vehicle (for the photo)</Label>
+                    <select id={`route-price-vehicle-${index}`} className={selectClass} value={item.vehicleId} onChange={(event) => chooseVehicle(index, event.target.value)}>
+                      <option value="">No photo</option>
+                      {VEHICLE_CLASSES.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`route-price-label-${index}`}>Name</Label>
+                    <Input id={`route-price-label-${index}`} value={item.label} maxLength={ROUTE_TEXT_LIMITS.priceLabel} placeholder="e.g. Saloon" onChange={(event) => updatePrice(index, { label: event.target.value })} />
+                    <FieldError message={errors[`prices.${index}.label`]} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`route-price-amount-${index}`}>Price (£)</Label>
+                    <Input id={`route-price-amount-${index}`} inputMode="decimal" value={item.price} placeholder="120" onChange={(event) => updatePrice(index, { price: event.target.value })} />
+                    <FieldError message={errors[`prices.${index}.price`]} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`route-price-note-${index}`}>Note (optional)</Label>
+                  <Input id={`route-price-note-${index}`} value={item.note} maxLength={ROUTE_TEXT_LIMITS.priceNote} placeholder="e.g. Up to 4 passengers, one way" onChange={(event) => updatePrice(index, { note: event.target.value })} />
+                </div>
+              </div>
+            )
+          })}
+          <FieldError message={errors.prices} />
+          <Button type="button" variant="outline" disabled={form.prices.length >= ROUTE_PRICE_LIMIT} onClick={() => updatePrices([...form.prices, { vehicleId: "", label: "", price: "", note: "" }])}><Plus className="size-4" />Add price</Button>
         </CardContent>
       </Card>
 
@@ -227,7 +310,7 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
           {!facts ? <p className="text-sm text-muted-foreground">Choose both places first.</p> : <>
             <OptionalText id="route-seo-title" label="SEO title" value={form.text.seoTitle} max={ROUTE_TEXT_LIMITS.seoTitle} fallback={defaultRouteSeoTitle(facts)} error={errors["text.seoTitle"]} onChange={(value) => updateText("seoTitle", value)} />
             <OptionalText id="route-seo-description" label="SEO description" rows={3} value={form.text.seoDescription} max={ROUTE_TEXT_LIMITS.seoDescription} fallback={defaultRouteSeoDescription(facts)} error={errors["text.seoDescription"]} onChange={(value) => updateText("seoDescription", value)} />
-            <p className="text-xs text-muted-foreground">The default description also names the lowest fare once the page is live.</p>
+            <p className="text-xs text-muted-foreground">The default description also names your lowest price.</p>
           </>}
         </CardContent>
       </Card>
