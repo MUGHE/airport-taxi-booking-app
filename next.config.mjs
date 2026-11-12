@@ -40,7 +40,7 @@ const nextConfig = {
   // root URL stays a real 404, and the internal /route-pages/... address redirects to the public one.
   async rewrites() {
     return {
-      beforeFiles: [{ source: '/:slug([a-z0-9]+(?:-[a-z0-9]+)*-to-[a-z0-9]+(?:-[a-z0-9]+)*-taxi)', destination: '/route-pages/:slug' }],
+      beforeFiles: [{ source: '/:slug([a-z0-9-]+-to-[a-z0-9-]+-taxi)', destination: '/route-pages/:slug' }],
     }
   },
   images: {
