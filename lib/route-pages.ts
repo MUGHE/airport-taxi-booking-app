@@ -192,6 +192,11 @@ export async function saveRoutePage(input: RoutePageInput): Promise<Result<{ rou
 
   const before = input.id ? await getAdminRoutePage(input.id) : null
   if (input.id && !before) return { ok: false, error: "This route page no longer exists." }
+  // Checked first so the message names the real problem; the database enforces it too.
+  const { data: samePair } = await supabase.from("route_pages").select("id")
+    .or(`and(endpoint_a_id.eq.${a.id},endpoint_b_id.eq.${b.id}),and(endpoint_a_id.eq.${b.id},endpoint_b_id.eq.${a.id})`)
+    .neq("id", input.id ?? "00000000-0000-0000-0000-000000000000").limit(1)
+  if (samePair?.length) return { ok: false, error: "There is already a route page for these two places. It covers both directions." }
   // Google fills the distance when the admin leaves it empty or changes the places.
   const endpointsChanged = before ? before.endpointAId !== a.id || before.endpointBId !== b.id : true
   let distanceMiles = input.distanceMiles
