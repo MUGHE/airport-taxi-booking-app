@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils"
 import { COMPANY_ADDRESS, COMPANY_LEGAL_NAME, COMPANY_REGISTRATION_NUMBER, COMPANY_TRADING_NAME } from "@/lib/company"
 import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, SOCIAL_LINKS, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 import { FacebookIcon, InstagramIcon, YouTubeIcon } from "@/components/social-icons"
+import { listPublishedRoutePages } from "@/lib/route-pages"
+
+/** How many route links the footer lists before "View all routes". */
+const FOOTER_ROUTE_LIMIT = 12
 
 const SOCIAL_ICONS = { Facebook: FacebookIcon, Instagram: InstagramIcon, YouTube: YouTubeIcon }
 
@@ -25,7 +29,8 @@ const TRUST_BADGES = [
   { src: "/payments/trustwave.webp", alt: "Trustwave" },
 ]
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const routes = await listPublishedRoutePages().catch(() => [])
   return (
     <footer className="site-footer footer-theme relative overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute -top-40 right-[-10%] size-96 rounded-full bg-primary/12 blur-3xl" />
@@ -82,6 +87,7 @@ export function SiteFooter() {
             { href: "/airport-transfers", label: "Airport Transfers" },
             { href: "/airport-guide", label: "Airport Guide" },
             { href: "/destinations", label: "Destinations" },
+            ...(routes.length ? [{ href: "/routes", label: "Routes" }] : []),
             { href: "/#fleet", label: "Our Fleet" },
             { href: "/track", label: "Track Booking" },
           ]} />
@@ -98,6 +104,19 @@ export function SiteFooter() {
           ]} />
           <FooterCompanyDetails />
         </div>
+
+        {routes.length > 0 && <>
+          <Separator className="bg-border" />
+          <nav aria-labelledby="footer-routes-heading" className="py-8">
+            <h2 id="footer-routes-heading" className="text-xs font-bold uppercase tracking-[.16em] text-foreground">Popular routes</h2>
+            <ul className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+              {routes.slice(0, FOOTER_ROUTE_LIMIT).map((route) => (
+                <li key={route.slug}><Link href={`/${route.slug}`} className="text-sm text-muted-foreground transition-colors hover:text-primary">{route.title}</Link></li>
+              ))}
+            </ul>
+            <Link href="/routes" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">View all routes <ArrowRight aria-hidden="true" className="size-4" /></Link>
+          </nav>
+        </>}
 
         <Separator className="bg-border" />
 

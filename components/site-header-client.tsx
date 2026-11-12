@@ -73,6 +73,47 @@ function DesktopAirportNavigation({ airports }: { airports: AirportDirectoryEntr
   )
 }
 
+export type HeaderRoute = { slug: string; title: string }
+
+function RouteLinks({ routes, onNavigate }: { routes: HeaderRoute[]; onNavigate?: () => void }) {
+  return <>
+    <div className="max-h-72 overflow-y-auto">
+      {routes.map((route) => <Link key={route.slug} href={`/${route.slug}`} onClick={onNavigate} className="block rounded-md px-3 py-2 text-sm hover:bg-secondary">{route.title}</Link>)}
+    </div>
+    <Link href="/routes" onClick={onNavigate} className="mt-1 block border-t border-border px-3 py-2 text-sm font-medium text-primary">View all routes</Link>
+  </>
+}
+
+function DesktopRouteNavigation({ routes }: { routes: HeaderRoute[] }) {
+  return (
+    <NavigationMenu>
+      <NavigationMenuList>
+        <NavigationMenuItem>
+          <NavigationMenuTrigger className="text-muted-foreground hover:text-foreground">
+            Routes
+          </NavigationMenuTrigger>
+          <NavigationMenuContent className="w-[min(42rem,calc(100vw-2rem))] p-2">
+            {/* Many routes are expected, so the list scrolls inside the menu. */}
+            <div className="grid max-h-[min(24rem,60vh)] grid-cols-2 gap-1 overflow-y-auto">
+              {routes.map((route) => (
+                <NavigationMenuLink key={route.slug} render={<Link href={`/${route.slug}`} />} className="block">
+                  {route.title}
+                </NavigationMenuLink>
+              ))}
+            </div>
+            <NavigationMenuLink
+              render={<Link href="/routes" />}
+              className="mt-1 border-t border-border pt-3 font-medium text-primary"
+            >
+              View all routes
+            </NavigationMenuLink>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      </NavigationMenuList>
+    </NavigationMenu>
+  )
+}
+
 function readCustomerName(): string | null {
   const match = document.cookie.split("; ").find((c) => c.startsWith(`${CUSTOMER_HINT_COOKIE}=`))
   return match ? decodeURIComponent(match.slice(CUSTOMER_HINT_COOKIE.length + 1)) : null
@@ -108,7 +149,7 @@ function Avatar({ name, size = "size-8" }: { name: string; size?: string }) {
   )
 }
 
-export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry[] }) {
+export function SiteHeaderClient({ airports, routes = [] }: { airports: AirportDirectoryEntry[]; routes?: HeaderRoute[] }) {
   const pathname = usePathname()
   const usesDarkHeader = pathname === "/" || pathname === "/airport-transfers" || pathname.startsWith("/airport-transfers/")
   const [open, setOpen] = useState(false)
@@ -124,6 +165,7 @@ export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry
         <Link href="/" className="flex items-center gap-2 font-semibold"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-white/95 ring-1 ring-white/35 shadow-sm"><Image src="/brand/logo-mark.png" alt="ONE Airport Taxi logo" width={32} height={32} className="size-8" /></span>{/* Below xl the full nav needs the room, so only the logo mark shows there. */}<span className="whitespace-nowrap text-lg tracking-tight md:max-xl:sr-only">ONE Airport Taxi</span></Link>
         <nav className="hidden items-center gap-1 md:flex">
           <DesktopAirportNavigation airports={airports} />
+          {routes.length > 0 && <DesktopRouteNavigation routes={routes} />}
           <Link href="/destinations" className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === "/destinations" && "text-foreground")}>Destinations</Link>
           {NAV.map((item) => <Link key={item.href} href={item.href} prefetch={FULL_PREFETCH.has(item.href) ? true : undefined} className={cn(navigationMenuTriggerStyle(), "text-muted-foreground hover:text-foreground", pathname === item.href && "text-foreground", "desktopClass" in item && item.desktopClass)}>{item.label}</Link>)}
         </nav>
@@ -136,7 +178,7 @@ export function SiteHeaderClient({ airports }: { airports: AirportDirectoryEntry
         </div>
         <button type="button" aria-label="Toggle menu" className="inline-flex size-9 items-center justify-center rounded-md text-foreground md:hidden" onClick={() => setOpen((value) => !value)}>{open ? <X className="size-5" /> : <Menu className="size-5" />}</button>
       </div>
-      {open && <div className="border-t border-border/60 bg-background md:hidden"><nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3"><details className="rounded-md"><summary className="cursor-pointer list-none rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Airports</summary><div className="ml-3 border-l border-border pl-3"><AirportLinks airports={airports} onNavigate={() => setOpen(false)} /></div></details><Link href="/destinations" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Destinations</Link>{NAV.map((item) => <Link key={item.href} href={item.href} prefetch={FULL_PREFETCH.has(item.href) ? true : undefined} onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">{item.label}</Link>)}{customerName && <Link href="/account" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><Avatar name={customerName} size="size-5" />My account</Link>}<Link href="/book" onClick={() => setOpen(false)} className={cn(buttonVariants(), "mt-2")}>Get a Quote</Link><a href={CALL_LINK} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><Phone aria-hidden="true" className="size-4" />Call 24/7: {CALL_NUMBER}</a></nav></div>}
+      {open && <div className="border-t border-border/60 bg-background md:hidden"><nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3"><details className="rounded-md"><summary className="cursor-pointer list-none rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Airports</summary><div className="ml-3 border-l border-border pl-3"><AirportLinks airports={airports} onNavigate={() => setOpen(false)} /></div></details>{routes.length > 0 && <details className="rounded-md"><summary className="cursor-pointer list-none rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Routes</summary><div className="ml-3 border-l border-border pl-3"><RouteLinks routes={routes} onNavigate={() => setOpen(false)} /></div></details>}<Link href="/destinations" onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">Destinations</Link>{NAV.map((item) => <Link key={item.href} href={item.href} prefetch={FULL_PREFETCH.has(item.href) ? true : undefined} onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground">{item.label}</Link>)}{customerName && <Link href="/account" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><Avatar name={customerName} size="size-5" />My account</Link>}<Link href="/book" onClick={() => setOpen(false)} className={cn(buttonVariants(), "mt-2")}>Get a Quote</Link><a href={CALL_LINK} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"><Phone aria-hidden="true" className="size-4" />Call 24/7: {CALL_NUMBER}</a></nav></div>}
     </header>
   )
 }

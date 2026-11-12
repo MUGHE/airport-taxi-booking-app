@@ -30,11 +30,15 @@ export type RouteCustomText = {
   faqs: RouteFaq[]
 }
 
+/** One price quote an admin types in, e.g. Saloon £120. `vehicleId` (optional) adds that vehicle's photo, seats and bags. */
+export type RoutePrice = { vehicleId: string; label: string; price: number; note: string }
+
 export type RouteStatus = "draft" | "published"
 
 export const ROUTE_SLUG_PATTERN = /^([a-z0-9]+(?:-[a-z0-9]+)*)-to-([a-z0-9]+(?:-[a-z0-9]+)*)-taxi$/
 export const ROUTE_FAQ_LIMIT = 10
-export const ROUTE_TEXT_LIMITS = { heading: 160, intro: 1200, aToBText: 1200, bToAText: 1200, seoTitle: 70, seoDescription: 170, faqQuestion: 200, faqAnswer: 1200 } as const
+export const ROUTE_PRICE_LIMIT = 30
+export const ROUTE_TEXT_LIMITS = { heading: 160, intro: 1200, aToBText: 1200, bToAText: 1200, seoTitle: 70, seoDescription: 170, faqQuestion: 200, faqAnswer: 1200, priceLabel: 60, priceNote: 120 } as const
 
 export function slugifyRoutePart(value: string) {
   return value.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
@@ -123,7 +127,7 @@ export function defaultRouteFaqs({ a, b, distanceMiles, durationMinutes, fromFar
   })
   if (fromFare != null) faqs.push({
     question: `How much is a taxi from ${a.name} to ${b.name}?`,
-    answer: `Fares start from £${fromFare} for a standard car. The price depends on the vehicle you choose and your exact pickup and drop-off addresses, and you see the full fixed price before you book.`,
+    answer: `Fares start from £${fromFare}. The price depends on the vehicle you choose, and you see the full fixed price before you book.`,
   })
   faqs.push({
     question: `Do you also drive from ${b.name} to ${a.name}?`,

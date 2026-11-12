@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
-import { ROUTE_FAQ_LIMIT, ROUTE_TEXT_LIMITS, reverseRouteSlug } from "@/lib/route-page-content"
+import { ROUTE_FAQ_LIMIT, ROUTE_PRICE_LIMIT, ROUTE_TEXT_LIMITS, reverseRouteSlug } from "@/lib/route-page-content"
 import { ROUTE_PAGES_TAG, deleteRoutePage, saveRoutePage, setRoutePageStatus, type AdminRoutePage } from "@/lib/route-pages"
 import { isAdminAuthenticated } from "@/lib/session"
 
@@ -26,6 +26,12 @@ const routeInputSchema = z.object({
     seoDescription: text(ROUTE_TEXT_LIMITS.seoDescription, "The SEO description"),
     faqs: z.array(z.object({ question: text(ROUTE_TEXT_LIMITS.faqQuestion, "A question"), answer: text(ROUTE_TEXT_LIMITS.faqAnswer, "An answer") })).max(ROUTE_FAQ_LIMIT, `Add at most ${ROUTE_FAQ_LIMIT} questions.`),
   }),
+  prices: z.array(z.object({
+    vehicleId: z.string().max(60),
+    label: text(ROUTE_TEXT_LIMITS.priceLabel, "A price name"),
+    price: z.number({ message: "Enter a price in pounds." }).positive("A price must be more than £0.").max(100000, "That price is too high."),
+    note: text(ROUTE_TEXT_LIMITS.priceNote, "A price note"),
+  })).max(ROUTE_PRICE_LIMIT, `Add at most ${ROUTE_PRICE_LIMIT} prices.`),
   distanceMiles: z.number().positive("Distance must be more than 0.").max(2000).nullable(),
   durationMinutes: z.number().int("Use whole minutes.").positive("Time must be more than 0.").max(3000).nullable(),
 })
@@ -37,6 +43,7 @@ function refreshRoutes(...slugs: (string | null | undefined)[]) {
     // Route pages are built at /route-pages/[slug] and served at /[slug] (see next.config.mjs).
     for (const slug of slugs) if (slug) revalidatePath(`/route-pages/${slug}`)
     revalidatePath("/sitemap.xml")
+    revalidatePath("/routes")
     revalidatePath("/admin/route-pages")
   } catch (error) {
     console.error("Route page cache refresh failed", error)

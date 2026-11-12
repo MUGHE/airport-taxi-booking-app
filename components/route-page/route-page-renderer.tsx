@@ -10,6 +10,10 @@ import { Button } from "@/components/ui/button"
 import { formatRouteDuration, type RouteEndpoint } from "@/lib/route-page-content"
 import type { RoutePagePresentation } from "@/lib/route-pages"
 
+function formatPrice(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2)
+}
+
 function EndpointIcon({ endpoint, arriving }: { endpoint: RouteEndpoint; arriving?: boolean }) {
   if (endpoint.type !== "airport") return <MapPin aria-hidden="true" />
   return arriving ? <PlaneTakeoff aria-hidden="true" /> : <PlaneLanding aria-hidden="true" />
@@ -31,7 +35,7 @@ export function RoutePageRenderer({ page }: { page: RoutePagePresentation }) {
               <ul className="route-hero-facts">
                 {page.distanceMiles != null && <li><Route aria-hidden="true" />{Math.round(page.distanceMiles)} miles</li>}
                 {page.durationMinutes != null && <li><Clock aria-hidden="true" />About {formatRouteDuration(page.durationMinutes)}</li>}
-                {page.fromFare != null && <li><Car aria-hidden="true" />From £{page.fromFare}</li>}
+                {page.fromFare != null && <li><Car aria-hidden="true" />From £{formatPrice(page.fromFare)}</li>}
               </ul>
             </div>
             <div className="route-hero-card">
@@ -67,14 +71,15 @@ export function RoutePageRenderer({ page }: { page: RoutePagePresentation }) {
         {page.fares.length > 0 && (
           <section className="route-fares">
             <div className="airport-container">
-              <div className="airport-section-heading"><div><p className="airport-eyebrow">Fares</p><h2>Prices for this route</h2></div><p>The same price applies in both directions. Your final fixed price depends on your exact addresses and is shown before you book.</p></div>
+              <div className="airport-section-heading"><div><p className="airport-eyebrow">Fares</p><h2>Prices for this route</h2></div><p>The same price applies in both directions. Your fixed price is confirmed before you book.</p></div>
               <ul className="route-fare-grid">
                 {page.fares.map((vehicle) => (
-                  <li key={vehicle.id} className="route-fare-card">
-                    <div className="route-fare-image"><Image src={vehicle.image} alt={vehicle.name} fill sizes="(min-width: 900px) 20vw, 45vw" className="object-contain" /></div>
+                  <li key={vehicle.key} className="route-fare-card">
+                    {vehicle.image && <div className="route-fare-image"><Image src={vehicle.image} alt={vehicle.name} fill sizes="(min-width: 900px) 20vw, 45vw" className="object-contain" /></div>}
                     <h3>{vehicle.name}</h3>
-                    <p className="route-fare-meta"><span><Users aria-hidden="true" />{vehicle.capacity}</span><span><Luggage aria-hidden="true" />{vehicle.luggage}</span></p>
-                    <p className="route-fare-price"><small>from</small> £{vehicle.fare}</p>
+                    {vehicle.capacity != null && vehicle.luggage != null && <p className="route-fare-meta"><span><Users aria-hidden="true" />{vehicle.capacity}</span><span><Luggage aria-hidden="true" />{vehicle.luggage}</span></p>}
+                    {vehicle.note && <p className="route-fare-note">{vehicle.note}</p>}
+                    <p className="route-fare-price">£{formatPrice(vehicle.fare)}</p>
                   </li>
                 ))}
               </ul>

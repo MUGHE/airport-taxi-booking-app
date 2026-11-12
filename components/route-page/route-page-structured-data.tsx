@@ -36,7 +36,7 @@ export function RoutePageStructuredData({ page }: { page: RoutePagePresentation 
       serviceType: "Private taxi transfer",
       provider: { "@id": ORGANIZATION_ID },
       areaServed: [page.a.name, page.b.name],
-      ...(page.fromFare != null ? { offers: { "@type": "AggregateOffer", priceCurrency: "GBP", lowPrice: page.fromFare, highPrice: page.fares[page.fares.length - 1]?.fare ?? page.fromFare, offerCount: page.fares.length } } : {}),
+      ...(page.fromFare != null ? { offers: { "@type": "AggregateOffer", priceCurrency: "GBP", lowPrice: page.fromFare, highPrice: Math.max(...page.fares.map((fare) => fare.fare)), offerCount: page.fares.length } } : {}),
     },
   ]
   if (page.faqs.length) graph.push({
