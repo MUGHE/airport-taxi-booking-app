@@ -18,6 +18,7 @@ export const ADMIN_TABS: { href: string; label: string; section: AdminSection }[
   { href: "/admin/pricing", label: "Pricing engine", section: "pricing" },
   { href: "/admin/airport-pages", label: "Airport Pages", section: "content" },
   { href: "/admin/destination-pages", label: "Destination Pages", section: "content" },
+  { href: "/admin/route-pages", label: "Route Pages", section: "content" },
   { href: "/admin/airport-faqs", label: "Airport FAQs", section: "content" },
   { href: "/admin/blog", label: "Blog", section: "content" },
   { href: "/admin/media-library", label: "Media Library", section: "content" },

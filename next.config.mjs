@@ -27,12 +27,21 @@ const nextConfig = {
       // The contact and about pages moved to /Contact-Us and /About-Us.
       { source: '/contact', destination: '/Contact-Us', permanent: true },
       { source: '/about', destination: '/About-Us', permanent: true },
+      { source: '/route-pages/:slug', destination: '/:slug', permanent: true },
       ...LEGACY_AIRPORT_REDIRECTS.map(([source, destination]) => ({
         source: `/airport-transfers/${source}`,
         destination: `/airport-transfers/${destination}`,
         permanent: true,
       })),
     ]
+  },
+  // Route pages (lib/route-pages.ts) live at the site root, e.g. /heathrow-to-birmingham-taxi, but are
+  // built from app/route-pages/[slug]. Only route-shaped URLs are sent there, so every other unknown
+  // root URL stays a real 404, and the internal /route-pages/... address redirects to the public one.
+  async rewrites() {
+    return {
+      beforeFiles: [{ source: '/:slug([a-z0-9-]+-to-[a-z0-9-]+-taxi)', destination: '/route-pages/:slug' }],
+    }
   },
   images: {
     // images.unsplash.com hosts the placeholder photography for the /landing-page-new preview.
