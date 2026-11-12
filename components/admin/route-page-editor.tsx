@@ -61,7 +61,7 @@ function OptionalText({ id, label, value, max, fallback, rows, error, onChange }
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-3"><Label htmlFor={id}>{label}</Label><span className="text-xs"><CharCount value={value} max={max} /></span></div>
       {rows ? <Textarea id={id} rows={rows} value={value} placeholder={fallback} onChange={(event) => onChange(event.target.value)} /> : <Input id={id} value={value} placeholder={fallback} onChange={(event) => onChange(event.target.value)} />}
-      <p className="text-xs text-muted-foreground">{value.trim() ? "Your text is used." : "Empty: the page shows the grey text above."}</p>
+      <p className="text-xs text-muted-foreground">{value.trim() ? "Your text is used." : "Empty: the page uses the grey text in the box."}</p>
       <FieldError message={error} />
     </div>
   )
@@ -82,7 +82,8 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
   const distanceMiles = form.distanceMiles.trim() ? Number(form.distanceMiles) : null
   const durationMinutes = form.durationMinutes.trim() ? Number(form.durationMinutes) : null
   const facts = a && b ? { a, b, distanceMiles: Number.isFinite(distanceMiles) ? distanceMiles : null, durationMinutes: Number.isFinite(durationMinutes) ? durationMinutes : null, fromFare: null } : null
-  const autoFaqs = facts ? defaultRouteFaqs(facts) : []
+  // The fare question needs a price; any number lists it here, as only the questions are shown.
+  const autoFaqs = facts ? defaultRouteFaqs({ ...facts, fromFare: 0 }) : []
   const reverse = reverseRouteSlug(form.slug)
 
   function setEndpoints(endpointAId: string, endpointBId: string) {

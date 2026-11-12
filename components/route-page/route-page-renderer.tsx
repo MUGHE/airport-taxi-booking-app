@@ -103,7 +103,7 @@ export function RoutePageRenderer({ page }: { page: RoutePagePresentation }) {
         {page.faqs.length > 0 && (
           <section className="airport-faq">
             <div className="airport-container airport-faq-grid">
-              <div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2>{a.name} to {b.name} questions</h2></div>
+              <div className="airport-faq-heading"><p className="airport-eyebrow">Need to know</p><h2 className="route-faq-title">{a.name} to {b.name} questions</h2></div>
               <Accordion className="airport-faq-list" multiple>
                 {page.faqs.map((faq, index) => <AccordionItem key={`${faq.question}-${index}`} value={`faq-${index}`}><AccordionTrigger>{faq.question}</AccordionTrigger><AccordionPanel>{faq.answer}</AccordionPanel></AccordionItem>)}
               </Accordion>
