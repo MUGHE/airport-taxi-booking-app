@@ -282,8 +282,8 @@ export const listPublishedRoutePages = unstable_cache(async () => {
   return routes.flatMap((route) => {
     const a = byId.get(route.endpointAId)
     const b = byId.get(route.endpointBId)
-    return a && b ? [{ slug: route.slug, updatedAt: route.updatedAt, endpointAId: a.id, endpointBId: b.id, title: `${a.name} to ${b.name}` }] : []
-  })
+    return a && b ? [{ slug: route.slug, updatedAt: route.updatedAt, endpointAId: a.id, endpointBId: b.id, fromName: a.name, toName: b.name, title: `${a.name} to ${b.name}` }] : []
+  }).sort((left, right) => left.title.localeCompare(right.title))
 }, ["route-pages-published"], { revalidate: 300, tags: [ROUTE_PAGES_TAG] })
 
 // Throws when the database can't be read, so a failed read is never cached as a page.

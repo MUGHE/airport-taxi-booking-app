@@ -43,6 +43,7 @@ function refreshRoutes(...slugs: (string | null | undefined)[]) {
     // Route pages are built at /route-pages/[slug] and served at /[slug] (see next.config.mjs).
     for (const slug of slugs) if (slug) revalidatePath(`/route-pages/${slug}`)
     revalidatePath("/sitemap.xml")
+    revalidatePath("/routes")
     revalidatePath("/admin/route-pages")
   } catch (error) {
     console.error("Route page cache refresh failed", error)
