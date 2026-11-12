@@ -832,6 +832,14 @@
 .landing-review-number { position: absolute; right: 1rem; bottom: -.8rem; color: #eef3f6; font-size: 5.5rem; font-weight: 800; line-height: 1; }
 
 .landing-faq { padding-block: clamp(5.5rem, 10vw, 8rem); background: var(--landing-paper); }
+.landing-areas { padding-block: clamp(4.5rem, 8vw, 6.5rem); background: #fff; }
+.landing-areas h2 { max-width: none; margin-top: .75rem; font-size: clamp(1.9rem, 3.4vw, 2.75rem); }
+.landing-areas h2 + p { max-width: 48rem; margin-top: 1rem; color: #617285; line-height: 1.7; }
+.landing-areas-list { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 2rem; }
+.landing-areas-list a, .landing-areas-list span { display: inline-flex; gap: .45rem; align-items: center; padding: .55rem 1rem; border: 1px solid #dbe5ec; border-radius: 999px; background: #fff; color: var(--landing-ink); font-size: .875rem; font-weight: 500; }
+.landing-areas-list a { transition: border-color .15s, color .15s; }
+.landing-areas-list a:hover { border-color: var(--landing-blue); color: var(--landing-blue); }
+.landing-areas-list svg { flex: none; width: 1rem; height: 1rem; }
 .landing-faq-grid { display: grid; gap: 3rem; align-items: start; }
 .landing-faq-heading h2 { margin-top: .75rem; }
 .landing-faq-heading p { margin-top: 1rem; max-width: 28rem; color: #617285; line-height: 1.7; }

@@ -10,6 +10,7 @@ import { AirportsCoverage } from "@/components/landing-new/airports-coverage"
 import { FleetSection } from "@/components/landing-new/fleet-section"
 import { Testimonials } from "@/components/landing-new/testimonials"
 import { FAQ } from "@/components/landing-new/faq"
+import { AreasWeCover } from "@/components/landing-new/areas-we-cover"
 import { FinalCta } from "@/components/landing-new/final-cta"
 
 export function LandingPage() {
@@ -27,6 +28,7 @@ export function LandingPage() {
         <FleetSection />
         <Testimonials />
         <FAQ />
+        <AreasWeCover />
         <FinalCta />
       </main>
       <SiteFooter />
