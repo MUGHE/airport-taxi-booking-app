@@ -15,10 +15,12 @@ export type AirportPageFaq = { question: string; answer: string; link?: { href: 
 /** The FAQs shown on every airport page (and in its FAQPage schema), named for that airport.
  *  Fees here (meet & greet, extra waiting) are set by the business; keep the Terms in step. */
 export function airportPageFaqs(airportName: string): AirportPageFaq[] {
-  const airport = `${airportName} Airport`
+  // Page names may already end in "Airport" ("East Midlands Airport"); never write "Airport Airport".
+  const airport = /\bairport$/i.test(airportName.trim()) ? airportName.trim() : `${airportName.trim()} Airport`
+  const article = /^[aeiou]/i.test(airport) ? "an" : "a"
   return [
     {
-      question: `How do I book a ${airport} transfer with One Airport Taxi?`,
+      question: `How do I book ${article} ${airport} transfer with One Airport Taxi?`,
       answer: "You can book your airport transfer directly through our website by entering your pickup and drop-off details, travel date and time, and passenger and luggage requirements. You can request a quote and complete your booking online. We recommend booking in advance, especially for early-morning, late-night and busy travel periods.",
     },
     {
@@ -35,7 +37,7 @@ export function airportPageFaqs(airportName: string): AirportPageFaq[] {
       answer: "We monitor your flight once flight details are provided, to track any delays or changes to the scheduled arrival time. Your driver can adjust the pickup accordingly to help avoid unnecessary waiting or missed pickups. Please make sure your correct flight number is included with your booking.",
     },
     {
-      question: `Can I book a ${airport} transfer for someone else?`,
+      question: `Can I book ${article} ${airport} transfer for someone else?`,
       answer: "Yes. You can make a booking on behalf of another passenger. We provide airport transfers for colleagues, employees, students, corporate travellers, family members and other guests. Please provide the passenger's correct name, contact details and travel information when making the booking.",
     },
     {

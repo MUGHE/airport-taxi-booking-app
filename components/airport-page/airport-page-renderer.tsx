@@ -171,7 +171,9 @@ function cmsGuideGroups(section: AirportPageContentSection) {
   const groups: { title: string; cards: BriefCard[] }[] = []
   for (const item of section.items ?? []) {
     if (!item.title) continue
-    const title = item.group ?? ""
+    const last = groups[groups.length - 1]
+    // A card with no group heading stays with the cards above it, so "By rail" after "By road" shares its row.
+    const title = item.group?.trim() || (last?.title ?? "")
     const card: BriefCard = {
       icon: TRAVELLER_ICONS[item.icon],
       title: item.title,
@@ -179,7 +181,6 @@ function cmsGuideGroups(section: AirportPageContentSection) {
       // Button text turns the card into the highlighted booking card.
       ...(item.linkLabel ? { actions: [{ kind: "to" as const, label: item.linkLabel }], highlight: true } : {}),
     }
-    const last = groups[groups.length - 1]
     if (last && last.title === title) last.cards.push(card)
     else groups.push({ title, cards: [card] })
   }
