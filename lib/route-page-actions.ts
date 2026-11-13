@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
-import { ROUTE_FAQ_LIMIT, ROUTE_PRICE_LIMIT, ROUTE_TEXT_LIMITS, reverseRouteSlug } from "@/lib/route-page-content"
+import { ROUTE_FAQ_LIMIT, ROUTE_PRICE_LIMIT, ROUTE_WHY_LIMIT, ROUTE_TEXT_LIMITS, reverseRouteSlug } from "@/lib/route-page-content"
 import { ROUTE_PAGES_TAG, deleteRoutePage, saveRoutePage, setRoutePageStatus, type AdminRoutePage } from "@/lib/route-pages"
 import { isAdminAuthenticated } from "@/lib/session"
 
@@ -24,6 +24,9 @@ const routeInputSchema = z.object({
     bToAText: text(ROUTE_TEXT_LIMITS.bToAText, "This text"),
     seoTitle: text(ROUTE_TEXT_LIMITS.seoTitle, "The SEO title"),
     seoDescription: text(ROUTE_TEXT_LIMITS.seoDescription, "The SEO description"),
+    whyHeading: text(ROUTE_TEXT_LIMITS.whyHeading, "The Why Choose Us heading"),
+    whyIntro: text(ROUTE_TEXT_LIMITS.whyIntro, "The Why Choose Us introduction"),
+    whyPoints: z.array(z.object({ title: text(ROUTE_TEXT_LIMITS.whyTitle, "A point title"), text: text(ROUTE_TEXT_LIMITS.whyText, "A point text") })).max(ROUTE_WHY_LIMIT, `Add at most ${ROUTE_WHY_LIMIT} points.`),
     faqs: z.array(z.object({ question: text(ROUTE_TEXT_LIMITS.faqQuestion, "A question"), answer: text(ROUTE_TEXT_LIMITS.faqAnswer, "An answer") })).max(ROUTE_FAQ_LIMIT, `Add at most ${ROUTE_FAQ_LIMIT} questions.`),
   }),
   prices: z.array(z.object({

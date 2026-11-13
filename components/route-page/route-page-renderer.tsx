@@ -1,14 +1,17 @@
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Car, Check, Clock, Luggage, MapPin, PlaneLanding, PlaneTakeoff, Route, Users } from "lucide-react"
+import { ArrowRight, BadgeCheck, Banknote, Car, Check, Clock, Headphones, Luggage, MapPin, PlaneLanding, PlaneTakeoff, Route, ShieldCheck, Sparkles, ThumbsUp, Users } from "lucide-react"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
-import { PlaceDriversSection } from "@/components/airport-page/airport-page-renderer"
+import { BenefitCards, PlaceDriversSection } from "@/components/airport-page/airport-page-renderer"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { formatRouteDuration, type RouteEndpoint } from "@/lib/route-page-content"
 import type { RoutePagePresentation } from "@/lib/route-pages"
+
+// Icons for the Why Choose Us points, in turn; the site's standard points are written to match this order.
+const WHY_ICONS = [Banknote, Car, ShieldCheck, Headphones, PlaneTakeoff, BadgeCheck, Clock, Luggage, ThumbsUp, Sparkles, Users, MapPin]
 
 function formatPrice(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2)
@@ -86,6 +89,13 @@ export function RoutePageRenderer({ page }: { page: RoutePagePresentation }) {
             </div>
           </section>
         )}
+
+        <section className="airport-benefits" aria-labelledby="route-why-heading">
+          <div className="airport-container">
+            <div className="airport-section-heading"><div><p className="airport-eyebrow">Why choose us</p><h2 id="route-why-heading">{page.why.heading}</h2></div><p>{page.why.intro}</p></div>
+            <div className="airport-benefits-grid"><div className="airport-benefit-copy"><BenefitCards cards={page.why.points.map((point, index) => ({ icon: WHY_ICONS[index % WHY_ICONS.length], title: point.title, text: point.text }))} /></div></div>
+          </div>
+        </section>
 
         <section className="route-places">
           <div className="airport-container">

@@ -19,6 +19,9 @@ export type RouteEndpoint = {
 
 export type RouteFaq = { question: string; answer: string }
 
+/** One point in the "Why Choose Us" section. */
+export type RouteWhyPoint = { title: string; text: string }
+
 /** What an admin can write. Empty strings mean "use the site's text". */
 export type RouteCustomText = {
   heading: string
@@ -28,6 +31,10 @@ export type RouteCustomText = {
   seoTitle: string
   seoDescription: string
   faqs: RouteFaq[]
+  whyHeading: string
+  whyIntro: string
+  /** Empty: the page shows the site's standard points. */
+  whyPoints: RouteWhyPoint[]
 }
 
 /** One price quote an admin types in, e.g. Saloon £120. `vehicleId` (optional) adds that vehicle's photo, seats and bags. */
@@ -38,7 +45,8 @@ export type RouteStatus = "draft" | "published"
 export const ROUTE_SLUG_PATTERN = /^([a-z0-9]+(?:-[a-z0-9]+)*)-to-([a-z0-9]+(?:-[a-z0-9]+)*)-taxi$/
 export const ROUTE_FAQ_LIMIT = 10
 export const ROUTE_PRICE_LIMIT = 30
-export const ROUTE_TEXT_LIMITS = { heading: 160, intro: 1200, aToBText: 1200, bToAText: 1200, seoTitle: 70, seoDescription: 170, faqQuestion: 200, faqAnswer: 1200, priceLabel: 60, priceNote: 120 } as const
+export const ROUTE_WHY_LIMIT = 12
+export const ROUTE_TEXT_LIMITS = { heading: 160, intro: 1200, aToBText: 1200, bToAText: 1200, seoTitle: 70, seoDescription: 170, faqQuestion: 200, faqAnswer: 1200, priceLabel: 60, priceNote: 120, whyHeading: 160, whyIntro: 600, whyTitle: 80, whyText: 400 } as const
 
 export function slugifyRoutePart(value: string) {
   return value.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
@@ -150,4 +158,23 @@ export function defaultRouteFaqs({ a, b, distanceMiles, durationMinutes, fromFar
   return faqs
 }
 
-export const EMPTY_ROUTE_TEXT: RouteCustomText = { heading: "", intro: "", aToBText: "", bToAText: "", seoTitle: "", seoDescription: "", faqs: [] }
+export function defaultWhyHeading({ a, b }: Pick<RouteFacts, "a" | "b">) {
+  return `Why choose ONE Airport Taxi for ${a.name} to ${b.name}?`
+}
+
+export function defaultWhyIntro({ a, b }: Pick<RouteFacts, "a" | "b">) {
+  return `A private car between ${a.name} and ${b.name}, with a fixed price and a checked driver, whichever way you travel.`
+}
+
+export function defaultWhyPoints({ a, b }: Pick<RouteFacts, "a" | "b">): RouteWhyPoint[] {
+  const points: RouteWhyPoint[] = [
+    { title: "Fixed fares", text: "The price you're quoted is the price you pay. Tolls, parking and congestion charges are included." },
+    { title: "Door to door", text: "A private car with no shared stops, from your pickup address straight to your destination." },
+    { title: "Licensed drivers", text: "Every driver is licensed, background-checked and used to long journeys." },
+    { title: "24/7 support", text: "Our team answers around the clock, before and during your journey." },
+  ]
+  if (a.type === "airport" || b.type === "airport") points.push({ title: "Flight tracking", text: "Add your flight number and we track it, so your driver is there when you land, even if your flight is late." })
+  return points
+}
+
+export const EMPTY_ROUTE_TEXT: RouteCustomText = { heading: "", intro: "", aToBText: "", bToAText: "", seoTitle: "", seoDescription: "", faqs: [], whyHeading: "", whyIntro: "", whyPoints: [] }

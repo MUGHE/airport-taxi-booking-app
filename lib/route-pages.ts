@@ -4,9 +4,9 @@ import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { calculateDrivingRoute } from "@/lib/google-distance"
 import { createRouteBookingLinks } from "@/lib/airport-page-data"
 import {
-  defaultDirectionText, defaultRouteFaqs, defaultRouteHeading, defaultRouteIntro, defaultRouteSeoDescription, defaultRouteSeoTitle,
+  defaultDirectionText, defaultRouteFaqs, defaultRouteHeading, defaultRouteIntro, defaultRouteSeoDescription, defaultRouteSeoTitle, defaultWhyHeading, defaultWhyIntro, defaultWhyPoints,
   reverseRouteSlug, slugifyRoutePart,
-  type RouteCustomText, type RouteEndpoint, type RouteFaq, type RoutePrice, type RouteStatus,
+  type RouteCustomText, type RouteEndpoint, type RouteFaq, type RoutePrice, type RouteStatus, type RouteWhyPoint,
 } from "@/lib/route-page-content"
 
 // Route pages storage. Like the rest of the site this talks to Supabase with the service role key,
@@ -20,11 +20,11 @@ type Result<T> = ({ ok: true } & T) | { ok: false; error: string }
 type RouteRow = {
   id: string; endpoint_a_id: string; endpoint_b_id: string; slug: string; reverse_slug: string
   heading: string; intro: string; a_to_b_text: string; b_to_a_text: string; faqs: unknown
-  seo_title: string; seo_description: string; prices: unknown; distance_miles: number | string | null; duration_minutes: number | null
+  seo_title: string; seo_description: string; why_heading: string; why_intro: string; why_points: unknown; prices: unknown; distance_miles: number | string | null; duration_minutes: number | null
   status: RouteStatus; published_at: string | null; created_at: string; updated_at: string
 }
 
-const ROUTE_COLUMNS = "id, endpoint_a_id, endpoint_b_id, slug, reverse_slug, heading, intro, a_to_b_text, b_to_a_text, faqs, seo_title, seo_description, prices, distance_miles, duration_minutes, status, published_at, created_at, updated_at"
+const ROUTE_COLUMNS = "id, endpoint_a_id, endpoint_b_id, slug, reverse_slug, heading, intro, a_to_b_text, b_to_a_text, faqs, seo_title, seo_description, why_heading, why_intro, why_points, prices, distance_miles, duration_minutes, status, published_at, created_at, updated_at"
 
 export type AdminRoutePage = {
   id: string
@@ -68,6 +68,7 @@ export type RoutePagePresentation = {
   /** The admin's price quotes, in the order they entered them. */
   fares: { key: string; name: string; note: string; image: string | null; capacity: number | null; luggage: number | null; fare: number }[]
   faqs: RouteFaq[]
+  why: { heading: string; intro: string; points: RouteWhyPoint[] }
   seoTitle: string
   seoDescription: string
   /** Other published routes that share a place with this one. */
@@ -93,6 +94,11 @@ function readFaqs(value: unknown): RouteFaq[] {
   return value.flatMap((item) => item && typeof item === "object" && typeof item.question === "string" && typeof item.answer === "string" ? [{ question: item.question, answer: item.answer }] : [])
 }
 
+function readWhyPoints(value: unknown): RouteWhyPoint[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => item && typeof item === "object" && typeof item.title === "string" && typeof item.text === "string" ? [{ title: item.title, text: item.text }] : [])
+}
+
 function readPrices(value: unknown): RoutePrice[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((item) => {
@@ -110,7 +116,7 @@ function toAdminRoute(row: RouteRow): AdminRoutePage {
     endpointBId: row.endpoint_b_id,
     slug: row.slug,
     reverseSlug: row.reverse_slug,
-    text: { heading: row.heading, intro: row.intro, aToBText: row.a_to_b_text, bToAText: row.b_to_a_text, seoTitle: row.seo_title, seoDescription: row.seo_description, faqs: readFaqs(row.faqs) },
+    text: { heading: row.heading, intro: row.intro, aToBText: row.a_to_b_text, bToAText: row.b_to_a_text, seoTitle: row.seo_title, seoDescription: row.seo_description, faqs: readFaqs(row.faqs), whyHeading: row.why_heading ?? "", whyIntro: row.why_intro ?? "", whyPoints: readWhyPoints(row.why_points) },
     prices: readPrices(row.prices),
     distanceMiles: row.distance_miles == null ? null : Number(row.distance_miles),
     durationMinutes: row.duration_minutes,
@@ -226,6 +232,8 @@ export async function saveRoutePage(input: RoutePageInput): Promise<Result<{ rou
     heading: input.text.heading.trim(), intro: input.text.intro.trim(), a_to_b_text: input.text.aToBText.trim(), b_to_a_text: input.text.bToAText.trim(),
     faqs: input.text.faqs.map((faq) => ({ question: faq.question.trim(), answer: faq.answer.trim() })).filter((faq) => faq.question && faq.answer),
     seo_title: input.text.seoTitle.trim(), seo_description: input.text.seoDescription.trim(),
+    why_heading: input.text.whyHeading.trim(), why_intro: input.text.whyIntro.trim(),
+    why_points: input.text.whyPoints.map((point) => ({ title: point.title.trim(), text: point.text.trim() })).filter((point) => point.title && point.text),
     prices: input.prices
       .map((item) => ({ vehicleId: VEHICLE_CLASSES.some((vehicle) => vehicle.id === item.vehicleId) ? item.vehicleId : "", label: item.label.trim(), price: Math.round(item.price * 100) / 100, note: item.note.trim() }))
       .filter((item) => item.label && item.price > 0),
@@ -328,6 +336,7 @@ async function loadPublicRoutePage(slug: string): Promise<Exclude<PublicRoutePag
       fromFare,
       fares,
       faqs: [...defaultRouteFaqs(facts), ...text.faqs],
+      why: { heading: text.whyHeading || defaultWhyHeading(facts), intro: text.whyIntro || defaultWhyIntro(facts), points: text.whyPoints.length ? text.whyPoints : defaultWhyPoints(facts) },
       seoTitle: text.seoTitle || defaultRouteSeoTitle(facts),
       seoDescription: text.seoDescription || defaultRouteSeoDescription(facts),
       relatedRoutes: related
