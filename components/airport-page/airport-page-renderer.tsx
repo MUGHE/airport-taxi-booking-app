@@ -360,7 +360,7 @@ function airportCopy(page: AirportPagePresentation): AirportCopy {
 }
 
 /** "Why book with us" cards on every airport and destination page; an airport can override them in AIRPORT_COPY. */
-const DEFAULT_BENEFIT_CARDS: { icon: typeof Banknote; title: string; text: string }[] = [
+export const DEFAULT_BENEFIT_CARDS: { icon: typeof Banknote; title: string; text: string }[] = [
   { icon: Banknote, title: "Fixed Fare", text: "Your quoted fare includes pickup/drop-off charges, tolls, parking, and congestion charges. Optional Meet & Greet and additional waiting time are extra." },
   { icon: Headphones, title: "24/7 Support", text: "Our dedicated support team is available around the clock to assist you with any inquiries or issues." },
   { icon: ShieldCheck, title: "Licensed drivers", text: "Ride with confidence knowing our experienced and courteous drivers are committed to your comfort and safety." },
@@ -465,7 +465,7 @@ function FaqSection({ page, title }: { page: AirportPagePresentation; title?: st
 }
 
 // Six short standard cards on every airport page, so each one states the same, accurate terms.
-function BenefitCards({ cards }: { cards: { icon: typeof Banknote; title: string; text: string }[] }) {
+export function BenefitCards({ cards }: { cards: { icon: typeof Banknote; title: string; text: string }[] }) {
   return (
     <div className="airport-facts-grid airport-benefit-card-grid">
       {cards.map(({ icon: Icon, title, text }, index) => (

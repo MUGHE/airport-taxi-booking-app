@@ -14,8 +14,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
 import { deleteRoutePageAction, saveRoutePageAction, setRoutePageStatusAction } from "@/lib/route-page-actions"
 import {
-  EMPTY_ROUTE_TEXT, ROUTE_FAQ_LIMIT, ROUTE_PRICE_LIMIT, ROUTE_TEXT_LIMITS,
-  defaultDirectionText, defaultRouteFaqs, defaultRouteHeading, defaultRouteIntro, defaultRouteSeoDescription, defaultRouteSeoTitle,
+  EMPTY_ROUTE_TEXT, ROUTE_FAQ_LIMIT, ROUTE_PRICE_LIMIT, ROUTE_WHY_LIMIT, ROUTE_TEXT_LIMITS,
+  defaultDirectionText, defaultRouteFaqs, defaultRouteHeading, defaultRouteIntro, defaultRouteSeoDescription, defaultRouteSeoTitle, defaultWhyHeading, defaultWhyIntro, defaultWhyPoints,
   reverseRouteSlug, routeSlug,
   type RouteCustomText, type RouteEndpoint,
 } from "@/lib/route-page-content"
@@ -130,6 +130,14 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
     const next = [...form.prices]
     ;[next[index], next[target]] = [next[target], next[index]]
     updatePrices(next)
+  }
+
+  function moveWhyPoint(index: number, by: -1 | 1) {
+    const target = index + by
+    if (target < 0 || target >= form.text.whyPoints.length) return
+    const next = [...form.text.whyPoints]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    updateText("whyPoints", next)
   }
 
   function save(after?: (saved: AdminRoutePage) => void) {
@@ -280,6 +288,37 @@ export function RoutePageEditor({ route: initialRoute, endpoints }: { route?: Ad
             <OptionalText id="route-intro" label="Introduction" rows={4} value={form.text.intro} max={ROUTE_TEXT_LIMITS.intro} fallback={defaultRouteIntro(facts)} error={errors["text.intro"]} onChange={(value) => updateText("intro", value)} />
             <OptionalText id="route-a-to-b" label={`${facts.a.name} to ${facts.b.name}`} rows={4} value={form.text.aToBText} max={ROUTE_TEXT_LIMITS.aToBText} fallback={defaultDirectionText(facts.a, facts.b)} error={errors["text.aToBText"]} onChange={(value) => updateText("aToBText", value)} />
             <OptionalText id="route-b-to-a" label={`${facts.b.name} to ${facts.a.name}`} rows={4} value={form.text.bToAText} max={ROUTE_TEXT_LIMITS.bToAText} fallback={defaultDirectionText(facts.b, facts.a)} error={errors["text.bToAText"]} onChange={(value) => updateText("bToAText", value)} />
+          </>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Why Choose Us</CardTitle></CardHeader>
+        <CardContent className="space-y-5">
+          {!facts ? <p className="text-sm text-muted-foreground">Choose both places to see the text the page will use.</p> : <>
+            <OptionalText id="route-why-heading" label="Heading" value={form.text.whyHeading} max={ROUTE_TEXT_LIMITS.whyHeading} fallback={defaultWhyHeading(facts)} error={errors["text.whyHeading"]} onChange={(value) => updateText("whyHeading", value)} />
+            <OptionalText id="route-why-intro" label="Short introduction" rows={2} value={form.text.whyIntro} max={ROUTE_TEXT_LIMITS.whyIntro} fallback={defaultWhyIntro(facts)} error={errors["text.whyIntro"]} onChange={(value) => updateText("whyIntro", value)} />
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Points</p>
+              {form.text.whyPoints.length === 0 && <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground"><p>No points added, so the page shows these:</p><ul className="mt-2 list-disc space-y-1 pl-5">{defaultWhyPoints(facts).map((point) => <li key={point.title}>{point.title}</li>)}</ul><Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => updateText("whyPoints", defaultWhyPoints(facts))}>Copy these to edit them</Button></div>}
+              {form.text.whyPoints.map((point, index) => {
+                const label = `Point ${index + 1}`
+                return (
+                  <div key={index} className="space-y-2 rounded-lg border p-3">
+                    <div className="flex items-start gap-2">
+                      <Input aria-label={`${label} title`} value={point.title} maxLength={ROUTE_TEXT_LIMITS.whyTitle} placeholder="Title, e.g. Fixed fares" onChange={(event) => updateText("whyPoints", form.text.whyPoints.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item))} />
+                      <Button type="button" variant="ghost" size="icon" aria-label={`Move ${label} up`} disabled={index === 0} onClick={() => moveWhyPoint(index, -1)}><ArrowUp className="size-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" aria-label={`Move ${label} down`} disabled={index === form.text.whyPoints.length - 1} onClick={() => moveWhyPoint(index, 1)}><ArrowDown className="size-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${label}`} onClick={() => updateText("whyPoints", form.text.whyPoints.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="size-4" /></Button>
+                    </div>
+                    <Textarea aria-label={`${label} text`} rows={2} value={point.text} maxLength={ROUTE_TEXT_LIMITS.whyText} placeholder="A sentence or two" onChange={(event) => updateText("whyPoints", form.text.whyPoints.map((item, itemIndex) => itemIndex === index ? { ...item, text: event.target.value } : item))} />
+                  </div>
+                )
+              })}
+              <FieldError message={errors["text.whyPoints"]} />
+              <Button type="button" variant="outline" disabled={form.text.whyPoints.length >= ROUTE_WHY_LIMIT} onClick={() => updateText("whyPoints", [...form.text.whyPoints, { title: "", text: "" }])}><Plus className="size-4" />Add point</Button>
+              <p className="text-xs text-muted-foreground">Points with an empty title or text are not saved.</p>
+            </div>
           </>}
         </CardContent>
       </Card>
