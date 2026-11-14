@@ -34,7 +34,8 @@ export function AirportPageStructuredData({ seo }: { seo: AirportPageSeo }) {
     {
       "@type": "TaxiService",
       "@id": `${canonicalUrl}#service`,
-      name: `${seo.airport.displayName} Airport Taxi Service`,
+      // Some page names already end in "Airport" ("East Midlands Airport").
+      name: `${seo.airport.displayName.trim().replace(/\s+airport$/i, "")} Airport Taxi Service`,
       url: canonicalUrl,
       image: absoluteUrl(seo.socialImage.url),
       description: seo.description,

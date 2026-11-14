@@ -13,6 +13,11 @@ import type { PlacePagePresentation } from "@/lib/place-page-data"
 import { cacheSafePublishedPlacePage, getSafePublishedPlacePage } from "@/lib/public-place-page-cache"
 import { airportPageFaqs } from "@/lib/airport-faqs"
 
+/** "East Midlands Airport" -> "East Midlands": page templates add "Airport" themselves. */
+function airportShortName(displayName: string) {
+  return displayName.trim().replace(/\s+airport$/i, "") || displayName.trim()
+}
+
 const airportPolicy = getDestinationPagePolicy("airport")
 const placePolicy = getDestinationPagePolicy("place")
 
@@ -109,7 +114,7 @@ export async function createDraftAirportPagePresentation(page: AdminDestinationP
   })
   const content = page.draft.content
   return createPublishedAirportPagePresentation({
-    shortName: page.displayName,
+    shortName: airportShortName(page.displayName),
     terminals,
     mapLocation: { placeId: page.googlePlaceId, address: page.address, latitude: page.latitude, longitude: page.longitude },
     content: {
@@ -354,7 +359,7 @@ async function loadPublishedAirportPage(slug: string): Promise<{ status: "publis
 
     return { status: "published", page: {
       presentation: createPublishedAirportPagePresentation({
-        shortName: airport.displayName,
+        shortName: airportShortName(airport.displayName),
         terminals,
         mapLocation: { placeId: airport.googlePlaceId, address: airport.address, latitude: airport.latitude, longitude: airport.longitude },
         content,
