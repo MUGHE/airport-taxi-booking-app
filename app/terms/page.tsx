@@ -3,7 +3,6 @@ import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Breadcrumbs } from "@/components/breadcrumbs"
-import { HeroOfferBox } from "@/components/hero-offer-box"
 import {
   TERMS_EFFECTIVE_DATE,
   TERMS_NOTICE,
@@ -31,7 +30,6 @@ export default function TermsPage() {
             <p className="mt-2 text-muted-foreground">
               {TERMS_SUBTITLE} &middot; Effective {TERMS_EFFECTIVE_DATE}
             </p>
-            <HeroOfferBox />
           </div>
 
           <div className="rounded-2xl border border-border bg-card px-5 py-4 text-sm">

@@ -7,7 +7,6 @@ import { Breadcrumbs } from "@/components/breadcrumbs"
 import { BlogCard } from "@/components/blog/blog-card"
 import { listCategories, listPublishedPosts } from "@/lib/blog"
 import { cn } from "@/lib/utils"
-import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const dynamic = "force-dynamic"
 
@@ -52,7 +51,6 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Se
             <p className="blog-eyebrow">ONE Airport Taxi blog</p>
             <h1>{activeCategory ? activeCategory.name : "Airport travel guides and tips"}</h1>
             <p className="blog-index-lead">Practical advice for getting to and from London&apos;s airports: terminals, pickup points, journey times and what to expect.</p>
-            <HeroOfferBox />
             {categories.length > 0 && (
               <nav className="blog-categories" aria-label="Blog categories">
                 <Link href="/blog" className={cn(!activeCategory && "is-active")} aria-current={!activeCategory ? "page" : undefined}>All posts</Link>
