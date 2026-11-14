@@ -4,6 +4,7 @@ import { Mail, MessageCircle, Phone } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 import {
   CALL_LINK,
   CALL_NUMBER,
@@ -67,6 +68,7 @@ export default function ContactPage() {
               For bookings, changes, cancellations, or complaints, reach our team
               directly &mdash; we&apos;re glad to help.
             </p>
+            <HeroOfferBox />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">

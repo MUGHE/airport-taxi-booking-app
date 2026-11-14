@@ -4,6 +4,7 @@ import { Star } from "lucide-react"
 import { FareEstimator } from "@/components/fare-estimator"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import type { GoogleRating } from "@/lib/google-rating"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 import type { StopPricing } from "@/lib/types"
 
 // Same layout and styles as the homepage hero (landing-hero-*), so every hero on the site matches:
@@ -42,13 +43,7 @@ export function AirportTransfersHero({ stopPricing, googleRating }: { stopPricin
             </p>
 
             <div className="landing-hero-proof">
-              <div className="landing-quote-reassurance">
-                <p className="landing-quote-notes">
-                  <span>No account needed</span>
-                  <span>No surge pricing</span>
-                  <span>Free flight tracking</span>
-                </p>
-              </div>
+              <HeroOfferBox />
 
               <div className="landing-rating">
                 {googleRating && (

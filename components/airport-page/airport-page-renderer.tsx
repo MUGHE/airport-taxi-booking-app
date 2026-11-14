@@ -1,5 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 import {
   ArrowRight,
   Accessibility,
@@ -171,7 +172,9 @@ function cmsGuideGroups(section: AirportPageContentSection) {
   const groups: { title: string; cards: BriefCard[] }[] = []
   for (const item of section.items ?? []) {
     if (!item.title) continue
-    const title = item.group ?? ""
+    const last = groups[groups.length - 1]
+    // A card with no group heading stays with the cards above it, so "By rail" after "By road" shares its row.
+    const title = item.group?.trim() || (last?.title ?? "")
     const card: BriefCard = {
       icon: TRAVELLER_ICONS[item.icon],
       title: item.title,
@@ -179,7 +182,6 @@ function cmsGuideGroups(section: AirportPageContentSection) {
       // Button text turns the card into the highlighted booking card.
       ...(item.linkLabel ? { actions: [{ kind: "to" as const, label: item.linkLabel }], highlight: true } : {}),
     }
-    const last = groups[groups.length - 1]
     if (last && last.title === title) last.cards.push(card)
     else groups.push({ title, cards: [card] })
   }
@@ -393,9 +395,7 @@ function AirportHeroCopy({ page, canonicalPath, googleRating }: { page: AirportP
       <p className="airport-hero-intro">{airportCopy(page).heroSubhead ?? <>Fixed-price transfers to and from {page.terminals.length > 1 ? `every ${page.shortName} terminal` : `${page.shortName} Airport`}. We track your flight and confirm your fare before you pay.</>}</p>
       {airportCopy(page).heroCallLine && <p className="airport-hero-call">{airportCopy(page).heroCallText ?? `Get a free instant ${page.shortName} taxi quote today, or call our team on`} <a href={`tel:${CALL_NUMBER}`}>{CALL_NUMBER}</a>{airportCopy(page).heroCallText ? "." : " to book."}</p>}
       <div className="airport-hero-proof">
-        <p className="airport-quote-notes">
-          {(airportCopy(page).heroNotes ?? ["No account needed", "No surge pricing", "Free flight tracking"]).map((note) => <span key={note}>{note}</span>)}
-        </p>
+        <HeroOfferBox notes={airportCopy(page).heroNotes} />
         <p className="airport-hero-rating">
           {googleRating && <><span className="airport-hero-stars">{Array.from({ length: 5 }).map((_, i) => <Star aria-hidden="true" key={i} />)}</span><strong>Rated {googleRating.rating.toFixed(1)} on Google from {googleRating.reviewCount.toLocaleString("en-GB")} reviews</strong><span aria-hidden="true">·</span></>}
           <a href="#reviews">{googleRating ? "Read reviews" : "Read our Google reviews"}</a>

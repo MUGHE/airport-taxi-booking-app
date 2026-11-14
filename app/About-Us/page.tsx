@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/site-footer"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { CallToAction } from "@/components/landing/cta"
 import { AIRPORTS } from "@/lib/fleet"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -66,6 +67,7 @@ export default function AboutPage() {
             should be the easiest part of your trip. Fixed prices, professional
             chauffeurs, and real flight tracking — booked in under a minute, every time.
           </p>
+          <HeroOfferBox className="mx-auto text-left" />
         </div>
 
         <div className="mx-auto max-w-5xl px-4 py-10">

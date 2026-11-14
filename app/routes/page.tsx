@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { RouteDirectory } from "@/components/route-directory"
 import { listPublishedRoutePages } from "@/lib/route-pages"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const revalidate = 300
 
@@ -17,7 +18,7 @@ export default async function RoutesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <main className="flex-1"><RouteDirectory routes={routes.map((route) => ({ slug: route.slug, fromName: route.fromName, toName: route.toName }))} /></main>
+      <main className="flex-1"><RouteDirectory offer={<HeroOfferBox />} routes={routes.map((route) => ({ slug: route.slug, fromName: route.fromName, toName: route.toName }))} /></main>
       <SiteFooter />
     </div>
   )

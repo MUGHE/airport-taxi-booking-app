@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 import { BenefitCards, PlaceDriversSection } from "@/components/airport-page/airport-page-renderer"
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 import { formatRouteDuration, type RouteEndpoint } from "@/lib/route-page-content"
 import type { RoutePagePresentation } from "@/lib/route-pages"
 
@@ -40,6 +41,7 @@ export function RoutePageRenderer({ page }: { page: RoutePagePresentation }) {
                 {page.durationMinutes != null && <li><Clock aria-hidden="true" />About {formatRouteDuration(page.durationMinutes)}</li>}
                 {page.fromFare != null && <li><Car aria-hidden="true" />From £{formatPrice(page.fromFare)}</li>}
               </ul>
+              <HeroOfferBox />
             </div>
             <div className="route-hero-card">
               <p className="route-hero-card-title">Which way are you going?</p>

@@ -3,6 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Check, MapPin, PlaneTakeoff } from "lucide-react"
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 import { ResilientImage } from "@/components/airport-page/resilient-image"
 import { SiteFooter } from "@/components/site-footer"
 import { SiteHeader } from "@/components/site-header"
@@ -30,6 +31,7 @@ export function PlacePageRenderer({ page, canonicalPath, showFooter = true, anal
           <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Destinations", href: "/destinations" }, { label: page.displayName, href: canonicalPath }]} includeStructuredData={false} className="[&_span]:text-white/90 [&_svg]:text-white/40 [&_a]:text-white/70" />
           <h1 className="airport-hero-heading">{page.heading}</h1>
           <div className="airport-hero-intro"><Blocks blocks={page.intro} /></div>
+          <HeroOfferBox />
         </div>
         <div className="airport-quote-wrap place-hero-quote">
           <PlaceQuoteForm sourcePlaceId={page.sourcePlaceId} sourcePlaceSlug={page.sourcePlaceSlug} analyticsEnabled={analyticsEnabled} stopPricing={stopPricing} />
