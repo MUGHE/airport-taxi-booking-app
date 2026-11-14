@@ -6,7 +6,7 @@ import { ArrowLeftRight } from "lucide-react"
 
 export type RouteDirectoryEntry = { slug: string; fromName: string; toName: string }
 
-export function RouteDirectory({ routes }: { routes: RouteDirectoryEntry[] }) {
+export function RouteDirectory({ routes, offer }: { routes: RouteDirectoryEntry[]; offer?: React.ReactNode }) {
   const [query, setQuery] = useState("")
   const filtered = useMemo(() => {
     const words = query.toLocaleLowerCase().split(/\s+/).filter(Boolean)
@@ -22,6 +22,7 @@ export function RouteDirectory({ routes }: { routes: RouteDirectoryEntry[] }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">Popular journeys</p>
         <h1 id="route-directory-heading" className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Taxi routes</h1>
         <p className="mt-4 text-pretty text-muted-foreground">Fixed-price private taxis between airports, towns and cities. Every route works in both directions.</p>
+        {offer}
       </div>
       <div className="mt-10 rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
         <label className="text-sm font-medium">Search routes

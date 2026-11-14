@@ -10,6 +10,7 @@ import { SupportCard } from "@/components/faq-page/support-card"
 import { getStopPricing } from "@/lib/actions"
 import { FAQ_PAGE_CATEGORIES } from "@/lib/faqs"
 import { serializeJsonLd } from "@/lib/json-ld"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const revalidate = 300
 
@@ -61,6 +62,7 @@ export default async function FaqsPage() {
               <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "FAQs" }]} />
               <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{TITLE}</h1>
               <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground text-pretty">{DESCRIPTION}</p>
+              <HeroOfferBox />
             </div>
             <div className="relative aspect-[16/10] overflow-hidden rounded-2xl ring-1 ring-border shadow-lg">
               <Image

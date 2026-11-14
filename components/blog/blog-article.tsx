@@ -6,6 +6,7 @@ import { BlogCard, formatBlogDate } from "@/components/blog/blog-card"
 import { BlogContent } from "@/components/blog/blog-content"
 import { Button } from "@/components/ui/button"
 import { readingMinutes, type BlogPost } from "@/lib/blog-schema"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 /** Full article layout, shared by the public post page and the admin preview. */
 export function BlogArticle({ post, related = [] }: { post: BlogPost; related?: BlogPost[] }) {
@@ -23,6 +24,7 @@ export function BlogArticle({ post, related = [] }: { post: BlogPost; related?: 
               {post.publishedAt && <time dateTime={post.publishedAt}>{formatBlogDate(post.publishedAt)}</time>}
               <span><Clock3 aria-hidden="true" />{readingMinutes(post.content)} min read</span>
             </p>
+            <HeroOfferBox />
           </div>
         </header>
 

@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, WHATSAPP_LINK, WHATSAPP_NUMBER } from "@/lib/contact"
 import { PRIVACY_SECTIONS, PRIVACY_SUBTITLE, PRIVACY_TITLE } from "@/lib/privacy-content"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const metadata: Metadata = {
   title: PRIVACY_TITLE,
@@ -22,6 +23,7 @@ export default function PrivacyPage() {
           <div className="mb-8">
             <h1 className="text-3xl font-semibold tracking-tight">{PRIVACY_TITLE}</h1>
             <p className="mt-2 text-muted-foreground">{PRIVACY_SUBTITLE}</p>
+            <HeroOfferBox />
           </div>
 
           <div className="rounded-2xl border border-border bg-card px-5 py-4 text-sm leading-relaxed text-muted-foreground">

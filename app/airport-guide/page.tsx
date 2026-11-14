@@ -13,6 +13,7 @@ import { AIRPORT_GUIDE_FAQS, CHOOSE_AIRPORT_TIPS, GUIDE_AIRPORTS, PICKUP_STEPS, 
 import { serializeJsonLd } from "@/lib/json-ld"
 import { airportImageAlt } from "@/lib/airport-images"
 import { cn } from "@/lib/utils"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const revalidate = 300
 
@@ -74,6 +75,7 @@ export default async function AirportGuidePage() {
               <p className="mt-3 max-w-xl leading-7 text-muted-foreground text-pretty">
                 We run 24 hours a day, 365 days a year, with licensed drivers, live flight tracking and 24/7 UK support.
               </p>
+              <HeroOfferBox />
               <Link href="/book" className={cn(buttonVariants({ size: "lg" }), "mt-6")}>
                 Get my fixed price <ArrowRight aria-hidden="true" className="size-4" />
               </Link>

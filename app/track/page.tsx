@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { TrackLookup } from "@/components/track-lookup"
+import { HeroOfferBox } from "@/components/hero-offer-box"
 
 export const metadata: Metadata = {
   title: "Track Your Booking",
@@ -22,6 +23,7 @@ export default function TrackPage() {
             Enter the booking reference from your confirmation to view trip details
             and status.
           </p>
+          <HeroOfferBox />
         </div>
         <TrackLookup />
       </main>

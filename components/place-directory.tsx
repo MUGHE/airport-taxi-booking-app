@@ -6,7 +6,7 @@ import type { PlaceDirectory } from "@/lib/place-directory"
 import { normalizePlaceDirectoryTerm, placeDirectorySearchText } from "@/lib/place-directory"
 import { trackPublicEvent } from "@/lib/analytics"
 
-export function PlaceDirectory({ directory }: { directory: PlaceDirectory }) {
+export function PlaceDirectory({ directory, offer }: { directory: PlaceDirectory; offer?: React.ReactNode }) {
   const [query, setQuery] = useState("")
   const [group, setGroup] = useState("all")
   const [type, setType] = useState("all")
@@ -19,7 +19,7 @@ export function PlaceDirectory({ directory }: { directory: PlaceDirectory }) {
   const letters = Array.from(new Set(directory.places.map((place) => place.displayName[0]?.toUpperCase()).filter(Boolean))).sort()
 
   return <section aria-labelledby="destination-directory-heading" className="mx-auto max-w-6xl px-4 py-16 lg:py-24">
-    <div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Places we serve</p><h1 id="destination-directory-heading" className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Find your destination</h1><p className="mt-4 text-pretty text-muted-foreground">Search a town, borough, neighbourhood, alias, or covered locality. Each result links to the Published Place Page that serves it.</p></div>
+    <div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Places we serve</p><h1 id="destination-directory-heading" className="mt-2 text-balance text-4xl font-semibold tracking-tight sm:text-5xl">Find your destination</h1><p className="mt-4 text-pretty text-muted-foreground">Search a town, borough, neighbourhood, alias, or covered locality. Each result links to the Published Place Page that serves it.</p>{offer}</div>
     <div className="mt-10 grid gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:grid-cols-3 sm:p-5">
       <label className="text-sm font-medium sm:col-span-3">Search destinations<input aria-label="Search destinations" type="search" value={query} onChange={(event) => { const nextQuery = event.currentTarget.value; setQuery(nextQuery); trackPublicEvent({ name: "destination_directory_search", queryLength: nextQuery.trim().length, resultCount: directory.places.filter((place) => placeDirectorySearchText(place).includes(normalizePlaceDirectoryTerm(nextQuery))).length }) }} placeholder="Name, alias, or locality" className="mt-1.5 h-11 w-full rounded-lg border border-input bg-background px-3 outline-none focus-visible:ring-3 focus-visible:ring-ring/50" /></label>
       <label className="text-sm font-medium">Place Group<select aria-label="Filter by Place Group" value={group} onChange={(event) => setGroup(event.currentTarget.value)} className="mt-1.5 h-11 w-full rounded-lg border border-input bg-background px-3"><option value="all">All groups</option>{directory.groups.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
