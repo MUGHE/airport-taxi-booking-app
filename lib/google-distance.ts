@@ -1,18 +1,22 @@
+import { unstable_cache } from "next/cache"
+
 interface LatLng {
   lat: number
   lng: number
 }
 
 export interface DrivingRoute {
+  /** Rounded to 0.1 mile here, once, so every price built from it (quote, booking, Stripe) agrees. */
   distanceMiles: number
   durationMinutes: number
 }
 
-export async function calculateDrivingRoute(
-  origin: LatLng,
-  destination: LatLng,
-  waypoints: LatLng[] = [],
-): Promise<DrivingRoute | null> {
+type RawRoute = { distanceMeters: number; durationSeconds: number }
+
+const METERS_PER_MILE = 1609.344
+
+/** One Google Routes API call, in the order given. Null when Google finds no drivable route. */
+async function fetchRoute(origin: LatLng, destination: LatLng, waypoints: LatLng[]): Promise<RawRoute | null> {
   const apiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY
   if (!apiKey) throw new Error("GOOGLE_MAPS_SERVER_API_KEY is missing.")
 
@@ -53,9 +57,55 @@ export async function calculateDrivingRoute(
   const distanceMeters = route?.distanceMeters
   const durationSeconds = typeof route?.duration === "string" ? Number.parseFloat(route.duration) : NaN
   if (typeof distanceMeters !== "number" || !Number.isFinite(durationSeconds)) return null
+  return { distanceMeters, durationSeconds }
+}
 
+function toDrivingRoute(distanceMeters: number, durationSeconds: number): DrivingRoute {
   return {
-    distanceMiles: distanceMeters / 1609.344,
+    distanceMiles: Math.round((distanceMeters / METERS_PER_MILE) * 10) / 10,
     durationMinutes: Math.ceil(durationSeconds / 60),
   }
+}
+
+/**
+ * The direction-independent route between two points: the average of A -> B and B -> A.
+ * One-way roads and junctions make the two directions differ by a few miles; averaging them
+ * means a trip and its reverse always get the same distance, time and so the same fare.
+ *
+ * Always called with the pair in canonical order (see calculateDrivingRoute), and cached on that
+ * pair for a day, so the quote the customer sees and the fare charged at booking come from the
+ * very same numbers rather than two Google calls minutes apart.
+ */
+const canonicalPairRoute = unstable_cache(
+  async (first: LatLng, second: LatLng): Promise<DrivingRoute | null> => {
+    const [forward, reverse] = await Promise.all([fetchRoute(first, second, []), fetchRoute(second, first, [])])
+    const legs = [forward, reverse].filter((leg): leg is RawRoute => leg != null)
+    // Both directions failing means there's no drivable route. If only one way works (rare),
+    // that direction stands for both, which is still the same answer whichever way is asked.
+    if (legs.length === 0) return null
+    const distanceMeters = legs.reduce((sum, leg) => sum + leg.distanceMeters, 0) / legs.length
+    const durationSeconds = legs.reduce((sum, leg) => sum + leg.durationSeconds, 0) / legs.length
+    return toDrivingRoute(distanceMeters, durationSeconds)
+  },
+  ["driving-route-pair-v1"],
+  { revalidate: 60 * 60 * 24 },
+)
+
+const comparePoints = (a: LatLng, b: LatLng) => a.lat - b.lat || a.lng - b.lng
+
+export async function calculateDrivingRoute(
+  origin: LatLng,
+  destination: LatLng,
+  waypoints: LatLng[] = [],
+): Promise<DrivingRoute | null> {
+  // A trip with stops is priced as driven, in the customer's order: reversing it is a
+  // different journey, not the same one backwards.
+  if (waypoints.length > 0) {
+    const route = await fetchRoute(origin, destination, waypoints)
+    return route ? toDrivingRoute(route.distanceMeters, route.durationSeconds) : null
+  }
+  // Point to point: put the pair in a fixed order first, so A -> B and B -> A hit the same
+  // calculation (and the same cache entry) and get identical numbers.
+  const [first, second] = comparePoints(origin, destination) <= 0 ? [origin, destination] : [destination, origin]
+  return canonicalPairRoute({ lat: first.lat, lng: first.lng }, { lat: second.lat, lng: second.lng })
 }
