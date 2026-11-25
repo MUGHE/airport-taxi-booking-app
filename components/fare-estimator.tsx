@@ -14,6 +14,7 @@ import { formatCurrency } from "@/lib/fleet"
 import { formatDate, localDate, minPickupTimeToday, TIME_SLOTS } from "@/lib/datetime"
 import type { StopPricing } from "@/lib/types"
 import { toast } from "sonner"
+import { clearQuoteDraft, readQuoteDraft, saveQuoteDraft } from "@/lib/quote-draft"
 
 // The calendar (react-day-picker + date-fns, ~30 KB) only shows once the date popover opens, so it
 // is kept out of the first load and fetched as soon as the visitor reaches for the date button.
@@ -30,6 +31,7 @@ export function FareEstimator({
   defaultDropoff,
   onContinue,
   extraParams,
+  persist = true,
 }: {
   stopPricing?: StopPricing
   layout?: "card" | "hub"
@@ -39,6 +41,8 @@ export function FareEstimator({
   onContinue?: () => void
   /** Extra query parameters carried to /book, e.g. the source place for attribution. */
   extraParams?: Record<string, string>
+  /** Restores the trip last entered in any quote form or on /book (sessionStorage), and saves it on submit. On by default. */
+  persist?: boolean
 }) {
   const router = useRouter()
   const [pickup, setPickup] = useState<PlaceSelection | null>(null)
@@ -53,6 +57,34 @@ export function FareEstimator({
   // 15-minute grid — not an arbitrary slot further out.
   const minTimeToday = minPickupTimeToday()
   const availableTimes = isToday ? TIME_SLOTS.filter((t) => t >= minTimeToday) : TIME_SLOTS
+  const hasInput = Boolean(pickup || (dropoff && !defaultDropoff) || stops.length || pickupDate || pickupTime)
+
+  // Read after mount, not in the useState initialisers: sessionStorage doesn't exist on the
+  // server, and reading it during render would make the first client render differ from the HTML.
+  useEffect(() => {
+    if (!persist) return
+    const draft = readQuoteDraft(localDate(new Date()))
+    if (!draft) return
+    // A page that fixes its own destination (an airport page) keeps it; everything else comes back.
+    // If the saved pick-up is that same place (a trip from the airport), pick-up is left empty
+    // rather than showing one place in both fields.
+    const pickupIsFixedDropoff = Boolean(defaultDropoff && draft.pickup && draft.pickup.address === defaultDropoff.address)
+    setPickup(pickupIsFixedDropoff ? null : draft.pickup)
+    setDropoff(defaultDropoff ?? draft.dropoff)
+    setStops(draft.stops)
+    setPickupDate(draft.pickupDate)
+    setPickupTime(draft.pickupTime)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persist])
+
+  function clearForm() {
+    setPickup(null)
+    setDropoff(defaultDropoff ?? null)
+    setStops([])
+    setPickupDate("")
+    setPickupTime("")
+    clearQuoteDraft()
+  }
 
   // Defends against the date having rolled over to a new day while the tab was open.
   useEffect(() => {
@@ -95,6 +127,7 @@ export function FareEstimator({
       ...(validStops.length > 0 ? { stops: JSON.stringify(validStops) } : {}),
       ...extraParams,
     })
+    if (persist) saveQuoteDraft({ pickup, dropoff, stops: validStops, pickupDate, pickupTime })
     onContinue?.()
     router.push(`/book?${params.toString()}`)
   }
@@ -158,6 +191,13 @@ export function FareEstimator({
         {stops.length < MAX_STOPS && <Button type="button" variant="outline" size="sm" onClick={addStop}><MapPinPlus className="size-4" />Add a stop{stopPricing.pricePerStop > 0 && ` (${formatCurrency(stopPricing.pricePerStop)} each)`}</Button>}
       </div>
       <Button className="mt-5 w-full bg-[#075fbd] font-bold text-white shadow-lg shadow-[#075fbd]/25 hover:bg-[#054d99]" size="lg" onClick={continueToBooking}>Get My Fixed Price <ArrowRight className="size-4" /></Button>
+      {persist && hasInput && (
+        <div className="mt-2 text-center">
+          <button type="button" onClick={clearForm} className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+            Clear form
+          </button>
+        </div>
+      )}
     </div>
   )
 }

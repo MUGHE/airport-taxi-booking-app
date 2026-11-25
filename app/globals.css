@@ -842,12 +842,24 @@
 .landing-areas-list a { transition: border-color .15s, color .15s; }
 .landing-areas-list a:hover { border-color: var(--landing-blue); color: var(--landing-blue); }
 .landing-areas-list svg { flex: none; width: 1rem; height: 1rem; }
-.landing-faq-grid { display: grid; gap: 3rem; align-items: start; }
+.landing-faq-heading { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: flex-end; justify-content: space-between; }
 .landing-faq-heading h2 { margin-top: .75rem; }
 .landing-faq-heading p { margin-top: 1rem; max-width: 28rem; color: #617285; line-height: 1.7; }
-.landing-faq-heading a { display: inline-flex; gap: .45rem; align-items: center; margin-top: 2rem; color: var(--landing-blue); font-size: .85rem; font-weight: 750; }
+.landing-faq-heading a { display: inline-flex; flex: none; gap: .45rem; align-items: center; color: var(--landing-blue); font-size: .85rem; font-weight: 750; }
 .landing-faq-heading a svg { width: 1rem; }
-.landing-faq-list { display: grid; gap: .65rem; }
+.landing-faq-tabs { display: flex; gap: .5rem; margin-top: 2rem; margin-bottom: 1.25rem; overflow-x: auto; scrollbar-width: none; }
+.landing-faq-tabs::-webkit-scrollbar { display: none; }
+.landing-faq-tabs button { display: inline-flex; flex: none; gap: .45rem; align-items: center; padding: .5rem .95rem; border: 1px solid #d7e1e9; border-radius: 999px; background: #fff; color: var(--landing-ink); font-size: .82rem; font-weight: 650; white-space: nowrap; cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
+.landing-faq-tabs button:hover { border-color: var(--landing-blue); color: var(--landing-blue); }
+.landing-faq-tabs button span { color: #8a9aab; font-size: .72rem; font-weight: 700; }
+.landing-faq-tabs button[aria-pressed="true"] { border-color: var(--landing-blue); background: var(--landing-blue); color: #fff; }
+.landing-faq-tabs button[aria-pressed="true"] span { color: rgba(255,255,255,.75); }
+.landing-faq-tabs button:focus-visible, .landing-faq-more button:focus-visible { outline: 2px solid var(--landing-blue); outline-offset: 2px; }
+/* align-items: start so an opened card doesn't stretch its neighbour in the same row. */
+.landing-faq-list { display: grid; gap: .65rem; align-items: start; }
+.landing-faq-more { display: flex; justify-content: center; margin-top: 1.5rem; }
+.landing-faq-more button { padding: .65rem 1.4rem; border: 1px solid #d7e1e9; border-radius: 999px; background: #fff; color: var(--landing-blue); font-size: .85rem; font-weight: 750; cursor: pointer; transition: border-color .15s; }
+.landing-faq-more button:hover { border-color: var(--landing-blue); }
 .landing-faq-list [data-slot="accordion-item"] { padding-inline: 1.15rem; border: 1px solid #d7e1e9; border-radius: var(--landing-radius-sm); background: #fff; }
 .landing-faq-list button { min-height: 3.5rem; padding-block: 1.25rem; font-size: .9rem; font-weight: 650; }
 .landing-faq-list [role="region"] { padding-bottom: 1.25rem; color: #617285; font-size: .85rem; line-height: 1.7; }
@@ -879,6 +891,10 @@
   .landing-airport-card.is-compact { min-height: 16rem; }
   .landing-process-grid, .landing-fleet-grid, .landing-review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing-review-card:first-child { grid-row: span 2; min-height: 28rem; }
+  .landing-faq-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .landing-faq-list { gap: 1rem; }
 }
 @media (min-width: 900px) {
   .landing-hero-grid { grid-template-columns: 1.12fr .88fr; }
@@ -900,9 +916,6 @@
   .landing-airport-card.is-side p, .landing-airport-card.is-compact p { font-size: .85rem; }
   .landing-airport-card.is-compact .landing-arrow-link { margin-top: .85rem; }
   .landing-review-grid { grid-template-columns: 1.2fr .8fr; }
-  .landing-faq-grid { grid-template-columns: .72fr 1.28fr; }
-  /* The heading stays in view beside the long question list, and scrolls away with the section's end. */
-  .landing-faq-heading { position: sticky; top: 6.5rem; }
   .landing-final-cta { grid-template-columns: 1.35fr .65fr; }
 }
 @media (max-width: 639px) {
