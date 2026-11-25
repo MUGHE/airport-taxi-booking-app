@@ -213,12 +213,14 @@ export function TripMap({
           }
         )
 
-        // Ready once Google has drawn tiles, not when the map object exists: a rejected key
-        // creates the object fine and then never paints anything.
-        g.maps.event.addListenerOnce(map, "tilesloaded", () => {
+        // Ready once Google has actually rendered (first "idle" or "tilesloaded"), not when the
+        // map object exists: a rejected key creates the object fine and then never paints.
+        const markReady = () => {
           tilesLoaded = true
           if (!cancelled && !authFailed) setReady(true)
-        })
+        }
+        g.maps.event.addListenerOnce(map, "idle", markReady)
+        g.maps.event.addListenerOnce(map, "tilesloaded", markReady)
       } catch (err) {
         console.error("Trip map failed to load:", err)
         if (!cancelled) fail("The Google Maps script failed to load.")
@@ -226,9 +228,13 @@ export function TripMap({
     }
 
     init()
-    // Covers a script that loads but never paints (blocked network, a silent key problem).
+    // Covers a script that never builds a map at all (blocked network, a silent key problem). If
+    // Google did build one and it's only slow to report in (slow phone, deferred image loads),
+    // keep the real map rather than swapping it for the sketch.
     const timeout = window.setTimeout(() => {
-      if (!cancelled && !tilesLoaded) setError((current) => current || "The map took too long to load.")
+      if (cancelled || tilesLoaded || authFailed) return
+      if (hostRef.current?.querySelector(".gm-style")) setReady(true)
+      else setError((current) => current || "The map took too long to load.")
     }, 12000)
     return () => {
       cancelled = true
