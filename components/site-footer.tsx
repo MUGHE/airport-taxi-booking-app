@@ -10,8 +10,8 @@ import { CALL_LINK, CALL_NUMBER, CONTACT_EMAIL, EMAIL_LINK, SOCIAL_LINKS, WHATSA
 import { FacebookIcon, InstagramIcon, YouTubeIcon } from "@/components/social-icons"
 import { listPublishedRoutePages } from "@/lib/route-pages"
 
-/** How many route links the footer lists before "View all routes". */
-const FOOTER_ROUTE_LIMIT = 12
+/** How many route links the footer lists; the rest sit behind the link to /routes. */
+const FOOTER_ROUTE_LIMIT = 4
 
 const SOCIAL_ICONS = { Facebook: FacebookIcon, Instagram: InstagramIcon, YouTube: YouTubeIcon }
 
@@ -30,7 +30,9 @@ const TRUST_BADGES = [
 ]
 
 export async function SiteFooter() {
-  const routes = await listPublishedRoutePages().catch(() => [])
+  // Heathrow routes lead the footer list (the busiest airport); the rest keep their A-Z order.
+  const isHeathrow = (route: { fromName: string; toName: string }) => /heathrow/i.test(route.fromName) || /heathrow/i.test(route.toName)
+  const routes = (await listPublishedRoutePages().catch(() => [])).toSorted((a, b) => Number(isHeathrow(b)) - Number(isHeathrow(a)))
   return (
     <footer className="site-footer footer-theme relative overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute -top-40 right-[-10%] size-96 rounded-full bg-primary/12 blur-3xl" />
@@ -114,7 +116,7 @@ export async function SiteFooter() {
                 <li key={route.slug}><Link href={`/${route.slug}`} className="text-sm text-muted-foreground transition-colors hover:text-primary">{route.title}</Link></li>
               ))}
             </ul>
-            <Link href="/routes" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">View all routes <ArrowRight aria-hidden="true" className="size-4" /></Link>
+            <Link href="/routes" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">{routes.length > FOOTER_ROUTE_LIMIT ? `See ${routes.length - FOOTER_ROUTE_LIMIT} more routes` : "View all routes"} <ArrowRight aria-hidden="true" className="size-4" /></Link>
           </nav>
         </>}
 
