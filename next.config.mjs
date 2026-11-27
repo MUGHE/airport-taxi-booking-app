@@ -15,9 +15,15 @@ const nextConfig = {
       { key: 'Referrer-Policy', value: 'no-referrer' },
       { key: 'Cache-Control', value: 'no-store, max-age=0' },
     ]
+    // The booking flow (/book, and every /book?pickupAddress=... variant, since header sources ignore
+    // the query string) is kept out of the index but stays crawlable: robots.ts must not disallow
+    // /book, or Googlebot never sees this header.
+    const noindexHeaders = [{ key: 'X-Robots-Tag', value: 'noindex, follow' }]
     return [
       { source: '/account', headers: accountHeaders },
       { source: '/account/:path*', headers: accountHeaders },
+      { source: '/book', headers: noindexHeaders },
+      { source: '/book/:path*', headers: noindexHeaders },
     ]
   },
   async redirects() {
