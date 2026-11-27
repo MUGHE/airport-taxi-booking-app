@@ -99,8 +99,8 @@ const HEATHROW_BRIEF: AirportBrief = {
     cards: travellerCards("Heathrow", "Heathrow is a common starting point for journeys well beyond London. Arrange a private transfer to destinations across the UK, with the fare agreed up front."),
   },
   cities: {
-    heading: "Heathrow Airport Taxi Transfers Across London and the UK",
-    paragraphs: ["From Central London, West London or a town outside the capital, we can arrange a pre-booked transfer to Heathrow. We cover journeys between Heathrow and homes, hotels, business addresses and other destinations right across the UK."],
+    heading: "Heathrow Airport Taxi Transfers Across London and Nearby Areas",
+    paragraphs: ["Book a reliable taxi to or from Heathrow Airport with One Airport Taxi. We provide pre-booked transfers between Heathrow and London, as well as to nearby towns, including Slough, Windsor, Reading, Maidenhead, and Bracknell. Whether you’re travelling from home, a hotel or a business address, you can arrange your journey in advance and see your fixed fare before booking."],
     listHeading: "You can arrange a taxi to Heathrow from places like:",
     places: [
       LONDON,
@@ -113,6 +113,7 @@ const HEATHROW_BRIEF: AirportBrief = {
       town("Bracknell", "Bracknell, Berkshire", 51.4154, -0.7536),
       town("Guildford", "Guildford, Surrey", 51.2362, -0.5704),
     ],
+    moreHeading: "Other destinations",
     closing: "You can also book a taxi from Heathrow to any of these places or even further away. Just enter your exact journey details to see the fare.",
     cta: "Get a Quote for Your Heathrow Journey",
   },

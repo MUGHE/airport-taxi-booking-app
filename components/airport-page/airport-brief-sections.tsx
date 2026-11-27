@@ -39,7 +39,8 @@ export type AirportBrief = {
   guide: { heading: string; paragraphs: React.ReactNode[]; groups: { title: string; columns: 2 | 3 | 4; cards: BriefCard[] }[] }
   departures: { eyebrow: string; heading: string; paragraphs: React.ReactNode[]; cards: BriefCard[] }
   travellers: { heading: string; lead: string; cards: BriefCard[] }
-  cities?: { eyebrow?: string; heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; closing: string; cta: string }
+  /** `moreHeading` titles the last "anywhere else" card (default "Other UK destinations"). */
+  cities?: { eyebrow?: string; heading: string; paragraphs: React.ReactNode[]; listHeading: string; places: BriefPlace[]; moreHeading?: string; closing: string; cta: string }
   /** `origin` starts the booking buttons somewhere other than the airport itself. */
   airports: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; closing?: string; origin?: BriefPlace }
   ports?: { heading: string; paragraphs: React.ReactNode[]; titleFrom: string; places: BriefPlace[]; note: string }
@@ -165,7 +166,7 @@ function BriefCitiesSection({ page, brief }: { page: AirportPagePresentation; br
 
 /** The town-by-town booking grid: used by the briefs and by the CMS "Places you can book from" section. */
 export function CitiesSection({ page, cities }: { page: AirportPagePresentation; cities: CitiesContent }) {
-  const { eyebrow = "London and the UK", heading, paragraphs, body, listHeading, places, closing, cta } = cities
+  const { eyebrow = "London and the UK", heading, paragraphs, body, listHeading, places, moreHeading = "Other UK destinations", closing, cta } = cities
   return (
     <section id={BRIEF_DESTINATIONS_ID} className="airport-comfort" data-preview-section="city_routes">
       <div className="airport-container">
@@ -183,7 +184,7 @@ export function CitiesSection({ page, cities }: { page: AirportPagePresentation;
             )
           })}
           <article className="airport-city-card airport-city-card-more">
-            <h4><Building2 aria-hidden="true" />Other UK destinations</h4>
+            <h4><Building2 aria-hidden="true" />{moreHeading}</h4>
             <Buttons buttons={[{ href: page.bookingLinks.fromAirport, label: "Get a quote" }, { href: "/destinations", label: "All destinations" }]} />
           </article>
         </div>
