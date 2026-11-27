@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache"
 import { createClient } from "@supabase/supabase-js"
 import { VEHICLE_CLASSES } from "@/lib/fleet"
+import type { VehicleClass } from "@/lib/types"
 import { calculateDrivingRoute } from "@/lib/google-distance"
 import { createRouteBookingLinks } from "@/lib/airport-page-data"
 import {
@@ -65,8 +66,8 @@ export type RoutePagePresentation = {
   distanceMiles: number | null
   durationMinutes: number | null
   fromFare: number | null
-  /** The admin's price quotes, in the order they entered them. */
-  fares: { key: string; name: string; note: string; image: string | null; capacity: number | null; luggage: number | null; fare: number }[]
+  /** The admin's price quotes, in the order they entered them. `vehicle` is the fleet class the quote is for, when it still exists. */
+  fares: { key: string; name: string; note: string; image: string | null; capacity: number | null; luggage: number | null; fare: number; vehicle: VehicleClass | null }[]
   faqs: RouteFaq[]
   why: { heading: string; intro: string; points: RouteWhyPoint[] }
   seoTitle: string
@@ -314,7 +315,7 @@ async function loadPublicRoutePage(slug: string): Promise<Exclude<PublicRoutePag
     // Prices are exactly what the admin typed; with none, the page shows no prices at all.
     const fares = route.prices.map((item, index) => {
       const vehicle = VEHICLE_CLASSES.find((candidate) => candidate.id === item.vehicleId)
-      return { key: `${index}-${item.label}`, name: item.label, note: item.note, image: vehicle?.image ?? null, capacity: vehicle?.capacity ?? null, luggage: vehicle?.luggage ?? null, fare: item.price }
+      return { key: `${index}-${item.label}`, name: item.label, note: item.note, image: vehicle?.image ?? null, capacity: vehicle?.capacity ?? null, luggage: vehicle?.luggage ?? null, fare: item.price, vehicle: vehicle ?? null }
     })
     const fromFare = fares.length ? Math.min(...fares.map((fare) => fare.fare)) : null
     const facts = { a, b, distanceMiles: route.distanceMiles, durationMinutes: route.durationMinutes, fromFare }

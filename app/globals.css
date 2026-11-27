@@ -1405,6 +1405,9 @@ html:has(.faq-page) { scroll-behavior: smooth; }
 .airport-pricing-panel p { margin-top: .5rem; max-width: 40rem; color: rgba(255,255,255,.7); line-height: 1.6; }
 .airport-pricing-panel .airport-info-card-icon { background: rgba(127,195,255,.15); color: #8bc7ff; }
 .landing-vehicle-description { margin-top: .4rem; color: #4b5d70; font-size: .8rem; line-height: 1.55; }
+/* Route page fare cards (fleet card shape): the price sits at the bottom so prices line up across a row. */
+.landing-vehicle-price { margin: auto 0 .9rem; padding-top: 1rem; color: var(--landing-ink); font-size: 1.6rem; font-weight: 750; letter-spacing: -.03em; line-height: 1; }
+.route-fare-book { width: 100%; border-radius: var(--landing-radius-sm); }
 @media (min-width: 640px) {
   .airport-card-grid-2, .airport-card-grid-3, .airport-card-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .airport-pricing-panel { grid-template-columns: auto minmax(0, 1fr) auto; }
@@ -1443,16 +1446,10 @@ html:has(.faq-page) { scroll-behavior: smooth; }
 .route-place-card > svg { width: 1.5rem; height: 1.5rem; margin-bottom: .9rem; color: var(--airport-blue); }
 .route-place-link { display: inline-flex; gap: .35rem; align-items: center; margin-top: 1rem; color: var(--airport-blue); font-size: .9rem; font-weight: 700; }
 .route-place-link svg { width: 1rem; height: 1rem; }
-.route-fare-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 1rem; }
-.route-fare-card { padding: 1.25rem; border: 1px solid #dbe5ec; border-radius: var(--airport-radius-lg); background: #fff; }
-.route-fare-image { position: relative; height: 7rem; }
-.route-fare-card h3 { margin-top: .75rem; font-size: 1.05rem; font-weight: 700; }
 .route-fare-meta { display: flex; gap: 1rem; margin-top: .35rem; color: #617285; font-size: .85rem; }
 .route-fare-meta span { display: inline-flex; gap: .3rem; align-items: center; }
 .route-fare-meta svg { width: .95rem; height: .95rem; }
 .route-fare-note { margin-top: .35rem; color: #617285; font-size: .85rem; line-height: 1.45; }
-.route-fare-price { margin-top: .75rem; font-size: 1.6rem; font-weight: 750; letter-spacing: -.03em; }
-.route-fare-price small { color: #617285; font-size: .8rem; font-weight: 600; letter-spacing: 0; }
 .route-related { padding-block: clamp(4rem, 7vw, 5.5rem); }
 .route-page .route-related-title { max-width: none; margin-top: .65rem; font-size: clamp(1.7rem, 3vw, 2.4rem); }
 .route-related-list { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.75rem; }

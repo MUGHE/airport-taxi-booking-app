@@ -8,6 +8,7 @@ import { BenefitCards, PlaceDriversSection } from "@/components/airport-page/air
 import { Accordion, AccordionItem, AccordionPanel, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import { HeroOfferBox } from "@/components/hero-offer-box"
+import { seatCount } from "@/lib/fleet"
 import { formatRouteDuration, type RouteEndpoint } from "@/lib/route-page-content"
 import type { RoutePagePresentation } from "@/lib/route-pages"
 
@@ -77,17 +78,27 @@ export function RoutePageRenderer({ page }: { page: RoutePagePresentation }) {
           <section className="route-fares">
             <div className="airport-container">
               <div className="airport-section-heading"><div><p className="airport-eyebrow">Fares</p><h2>Prices for this route</h2></div><p>The same price applies in both directions. Your fixed price is confirmed before you book.</p></div>
-              <ul className="route-fare-grid">
-                {page.fares.map((vehicle) => (
-                  <li key={vehicle.key} className="route-fare-card">
-                    {vehicle.image && <div className="route-fare-image"><Image src={vehicle.image} alt={vehicle.name} fill sizes="(min-width: 900px) 20vw, 45vw" className="object-contain" /></div>}
-                    <h3>{vehicle.name}</h3>
-                    {vehicle.capacity != null && vehicle.luggage != null && <p className="route-fare-meta"><span><Users aria-hidden="true" />{vehicle.capacity}</span><span><Luggage aria-hidden="true" />{vehicle.luggage}</span></p>}
-                    {vehicle.note && <p className="route-fare-note">{vehicle.note}</p>}
-                    <p className="route-fare-price">£{formatPrice(vehicle.fare)}</p>
-                  </li>
+              <div className="landing-fleet-grid">
+                {/* Same content as before, in the fleet card's shape (components/vehicle-card.tsx). Book Now opens
+                    the booking form with this route's addresses and, when the quote names a fleet class, that car chosen. */}
+                {page.fares.map((vehicle, index) => (
+                  <article key={vehicle.key} className="landing-vehicle-card">
+                    <div className="landing-vehicle-top"><span>Class {String(index + 1).padStart(2, "0")}</span>{vehicle.vehicle && <span>{seatCount(vehicle.vehicle)} seats</span>}</div>
+                    <div className="landing-vehicle-image">
+                      {vehicle.image && <Image src={vehicle.image} alt={vehicle.name} fill sizes="(max-width: 640px) 85vw, (max-width: 1024px) 50vw, 33vw" className="object-contain" />}
+                    </div>
+                    <div className="landing-vehicle-copy">
+                      <h3>{vehicle.name}</h3>
+                      {vehicle.capacity != null && vehicle.luggage != null && <p className="route-fare-meta"><span><Users aria-hidden="true" />{vehicle.capacity}</span><span><Luggage aria-hidden="true" />{vehicle.luggage}</span></p>}
+                      {vehicle.note && <p className="route-fare-note">{vehicle.note}</p>}
+                      <p className="landing-vehicle-price">£{formatPrice(vehicle.fare)}</p>
+                      <Button className="route-fare-book" nativeButton={false} render={<Link href={vehicle.vehicle ? `${page.directions[0].bookHref}&vehicle=${encodeURIComponent(vehicle.vehicle.id)}` : page.directions[0].bookHref} />}>
+                        Book Now <ArrowRight className="size-4" />
+                      </Button>
+                    </div>
+                  </article>
                 ))}
-              </ul>
+              </div>
             </div>
           </section>
         )}
